@@ -1,0 +1,43 @@
+{
+  "_doc": "Model manifest. Every entity/prop id maps to a procedural builder (props/buildings: src/render/models.js + buildingModels.js, units: src/render/unitModels.js). Set `gltf` to an asset path (e.g. /assets/models/penduduk.glb) to override the builder with a real low-poly model — no code changes needed. See ART_PIPELINE.md for asset conventions.",
+  "props": {
+    "jungle_tree": { "builder": "jungle_tree", "gltf": null },
+    "camphor_tree": { "builder": "camphor_tree", "gltf": null },
+    "gold_rock": { "builder": "gold_rock", "gltf": null },
+    "sago_palm": { "builder": "sago_palm", "gltf": null },
+    "fish_spot": { "builder": "fish_spot", "gltf": null }
+  },
+  "units": {
+    "penduduk": { "builder": "penduduk", "gltf": null },
+    "pahlawan_kampilan": { "builder": "pahlawan_kampilan", "gltf": null },
+    "pemanah": { "builder": "pemanah", "gltf": null },
+    "penikam_keris": { "builder": "penikam_keris", "gltf": null },
+    "pelempar_lembing": { "builder": "pelempar_lembing", "gltf": null },
+    "lela_gunner": { "builder": "lela_gunner", "gltf": null },
+    "perahu_nelayan": { "builder": "perahu_nelayan", "gltf": null },
+    "perahu_perang": { "builder": "perahu_perang", "gltf": null },
+    "pedagang": { "builder": "pedagang", "gltf": null },
+    "militia_ember": { "builder": "militia_ember", "gltf": null },
+    "spectral_warrior": { "builder": "spectral_warrior", "gltf": null },
+    "hero_semaun": { "builder": "hero_semaun", "gltf": null },
+    "hero_sakam": { "builder": "hero_sakam", "gltf": null },
+    "hero_hassan": { "builder": "hero_hassan", "gltf": null },
+    "hero_shahbandar": { "builder": "hero_shahbandar", "gltf": null },
+    "hero_saman": { "builder": "hero_saman", "gltf": null },
+    "hero_badar": { "builder": "hero_badar", "gltf": null }
+  },
+  "buildings": {
+    "istana": { "builder": "istana", "gltf": null },
+    "rumah_kampong": { "builder": "rumah_kampong", "gltf": null },
+    "kebun": { "builder": "kebun", "gltf": null },
+    "pangkalan": { "builder": "pangkalan", "gltf": null },
+    "balai_pahlawan": { "builder": "balai_pahlawan", "gltf": null },
+    "gerai_tukang": { "builder": "gerai_tukang", "gltf": null },
+    "kubu": { "builder": "kubu", "gltf": null },
+    "pagar": { "builder": "pagar", "gltf": null },
+    "surau": { "builder": "surau", "gltf": null },
+    "panggung_panji": { "builder": "panggung_panji", "gltf": null },
+    "mahkota_monument": { "builder": "mahkota_monument", "gltf": null },
+    "rubble": { "builder": "rubble", "gltf": null }
+  }
+}

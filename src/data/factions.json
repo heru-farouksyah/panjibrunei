@@ -1,0 +1,81 @@
+{
+  "_doc": "The 6 Panji. mods are stat modifiers applied at match start (data-driven, no faction-specific code paths). ult describes the hero ultimate; cooldown in seconds.",
+
+  "semaun": {
+    "name": "Panji Semaun",
+    "color": "#8d2f2f",
+    "hero": "hero_semaun",
+    "heroTitle": "Awang Semaun, the Giant of Legend",
+    "bonusText": "Infantry +15% HP; buildings 10% cheaper Timber",
+    "mods": { "infHpMult": 1.15, "buildTimberMult": 0.9 },
+    "ult": {
+      "id": "kekuatan_gergasi", "name": "Kekuatan Gergasi", "cooldown": 110,
+      "desc": "Ground slam: AoE damage, knockback and 3s stun around the hero."
+    }
+  },
+
+  "sakam": {
+    "name": "Panji Sakam",
+    "color": "#4a3f86",
+    "hero": "hero_sakam",
+    "heroTitle": "Pengiran Muda Sakam, Blade of Kota Batu",
+    "bonusText": "Military trains 20% faster; +5% move speed",
+    "mods": { "trainTimeMult": 0.8, "speedMult": 1.05 },
+    "ult": {
+      "id": "serbuan_berani_mati", "name": "Serbuan Berani Mati", "cooldown": 140,
+      "desc": "Summons 100 spectral warriors that charge the enemy for 30s."
+    }
+  },
+
+  "hassan": {
+    "name": "Panji Hassan",
+    "color": "#2f7d4f",
+    "hero": "hero_hassan",
+    "heroTitle": "Sultan Hassan, the Lawgiver",
+    "bonusText": "Walls & towers +25% HP; +2 armor near hero or Istana",
+    "mods": { "wallHpMult": 1.25, "auraArmor": 2, "auraRadius": 7 },
+    "ult": {
+      "id": "perintah_adil", "name": "Perintah Adil", "cooldown": 110,
+      "desc": "15s: allies in radius gain a damage-absorbing shield, +20% attack speed, and immunity to conversion."
+    }
+  },
+
+  "shahbandar": {
+    "name": "Panji Shahbandar",
+    "color": "#4f7d9e",
+    "hero": "hero_shahbandar",
+    "heroTitle": "Pg. Shahbandar Pg. Mohd. Salleh, the Reformer",
+    "bonusText": "Trade income +25%; +1 vision on all units",
+    "mods": { "tradeMult": 1.25, "losBonus": 1 },
+    "ult": {
+      "id": "lidah_pujangga", "name": "Lidah Pujangga", "cooldown": 130,
+      "desc": "Permanently converts up to 5 enemy units in a radius (heroes immune)."
+    }
+  },
+
+  "saman": {
+    "name": "Panji Saman",
+    "color": "#b35a2e",
+    "hero": "hero_saman",
+    "heroTitle": "Haji Saman, Flame of the Resistance",
+    "bonusText": "Villagers +50% HP and fight well; units cost 5% less Food",
+    "mods": { "vilHpMult": 1.5, "vilAtkMult": 2, "foodCostMult": 0.95 },
+    "ult": {
+      "id": "bara_perjuangan", "name": "Bara Perjuangan", "cooldown": 120,
+      "desc": "20s: nearby villagers transform into ember-wreathed militia, then revert."
+    }
+  },
+
+  "badar": {
+    "name": "Panji Badar",
+    "color": "#2f8d86",
+    "hero": "hero_badar",
+    "heroTitle": "Liau Badar, the Shadow Tactician",
+    "bonusText": "+1 line of sight; units in the treeline are hidden until they strike",
+    "mods": { "losBonus": 1, "jungleAmbush": true },
+    "ult": {
+      "id": "mata_strategi", "name": "Mata Strategi", "cooldown": 100,
+      "desc": "Reveals the whole map for 10s; marked enemies take +25% damage for 15s."
+    }
+  }
+}

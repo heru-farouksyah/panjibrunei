@@ -1,0 +1,9 @@
+{
+  "_doc": "Era (age) progression, researched at the Istana. Index 0 is the starting era and has no cost. Times in seconds.",
+  "eras": [
+    { "id": 1, "name": "Kampong Era", "cost": {}, "time": 0 },
+    { "id": 2, "name": "Kota Batu Era", "cost": { "food": 180, "gold": 50 }, "time": 16 },
+    { "id": 3, "name": "Empire Era", "cost": { "food": 380, "gold": 180, "camphor": 20 }, "time": 26 },
+    { "id": 4, "name": "Perjuangan Era", "cost": { "food": 650, "gold": 400, "camphor": 70 }, "time": 40 }
+  ]
+}

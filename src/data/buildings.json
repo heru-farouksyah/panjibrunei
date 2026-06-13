@@ -1,0 +1,90 @@
+{
+  "_doc": "All building stats. size = footprint in tiles (square). Times in seconds. dropoff lists resource types villagers/boats can deposit. shore = footprint must touch water. Eras gate availability.",
+
+  "istana": {
+    "name": "Istana", "size": 3, "hp": 2400, "armor": 3,
+    "cost": { "timber": 275, "gold": 100 }, "buildTime": 60, "era": 1,
+    "pop": 10, "los": 8,
+    "trains": ["penduduk"],
+    "dropoff": ["food", "timber", "gold", "camphor"],
+    "trickle": { "gold": 0.25, "food": 0.15 }
+  },
+
+  "rumah_kampong": {
+    "name": "Rumah Kampong", "size": 2, "hp": 550, "armor": 0,
+    "cost": { "timber": 30 }, "buildTime": 12, "era": 1,
+    "pop": 5, "los": 3,
+    "trickle": { "gold": 0.05 }
+  },
+
+  "kebun": {
+    "name": "Kebun", "size": 2, "hp": 140, "armor": 0,
+    "cost": { "timber": 45 }, "buildTime": 9, "era": 1,
+    "los": 2, "farm": { "rate": 0.85 }
+  },
+
+  "pangkalan": {
+    "name": "Pangkalan", "size": 2, "hp": 850, "armor": 1,
+    "cost": { "timber": 110 }, "buildTime": 22, "era": 1,
+    "los": 6, "shore": true,
+    "trains": ["perahu_nelayan", "perahu_perang", "pedagang"],
+    "dropoff": ["food"]
+  },
+
+  "balai_pahlawan": {
+    "name": "Balai Pahlawan", "size": 2, "hp": 1050, "armor": 1,
+    "cost": { "timber": 130 }, "buildTime": 24, "era": 1,
+    "los": 5,
+    "trains": ["pahlawan_kampilan", "penikam_keris", "pelempar_lembing", "pemanah", "lela_gunner"]
+  },
+
+  "gerai_tukang": {
+    "name": "Gerai Tukang", "size": 2, "hp": 800, "armor": 1,
+    "cost": { "timber": 100, "gold": 50 }, "buildTime": 19, "era": 2,
+    "los": 4,
+    "techs": [
+      { "id": "forged_kampilan", "name": "Forged Kampilan", "desc": "+1 melee attack",
+        "cost": { "food": 100, "gold": 50 }, "time": 30, "era": 2, "effect": { "meleeAtk": 1 } },
+      { "id": "fletching", "name": "Rattan Fletching", "desc": "+1 ranged attack",
+        "cost": { "food": 100, "gold": 50 }, "time": 30, "era": 2, "effect": { "rangedAtk": 1 } },
+      { "id": "woven_armor", "name": "Woven Armor", "desc": "+1 armor on all units",
+        "cost": { "food": 150, "gold": 75 }, "time": 40, "era": 3, "effect": { "unitArmor": 1 } },
+      { "id": "efficient_tools", "name": "Efficient Tools", "desc": "+15% gather rate",
+        "cost": { "food": 75, "timber": 75 }, "time": 35, "era": 2, "effect": { "gatherMult": 0.15 } }
+    ]
+  },
+
+  "kubu": {
+    "name": "Kubu", "size": 1, "hp": 720, "armor": 2,
+    "cost": { "timber": 90, "gold": 40 }, "buildTime": 19, "era": 1,
+    "los": 9, "tags": ["tower"],
+    "attack": { "atk": 8, "range": 6.5, "atkSpeed": 1.8, "projSpeed": 11 }
+  },
+
+  "pagar": {
+    "name": "Pagar", "size": 1, "hp": 380, "armor": 2,
+    "cost": { "timber": 5 }, "buildTime": 6, "era": 2,
+    "los": 1, "tags": ["wall"]
+  },
+
+  "surau": {
+    "name": "Surau", "size": 2, "hp": 620, "armor": 1,
+    "cost": { "timber": 80, "gold": 25 }, "buildTime": 16, "era": 2,
+    "los": 4,
+    "heal": { "radius": 5, "rate": 1.0 },
+    "trickle": { "camphor": 0.025 }
+  },
+
+  "panggung_panji": {
+    "name": "Panggung Panji", "size": 2, "hp": 950, "armor": 2,
+    "cost": { "timber": 150, "gold": 100, "camphor": 50 }, "buildTime": 28, "era": 3,
+    "los": 5, "hero": true
+  },
+
+  "mahkota_monument": {
+    "name": "Mahkota Monument", "size": 3, "hp": 4500, "armor": 3,
+    "cost": { "food": 800, "timber": 800, "gold": 800, "camphor": 250 },
+    "buildTime": 80, "era": 4,
+    "los": 6, "wonder": true
+  }
+}

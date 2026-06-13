@@ -1,0 +1,131 @@
+{
+  "_doc": "All unit stats. Times in seconds, speeds in tiles/sec, range in tiles (0 = melee). bonusVs multiplies damage against units carrying that tag. The sim converts seconds to ticks on load.",
+
+  "penduduk": {
+    "name": "Penduduk", "domain": "land", "era": 1, "pop": 1,
+    "cost": { "food": 30 }, "trainTime": 9, "trainedAt": "istana",
+    "hp": 28, "armor": 0, "atk": 3, "range": 0, "atkSpeed": 1.6, "windup": 0.3,
+    "speed": 1.05, "los": 5, "tags": ["villager"], "carry": 10
+  },
+
+  "pahlawan_kampilan": {
+    "name": "Pahlawan Kampilan", "domain": "land", "era": 1, "pop": 1,
+    "cost": { "food": 50, "gold": 22 }, "trainTime": 11, "trainedAt": "balai_pahlawan",
+    "hp": 64, "armor": 1, "atk": 7, "range": 0, "atkSpeed": 1.5, "windup": 0.35,
+    "speed": 1.12, "los": 5, "tags": ["infantry", "military"],
+    "bonusVs": { "skirmisher": 1.5 }
+  },
+
+  "pemanah": {
+    "name": "Pemanah", "domain": "land", "era": 1, "pop": 1,
+    "cost": { "food": 32, "timber": 36 }, "trainTime": 11, "trainedAt": "balai_pahlawan",
+    "hp": 34, "armor": 0, "atk": 5, "range": 4.5, "atkSpeed": 1.8, "projSpeed": 9, "projArc": true,
+    "speed": 1.05, "los": 6, "tags": ["archer", "military"],
+    "bonusVs": { "infantry": 2.6 }
+  },
+
+  "penikam_keris": {
+    "name": "Penikam Keris", "domain": "land", "era": 1, "pop": 1,
+    "cost": { "food": 28, "timber": 18 }, "trainTime": 8, "trainedAt": "balai_pahlawan",
+    "hp": 42, "armor": 0, "atk": 6, "range": 0, "atkSpeed": 1.3, "windup": 0.25,
+    "speed": 1.45, "los": 5, "tags": ["skirmisher", "military"],
+    "bonusVs": { "archer": 1.8 }
+  },
+
+  "pelempar_lembing": {
+    "name": "Pelempar Lembing", "domain": "land", "era": 1, "pop": 1,
+    "cost": { "food": 35, "timber": 20 }, "trainTime": 9, "trainedAt": "balai_pahlawan",
+    "hp": 44, "armor": 0, "atk": 8, "range": 4, "atkSpeed": 2.0, "windup": 0.35,
+    "projSpeed": 8, "projArc": true, "thrown": true,
+    "speed": 1.15, "los": 6, "tags": ["thrower", "military"],
+    "bonusVs": { "skirmisher": 1.4, "building": 1.3 }
+  },
+
+  "lela_gunner": {
+    "name": "Lela Gunner", "domain": "land", "era": 3, "pop": 2,
+    "cost": { "gold": 90, "timber": 50, "camphor": 15 }, "trainTime": 20, "trainedAt": "balai_pahlawan",
+    "hp": 88, "armor": 2, "atk": 16, "range": 6.5, "atkSpeed": 3.4, "projSpeed": 7, "projArc": true, "splash": 0.8,
+    "speed": 0.72, "los": 7, "tags": ["siege", "military"],
+    "bonusVs": { "building": 5 }
+  },
+
+  "perahu_nelayan": {
+    "name": "Perahu Nelayan", "domain": "water", "era": 1, "pop": 1,
+    "cost": { "timber": 45 }, "trainTime": 12, "trainedAt": "pangkalan",
+    "hp": 60, "armor": 0, "atk": 0, "range": 0, "atkSpeed": 2,
+    "speed": 1.5, "los": 6, "tags": ["boat", "fisher"], "carry": 15
+  },
+
+  "perahu_perang": {
+    "name": "Perahu Perang", "domain": "water", "era": 2, "pop": 2,
+    "cost": { "timber": 70, "gold": 35 }, "trainTime": 16, "trainedAt": "pangkalan",
+    "hp": 135, "armor": 1, "atk": 8, "range": 5, "atkSpeed": 2.0, "projSpeed": 9,
+    "speed": 1.4, "los": 7, "tags": ["boat", "warboat", "military"],
+    "bonusVs": { "boat": 1.4 }
+  },
+
+  "pedagang": {
+    "name": "Pedagang", "domain": "water", "era": 3, "pop": 1,
+    "cost": { "timber": 60, "gold": 60 }, "trainTime": 14, "trainedAt": "pangkalan",
+    "hp": 80, "armor": 0, "atk": 0, "range": 0, "atkSpeed": 2,
+    "speed": 1.45, "los": 6, "tags": ["boat", "trader"], "trade": true
+  },
+
+  "militia_ember": {
+    "name": "Pejuang Bara", "domain": "land", "era": 1, "pop": 0, "internal": true,
+    "cost": {}, "trainTime": 1,
+    "hp": 52, "armor": 1, "atk": 8, "range": 0, "atkSpeed": 1.4, "windup": 0.3,
+    "speed": 1.25, "los": 5, "tags": ["infantry", "military"]
+  },
+
+  "spectral_warrior": {
+    "name": "Pahlawan Roh", "domain": "land", "era": 1, "pop": 0, "internal": true,
+    "cost": {}, "trainTime": 1, "lifespan": 30, "uncontrollable": true,
+    "hp": 20, "armor": 0, "atk": 5, "range": 0, "atkSpeed": 1.2, "windup": 0.2,
+    "speed": 1.7, "los": 6, "tags": ["infantry", "spectral", "military"]
+  },
+
+  "hero_semaun": {
+    "name": "Awang Semaun", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 950, "armor": 4, "atk": 30, "range": 0, "atkSpeed": 1.7, "windup": 0.4, "splash": 1.2,
+    "speed": 1.15, "los": 7, "tags": ["hero", "infantry", "military"]
+  },
+
+  "hero_sakam": {
+    "name": "Pengiran Muda Sakam", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 640, "armor": 3, "atk": 24, "range": 0, "atkSpeed": 1.3, "windup": 0.3,
+    "speed": 1.65, "los": 7, "tags": ["hero", "military"],
+    "bonusVs": { "siege": 3 }
+  },
+
+  "hero_hassan": {
+    "name": "Sultan Hassan", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 580, "armor": 5, "atk": 13, "range": 0, "atkSpeed": 1.6, "windup": 0.4,
+    "speed": 1.1, "los": 8, "tags": ["hero", "military"], "aura": { "armor": 2, "radius": 7 }
+  },
+
+  "hero_shahbandar": {
+    "name": "Pg. Shahbandar Md. Salleh", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 500, "armor": 2, "atk": 19, "range": 6, "atkSpeed": 1.7, "projSpeed": 10,
+    "speed": 1.1, "los": 8, "tags": ["hero", "caster", "military"]
+  },
+
+  "hero_saman": {
+    "name": "Haji Saman", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 600, "armor": 3, "atk": 21, "range": 5, "atkSpeed": 1.9, "projSpeed": 11,
+    "meleeFallback": { "atk": 15, "atkSpeed": 1.3 },
+    "speed": 1.2, "los": 7, "tags": ["hero", "military"]
+  },
+
+  "hero_badar": {
+    "name": "Liau Badar", "domain": "land", "era": 3, "pop": 0, "hero": true,
+    "cost": { "gold": 100, "camphor": 150 }, "trainTime": 22, "trainedAt": "panggung_panji",
+    "hp": 480, "armor": 2, "atk": 15, "range": 0, "atkSpeed": 0.75, "windup": 0.15,
+    "speed": 1.7, "los": 9, "tags": ["hero", "skirmisher", "military"]
+  }
+}

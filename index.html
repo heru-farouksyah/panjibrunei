@@ -207,7 +207,7 @@
     }
     #zoom-in { right: 12px; top: 44%; width: 46px; height: 46px; }
     #zoom-out { right: 12px; top: calc(44% + 54px); width: 46px; height: 46px; }
-    #btn-stop { left: 12px; bottom: 150px; width: 48px; height: 48px; color: #e8743f; }
+    #btn-stop { right: 70px; bottom: 150px; width: 48px; height: 48px; color: #e8743f; }
     #btn-build-ok {
       left: 50%; bottom: 92px; transform: translateX(-50%);
       width: auto; height: auto; padding: 10px 22px; border-radius: 10px;
@@ -215,9 +215,13 @@
     }
     body.touch #touch-controls { display: block; }
     body.touch #watermark { display: none; }
-    /* new touch controls (P1/P2/P4): menu, box-select toggle, control groups */
-    #menu-btn { left: 8px; top: 96px; width: 48px; height: 48px; font-size: 22px; }
-    #btn-select { left: 8px; top: 150px; width: 48px; height: 48px; font-size: 22px; }
+    /* new touch controls: top-left pause/resume, menu, box-select, groups.
+       Left rail (top→down): pause · menu · idle. Right edge: minimap (top),
+       zoom (tablet only), select + stop (bottom). */
+    #pause-btn { left: 8px; top: 46px; width: 48px; height: 48px; }
+    #pause-btn.paused { color: var(--brass); box-shadow: 0 0 0 2px var(--brass), var(--panel-edge); }
+    #menu-btn { left: 8px; top: 104px; width: 48px; height: 48px; font-size: 22px; }
+    #btn-select { right: 12px; bottom: calc(150px + env(safe-area-inset-bottom)); width: 48px; height: 48px; font-size: 22px; }
     #btn-select.active { color: var(--brass); box-shadow: 0 0 0 2px var(--brass), var(--panel-edge); }
     #group-bar {
       position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
@@ -272,15 +276,15 @@
       .cmd-tile .cmd-name { font-size: 9.5px; }
       #minimap-wrap { bottom: auto; top: 46px; right: 8px; padding: 3px; }
       #minimap { width: 104px; height: 104px; }
-      #idle-btn { bottom: auto; top: 46px; left: 8px; }
+      #idle-btn { bottom: auto; top: 162px; left: 8px; }   /* below pause + menu */
       #monument-banner { top: 88px; font-size: 12px; }
       /* P3: bigger touch targets for thumbs (≥48px) */
       #zoom-in, #zoom-out { width: 52px; height: 52px; right: 10px; }
-      #btn-stop, #menu-btn, #btn-select { width: 52px; height: 52px; }
+      #pause-btn, #menu-btn, #idle-btn, #btn-stop, #btn-select { width: 52px; height: 52px; }
       #group-bar .grp { width: 46px; height: 46px; font-size: 16px; }
       .cmd-tile { min-width: var(--tile); min-height: var(--tile); }
-      /* P5: keep the left control stack clear of the bottom action panel */
-      #btn-stop { bottom: calc(160px + env(safe-area-inset-bottom)); left: 10px; }
+      /* select + stop live bottom-right, clear of the left rail and the panel */
+      #btn-stop { right: 72px; bottom: calc(150px + env(safe-area-inset-bottom)); }
     }
     @media (max-width: 560px) {
       .portrait { width: 60px; }
@@ -289,6 +293,18 @@
       #panel .sel-info { display: none; } /* portrait + command card only on tiny screens */
       .cmd-grid { max-width: 64vw; }
     }
+    /* ---- phone vs tablet: the command card navigates differently ---- */
+    /* Phone: compact, scrolling card; no zoom buttons (pinch instead); no info panel. */
+    body.phone #zoom-in, body.phone #zoom-out { display: none; }
+    body.phone #panel .sel-info { display: none; }
+    body.phone .cmd-grid { max-width: 62vw; max-height: calc(var(--tile) * 2 + 8px); overflow-y: auto; }
+    /* Tablet: roomier card — bigger tiles, the unit info panel stays, no scroll. */
+    body.tablet { --tile: 74px; }
+    body.tablet #panel { gap: 14px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+    body.tablet #panel .sel-info { display: block; min-width: 160px; max-width: 30vw; }
+    body.tablet .cmd-grid { max-width: 72vw; max-height: none; overflow: visible; }
+    body.tablet .cmd-tile .cmd-name { font-size: 11px; }
+    body.tablet #minimap { width: 132px; height: 132px; }
 
     /* ---------- screens ---------- */
     .screen-overlay {
@@ -564,6 +580,7 @@
   <div id="boot"><div class="boot-title">PANJI BRUNEI</div><div class="loading-spinner"></div></div>
   <div id="vignette"></div>
   <div id="touch-controls">
+    <button id="pause-btn" class="touch-btn" title="Pause / Resume"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button>
     <button id="menu-btn" class="touch-btn" title="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <button id="btn-select" class="touch-btn" title="Box select"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
     <button id="zoom-in" class="touch-btn">+</button>

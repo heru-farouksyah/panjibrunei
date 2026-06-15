@@ -8,29 +8,65 @@ import { HUD } from './render/hud.js';
 import { TouchControls } from './render/touch.js';
 import { Minimap } from './render/minimap.js';
 import { AudioManager } from './render/audio.js';
-import { showDisclaimer, showTitle, showFactionSelect, showEndScreen } from './render/screens.js';
+import { showDisclaimer, showTitle, showFactionSelect, showEndScreen, showTutorial, showRotatePrompt, showSettings, showLoading, hideLoading } from './render/screens.js';
+import { DeployController } from './render/deploy.js';
+import { hasSave, readSave, writeSave } from './render/settings.js';
 import factionsData from './data/factions.json' with { type: 'json' };
 
-// Game flow: title -> faction select -> match -> victory/defeat screen.
-function startMatch(playerFaction, difficulty) {
-  const factionIds = Object.keys(factionsData).filter((k) => !k.startsWith('_'));
-  const others = factionIds.filter((f) => f !== playerFaction);
-  const aiFaction = others[(Math.random() * others.length) | 0];
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
-  const sim = new Sim({
-    seed: (Math.random() * 1e9) | 0,
-    playerFaction,
-    aiFaction,
-    difficulty,
-  });
+// One AudioManager for the whole page (matches restart via reload, so a single
+// instance is correct). Shared by the title/settings screens and the match.
+const audio = new AudioManager();
+
+// Brief on-screen confirmation (save, etc.)
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 1800);
+}
+
+// Game flow: title -> faction select -> match -> victory/defeat screen.
+function startMatch(playerFaction, difficulty, opts = {}) {
+  showLoading(opts.loadSnapshot ? 'Restoring your kingdom…' : 'Preparing the kampong…');
+  // Two ways in: a fresh match, or restoring a saved snapshot.
+  let sim;
+  let theme;
+  const fromSave = !!opts.loadSnapshot;
+  if (fromSave) {
+    sim = Sim.deserialize(opts.loadSnapshot);
+    theme = sim.opts.theme;
+    playerFaction = sim.players[0].factionId;
+    difficulty = sim.opts.difficulty;
+  } else {
+    const factionIds = Object.keys(factionsData).filter((k) => !k.startsWith('_'));
+    const others = factionIds.filter((f) => f !== playerFaction);
+    const aiFaction = others[(Math.random() * others.length) | 0];
+    // Easy = 2 rival kingdoms, Normal = 4 (a bigger free-for-all).
+    const numEnemies = difficulty === 'easy' ? 2 : 4;
+    theme = opts.theme;
+    sim = new Sim({
+      seed: Number.isFinite(opts.seed) ? opts.seed : (Math.random() * 1e9) | 0,
+      mapSize: opts.mapSize, // small/medium/large; undefined → default 96
+      playerFaction,
+      aiFaction,
+      difficulty,
+      numEnemies,
+      richStart: true, // free villagers + buildings + diamond army for the player
+      theme,           // render-only, but stored in the snapshot for resume
+    });
+  }
 
   const container = document.getElementById('app');
-  const gameRenderer = new GameRenderer(container, sim);
+  const gameRenderer = new GameRenderer(container, sim, theme);
   const cameraRig = new CameraRig(gameRenderer.camera, gameRenderer.renderer.domElement, sim.grid);
   const input = new InputController(sim, gameRenderer, cameraRig);
   const hud = new HUD(sim, gameRenderer, input, cameraRig);
   const touch = new TouchControls(sim, gameRenderer, cameraRig, input, hud);
-  const audio = new AudioManager();
+  audio.world(theme); // start the per-theme ambient bed + score (once unlocked)
   const minimap = new Minimap(sim, cameraRig, input, audio);
   const overlay = new DebugOverlay(gameRenderer, sim);
 
@@ -44,9 +80,57 @@ function startMatch(playerFaction, difficulty) {
   // Debug/testing handle (used by scripts/verify-*.mjs and the console).
   window.__panji = { sim, gameRenderer, cameraRig, input, hud, minimap, audio, touch };
 
+  // On phones: start zoomed out for a wider view, and nag to rotate.
+  if (IS_TOUCH) {
+    cameraRig.dist = cameraRig.targetDist = 36;
+    showRotatePrompt();
+  }
+
   let last = performance.now();
   let accumulator = 0;
   let ended = false;
+  let paused = false;
+  let booted = false;
+
+  // Tutorial → deployment → battle. The match stays paused through both;
+  // deployment lets the player place their starting army where they like.
+  // A restored save skips straight into the running battle.
+  if (!fromSave && opts.tutorial !== false) {
+    paused = true;
+    const beginBattle = () => { paused = false; last = performance.now(); };
+    const deploy = () => new DeployController(sim, input, cameraRig, beginBattle);
+    showTutorial(() => deploy());
+  }
+
+  // In-match actions, shared by keyboard shortcuts (desktop) and the on-screen
+  // ☰ menu (mobile) so phone players can reach save/settings/pause too.
+  let settingsOpen = false;
+  const matchActions = {
+    isPaused: () => paused,
+    save: () => toast(writeSave(sim.serialize()) ? 'Game saved' : 'Could not save'),
+    togglePause: () => {
+      if (ended || settingsOpen) return;
+      paused = !paused;
+      if (!paused) last = performance.now();
+      toast(paused ? 'Paused' : 'Resumed');
+    },
+    openSettings: () => {
+      if (ended || settingsOpen) return;
+      settingsOpen = true;
+      const wasPaused = paused;
+      paused = true;
+      showSettings(audio, { onClose: () => { settingsOpen = false; paused = wasPaused; last = performance.now(); } });
+    },
+  };
+  touch.setMenuActions(matchActions);
+
+  // F5 save, O settings, Space pause. (Escape is taken by input for cancel.)
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'F5') { e.preventDefault(); matchActions.save(); }
+    else if (e.code === 'KeyO') matchActions.openSettings();
+    else if (e.code === 'Space') { e.preventDefault(); matchActions.togglePause(); }
+  });
 
   function handleEvents(events) {
     for (const ev of events) {
@@ -59,7 +143,7 @@ function startMatch(playerFaction, difficulty) {
         ended = true;
         showEndScreen(sim, ev.winner, {
           onReplay: () => {
-            sessionStorage.setItem('panji-restart', JSON.stringify({ faction: playerFaction, difficulty }));
+            sessionStorage.setItem('panji-restart', JSON.stringify({ faction: playerFaction, difficulty, theme: opts.theme }));
             location.reload();
           },
           onChangeBanner: () => location.reload(),
@@ -75,9 +159,11 @@ function startMatch(playerFaction, difficulty) {
     last = now;
     accumulator += dtMs;
 
-    // the sim freezes once the match is decided; rendering continues
+    // the sim freezes while the tutorial is up or once the match is decided;
+    // rendering continues so the world is visible behind the tutorial card
+    if (paused) accumulator = 0;
     let steps = 0;
-    while (!ended && accumulator >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
+    while (!ended && !paused && accumulator >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
       sim.step();
       accumulator -= TICK_MS;
       steps++;
@@ -94,25 +180,40 @@ function startMatch(playerFaction, difficulty) {
     );
     overlay.frame(dtMs);
 
+    if (!booted) { booted = true; hideLoading(); } // first frame is up — dismiss loader
+
     requestAnimationFrame(frame);
   }
 
   requestAnimationFrame(frame);
 }
 
+// JS is live now — drop the static boot splash; screens take over from here.
+document.getElementById('boot')?.remove();
+
 // "Play again" restarts carry the previous choice through a reload.
 const restart = sessionStorage.getItem('panji-restart');
 if (restart) {
   sessionStorage.removeItem('panji-restart');
-  const { faction, difficulty } = JSON.parse(restart);
-  startMatch(faction, difficulty);
+  const { faction, difficulty, theme } = JSON.parse(restart);
+  startMatch(faction, difficulty, { tutorial: false, theme });
 } else if (new URLSearchParams(location.search).has('quickstart')) {
-  startMatch('semaun', 'normal'); // headless testing shortcut
+  const q = new URLSearchParams(location.search);
+  const theme = q.get('theme') || undefined;
+  const mapSize = q.get('size') ? parseInt(q.get('size'), 10) : undefined;
+  startMatch('semaun', 'normal', { tutorial: false, theme, mapSize }); // headless testing shortcut
 } else {
-  // Disclaimer → title → faction select → match.
+  // Disclaimer → title → faction select → match (with the how-to-play tutorial).
+  // The title offers "Resume last game" (if a save exists) and Settings.
   showDisclaimer(() => {
-    showTitle(() => {
-      showFactionSelect((faction, difficulty) => startMatch(faction, difficulty));
-    });
+    const title = () => showTitle(
+      () => showFactionSelect((faction, difficulty, theme, seed, mapSize) =>
+        startMatch(faction, difficulty, { tutorial: true, theme, seed, mapSize })),
+      {
+        onResume: hasSave() ? () => startMatch(null, null, { loadSnapshot: readSave() }) : null,
+        onSettings: () => showSettings(audio),
+      }
+    );
+    title();
   });
 }

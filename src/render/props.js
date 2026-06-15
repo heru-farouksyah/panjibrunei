@@ -11,6 +11,7 @@ export function buildProps(grid) {
   const group = new THREE.Group();
   group.name = 'props';
   const tileMap = new Map(); // tileKey -> [{parts: [inst...], index}]
+  const stride = grid.size; // tile-key stride must match the grid dimension
 
   const byType = new Map();
   for (const p of grid.props) {
@@ -71,7 +72,7 @@ export function buildProps(grid) {
 
     for (let i = 0; i < placements.length; i++) {
       const p = placements[i];
-      const key = (p.x | 0) * 96 + (p.z | 0);
+      const key = (p.x | 0) * stride + (p.z | 0);
       if (!tileMap.has(key)) tileMap.set(key, []);
       tileMap.get(key).push({ parts: partInsts, index: i });
     }
@@ -81,7 +82,7 @@ export function buildProps(grid) {
   return {
     group,
     clearTile(x, z) {
-      const entries = tileMap.get((x | 0) * 96 + (z | 0));
+      const entries = tileMap.get((x | 0) * stride + (z | 0));
       if (!entries) return;
       for (const { parts, index } of entries) {
         for (const inst of parts) {
@@ -89,7 +90,7 @@ export function buildProps(grid) {
           inst.instanceMatrix.needsUpdate = true;
         }
       }
-      tileMap.delete((x | 0) * 96 + (z | 0));
+      tileMap.delete((x | 0) * stride + (z | 0));
     },
   };
 }

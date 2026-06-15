@@ -3,9 +3,15 @@ import { GRID, TileType } from './constants.js';
 // 3-state fog of war per player: unexplored (0) / explored (1) / visible (2).
 // Recomputed on a coarse tick (every 5 sim ticks) for performance.
 export class FogSystem {
-  constructor() {
-    this.visible = [new Uint8Array(GRID * GRID), new Uint8Array(GRID * GRID)];
-    this.explored = [new Uint8Array(GRID * GRID), new Uint8Array(GRID * GRID)];
+  constructor(numPlayers = 2, size = GRID) {
+    this.n = numPlayers;
+    this.size = size;
+    this.visible = [];
+    this.explored = [];
+    for (let i = 0; i < numPlayers; i++) {
+      this.visible.push(new Uint8Array(size * size));
+      this.explored.push(new Uint8Array(size * size));
+    }
     this.offsets = new Map(); // radius -> [dx, dz, ...]
     this.version = 0;
   }
@@ -25,7 +31,7 @@ export class FogSystem {
   }
 
   update(sim) {
-    for (let owner = 0; owner < 2; owner++) {
+    for (let owner = 0; owner < this.n; owner++) {
       const vis = this.visible[owner];
       const exp = this.explored[owner];
       const player = sim.players[owner];
@@ -46,8 +52,8 @@ export class FogSystem {
         for (let i = 0; i < o.length; i += 2) {
           const x = cx + o[i];
           const z = cz + o[i + 1];
-          if (x >= 0 && z >= 0 && x < GRID && z < GRID) {
-            const idx = z * GRID + x;
+          if (x >= 0 && z >= 0 && x < this.size && z < this.size) {
+            const idx = z * this.size + x;
             vis[idx] = 1;
             exp[idx] = 1;
           }
@@ -84,13 +90,13 @@ export class FogSystem {
   }
 
   tileVisible(owner, x, z) {
-    if (x < 0 || z < 0 || x >= GRID || z >= GRID) return false;
-    return this.visible[owner][z * GRID + x] === 1;
+    if (x < 0 || z < 0 || x >= this.size || z >= this.size) return false;
+    return this.visible[owner][z * this.size + x] === 1;
   }
 
   tileExplored(owner, x, z) {
-    if (x < 0 || z < 0 || x >= GRID || z >= GRID) return false;
-    return this.explored[owner][z * GRID + x] === 1;
+    if (x < 0 || z < 0 || x >= this.size || z >= this.size) return false;
+    return this.explored[owner][z * this.size + x] === 1;
   }
 
   // Can `viewer` (player index) see entity `e` right now?

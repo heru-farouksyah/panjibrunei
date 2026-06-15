@@ -1,4 +1,4 @@
-import { ERAS, MONUMENT_TICKS } from '../sim/sim.js';
+import { ERAS, MONUMENT_TICKS, MARKET_RATES } from '../sim/sim.js';
 import { iconSVG } from './icons.js';
 import factionsData from '../data/factions.json' with { type: 'json' };
 
@@ -31,8 +31,9 @@ const RES_META = [
 ];
 
 const BUILD_ORDER = [
-  'rumah_kampong', 'kebun', 'balai_pahlawan', 'pangkalan', 'gerai_tukang',
-  'kubu', 'pagar', 'surau', 'panggung_panji', 'mahkota_monument',
+  'rumah_kampong', 'lumbung', 'kebun', 'kedai_runcit', 'balai_pahlawan',
+  'pangkalan', 'gerai_tukang', 'kubu', 'pagar', 'surau', 'balai_bomba',
+  'panggung_panji', 'mahkota_monument',
 ];
 
 function el(tag, cls, parent, html) {
@@ -164,10 +165,13 @@ export class HUD {
     const p = this.sim.players[0];
     for (const [key] of RES_META) {
       const v = Math.floor(p.resources[key] ?? 0);
-      this.resEls[key].textContent = v;
+      const cap = p.resCap ? p.resCap[key] : 0;
+      // show "value / cap"; flag when storage is full (gathering is wasted)
+      this.resEls[key].textContent = cap ? `${v}/${cap}` : `${v}`;
+      const cell = this.resCells[key];
+      cell.classList.toggle('full', cap > 0 && v >= cap - 1);
       // pulse the cell when the value jumps up noticeably
       if (this.lastRes[key] !== undefined && v - this.lastRes[key] >= 3) {
-        const cell = this.resCells[key];
         cell.classList.remove('bump');
         void cell.offsetWidth; // retrigger the keyframe
         cell.classList.add('bump');
@@ -404,6 +408,28 @@ export class HUD {
           disabled: p.era > player.era || !sim.canAfford(0, cost),
           onClick: () => { sim.cmdTrain(building.id, protoId); this.refreshTop(); },
         });
+      }
+      // Kedai Runcit: buy/sell resources for gold (mercenaries are the
+      // building's `trains`, shown above)
+      if (building.proto.market) {
+        for (const [res, rate] of Object.entries(MARKET_RATES)) {
+          const earn = Math.round(rate.sell * rate.batch);
+          this.tile(grid, {
+            icon: res, name: `Sell ${rate.batch}`, sub: `+${earn}g`,
+            desc: `Sell ${rate.batch} ${res} → ${earn} gold`,
+            disabled: (player.resources[res] ?? 0) < rate.batch,
+            cls: 'sell-tile',
+            onClick: () => { sim.marketTrade(building.id, res, 'sell'); this.refreshTop(); },
+          });
+          const cost = Math.round(rate.buy * rate.batch);
+          this.tile(grid, {
+            icon: res, name: `Buy ${rate.batch}`, sub: `-${cost}g`,
+            desc: `Buy ${rate.batch} ${res} for ${cost} gold`,
+            disabled: (player.resources.gold ?? 0) < cost,
+            cls: 'buy-tile',
+            onClick: () => { sim.marketTrade(building.id, res, 'buy'); this.refreshTop(); },
+          });
+        }
       }
       if (building.protoId === 'panggung_panji') {
         const heroProto = sim.protos.units[player.faction.hero];

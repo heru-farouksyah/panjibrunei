@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BUILDING_MODEL_BUILDERS } from './buildingModels.js';
+import { loadGLTF, warnFallback, cloneTemplate } from './modelLoader.js';
 import manifest from '../data/models.json' with { type: 'json' };
 import factionsData from '../data/factions.json' with { type: 'json' };
 
@@ -244,12 +245,44 @@ export class BuildingRenderer {
     const entry = manifest.buildings[protoId];
     const builder = BUILDING_MODEL_BUILDERS[entry?.builder ?? protoId];
     if (!builder) return new THREE.Group();
-    return builder();
+    const group = builder();
+    // tag the procedural model parts so a later GLTF swap can replace just
+    // these, leaving the flag / selection ring / era-decor in place
+    for (const child of group.children) child.userData.procModel = true;
+    return group;
+  }
+
+  // If the manifest names a GLTF for this building, swap it in once loaded,
+  // replacing the procedural model meshes but keeping flag/ring/era systems.
+  // On failure we keep procedural and warn once. (Note: GLTF buildings don't
+  // get procedural storage-pile/era-decor geometry — see ART_PIPELINE.md.)
+  _upgradeBuildingGLTF(group, protoId, owner, size) {
+    const path = manifest.buildings[protoId]?.gltf;
+    if (!path) return;
+    loadGLTF(path, { targetHeight: Math.max(1, size * 1.4) })
+      .then((template) => {
+        for (const child of [...group.children]) {
+          if (child.userData?.procModel) group.remove(child);
+        }
+        const model = cloneTemplate(template);
+        model.userData.procModel = true;
+        group.add(model);
+        captureBaseColors(group);
+        this.tintFaction(group, owner);
+        this.materialPatcher?.(model);
+      })
+      .catch((err) => warnFallback(path, err));
   }
 
   tintFaction(group, owner) {
-    const color = FACTION_COLORS[this.sim.players[owner]?.factionId];
-    if (!color) return;
+    const hex = this.sim.players[owner]?.faction?.color;
+    if (!hex) return;
+    this._fcCache ??= new Map();
+    let color = this._fcCache.get(owner);
+    if (!color) {
+      color = new THREE.Color(hex);
+      this._fcCache.set(owner, color);
+    }
     group.traverse((n) => {
       if (n.isMesh && n.material.userData?.faction) n.material.color.copy(color);
     });
@@ -274,6 +307,7 @@ export class BuildingRenderer {
         }
         this.tintFaction(group, e.owner);
         this.materialPatcher?.(group); // fog-of-war shader patch
+        this._upgradeBuildingGLTF(group, e.protoId, e.owner, e.size); // data drop-in
         group.position.set(e.x, sim.grid.heightAt(e.x, e.z) - 0.03, e.z);
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(e.size * 0.62, e.size * 0.62 + 0.1, 28),
@@ -293,10 +327,46 @@ export class BuildingRenderer {
           scaffold.position.set(e.x, sim.grid.heightAt(e.x, e.z) - 0.03, e.z);
           this.scene.add(scaffold);
         }
-        rec = { group, ring, scaffold, flag, decor: null, era: -1, wasComplete: e.complete, dustT: 0 };
+        let pile = null;
+        group.traverse((n) => { if (n.userData?.storagePile) pile = n; });
+        // always-on health bar (shown whenever the building is damaged, on
+        // fire, or selected) so you can watch any structure being torn down
+        const barBg = new THREE.Sprite(new THREE.SpriteMaterial({
+          color: 0x10140e, transparent: true, opacity: 0.8, depthTest: false,
+        }));
+        barBg.renderOrder = 12;
+        barBg.visible = false;
+        const barFg = new THREE.Sprite(new THREE.SpriteMaterial({
+          color: 0x7dc35a, transparent: true, opacity: 0.95, depthTest: false,
+        }));
+        barFg.center.set(0, 0.5);
+        barFg.renderOrder = 13;
+        barFg.visible = false;
+        this.scene.add(barBg);
+        this.scene.add(barFg);
+        rec = { group, ring, scaffold, flag, pile, barBg, barFg, decor: null, era: -1, wasComplete: e.complete, dustT: 0 };
         this.groups.set(e.id, rec);
       }
       const visible = !isVisible || isVisible(e);
+
+      // health bar
+      const dmg = e.hp < e.maxHp - 0.5;
+      const showBar = e.complete && visible && (dmg || e.burning > 0 || selection?.has(e.id) === true);
+      if (showBar) {
+        const pct = Math.max(0, e.hp / e.maxHp);
+        const w = Math.min(1.7, e.size * 0.7);
+        const by = sim.grid.heightAt(e.x, e.z) + e.size * 1.25 + 0.6;
+        rec.barBg.position.set(e.x, by, e.z);
+        rec.barBg.scale.set(w + 0.07, 0.11, 1);
+        rec.barFg.position.set(e.x - w / 2, by, e.z);
+        rec.barFg.scale.set(Math.max(0.001, w * pct), 0.085, 1);
+        rec.barFg.material.color.setHex(pct > 0.6 ? 0x7dc35a : pct > 0.3 ? 0xd9b13b : 0xd95f3b);
+        rec.barBg.visible = true;
+        rec.barFg.visible = true;
+      } else {
+        rec.barBg.visible = false;
+        rec.barFg.visible = false;
+      }
 
       // era appearance upgrade: restyle the building when its owner advances
       const era = sim.players[e.owner]?.era ?? 1;
@@ -338,6 +408,22 @@ export class BuildingRenderer {
         }
       }
 
+      // storehouse sack pile grows with how full this owner's storage is
+      if (rec.pile && e.complete) {
+        const p = sim.players[e.owner];
+        let fill = 0.25;
+        if (p?.resCap) {
+          let stored = 0;
+          let cap = 0;
+          for (const r of ['food', 'timber', 'gold', 'camphor']) {
+            stored += p.resources[r] ?? 0;
+            cap += p.resCap[r] ?? 0;
+          }
+          if (cap > 0) fill = 0.25 + 0.75 * Math.min(1, stored / cap);
+        }
+        rec.pile.scale.setScalar(fill);
+      }
+
       rec.group.visible = visible;
       rec.ring.visible = visible && selection?.has(e.id) === true;
     });
@@ -347,6 +433,8 @@ export class BuildingRenderer {
       if (!seen.has(id)) {
         this.scene.remove(rec.group);
         if (rec.scaffold) this.scene.remove(rec.scaffold);
+        if (rec.barBg) this.scene.remove(rec.barBg);
+        if (rec.barFg) this.scene.remove(rec.barFg);
         if (rec.flag) this.flags = this.flags.filter((f) => f !== rec.flag);
         this.groups.delete(id);
       }

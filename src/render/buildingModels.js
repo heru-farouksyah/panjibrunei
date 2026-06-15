@@ -130,6 +130,76 @@ export function buildKebun() {
   return g;
 }
 
+export function buildLumbung() {
+  const g = new THREE.Group();
+  // raised rice-granary on stilts
+  posts(g, 1.4, 1.4, 0.5, 0.16);
+  add(g, box(1.5, 0.12, 1.5), mat(POST), 0, 0.56, 0);
+  add(g, box(1.3, 0.66, 1.3), mat(WALL), 0, 0.95, 0); // store body
+  add(g, box(1.34, 0.07, 1.34), mat(WALL_LIGHT), 0, 0.66, 0);
+  // bowed thatch roof (two stacked cones for a rounded granary look)
+  add(g, pyramid(1.25, 0.5), mat(THATCH), 0, 1.45, 0);
+  add(g, new THREE.SphereGeometry(0.62, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(THATCH), 0, 1.62, 0);
+  add(g, box(0.4, 0.4, 0.04), mat(ROOF_DARK), 0, 0.92, 0.66); // hatch
+  // a pile of sacks/baskets out front — scaled by fill level at render time
+  const pile = new THREE.Group();
+  const sackMat = mat(0xb9a86a);
+  const sacks = [[-0.25, 0, 0.2], [0.0, 0, 0.18], [0.25, 0, 0.22], [-0.12, 0.18, 0.2], [0.14, 0.18, 0.21], [0.02, 0.34, 0.2]];
+  for (const [x, y, z] of sacks) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), sackMat);
+    s.position.set(x, 0.62 + y, 0.78 + z * 0.1);
+    s.scale.set(1, 0.85, 1);
+    s.castShadow = true;
+    pile.add(s);
+  }
+  pile.userData.storagePile = true; // buildingRenderer scales this by fill
+  g.add(pile);
+  return g;
+}
+
+export function buildKedaiRuncit() {
+  const g = new THREE.Group();
+  // plank platform + corner poles
+  add(g, box(1.7, 0.12, 1.7), mat(POST), 0, 0.06, 0);
+  posts(g, 1.55, 1.55, 1.05, 0.12);
+  // shop counter at the front with goods on top
+  add(g, box(1.5, 0.5, 0.36), mat(WALL), 0, 0.35, 0.56);
+  add(g, box(1.6, 0.07, 0.46), mat(WALL_LIGHT), 0, 0.63, 0.56);
+  add(g, box(0.28, 0.24, 0.26), mat(0x6b4a2f), -0.42, 0.79, 0.54); // crate
+  add(g, box(0.24, 0.2, 0.24), mat(THATCH), -0.05, 0.77, 0.55); // basket
+  add(g, new THREE.SphereGeometry(0.12, 7, 5), mat(0xc25b3a), 0.32, 0.76, 0.55); // produce
+  add(g, new THREE.SphereGeometry(0.1, 7, 5), mat(0xd8b94a), 0.5, 0.74, 0.55);
+  // striped cloth awning (slightly peaked) + eave
+  add(g, box(1.82, 0.04, 1.82), mat(0xb56b46), 0, 1.12, 0);
+  add(g, pyramid(1.4, 0.42), mat(0x9c4f33), 0, 1.32, 0);
+  add(g, box(1.84, 0.16, 0.08), mat(0xe7d9b0), 0, 1.08, 0.9); // valance trim
+  // hanging gold scales (a market motif)
+  add(g, cyl(0.015, 0.015, 0.3, 5), mat(0x9a7434, { metalness: 0.5 }), 0.62, 0.95, -0.5);
+  add(g, cyl(0.12, 0.12, 0.02, 10), mat(0xc9a23b, { metalness: 0.6, roughness: 0.3 }), 0.62, 0.8, -0.5);
+  return g;
+}
+
+export function buildBalaiBomba() {
+  const g = new THREE.Group();
+  // stone-footed hall
+  add(g, box(1.7, 0.16, 1.7), mat(STONE), 0, 0.08, 0);
+  add(g, box(1.5, 0.66, 1.5), mat(0x8a4438), 0, 0.5, 0); // reddish station walls
+  add(g, box(1.54, 0.08, 1.54), mat(0xd8cdb0), 0, 0.86, 0); // white trim
+  add(g, pyramid(1.4, 0.5), mat(ROOF_DARK), 0, 1.15, 0);
+  // big garage door
+  add(g, box(0.7, 0.5, 0.04), mat(0x4a3a2a), 0, 0.42, 0.76);
+  // water tank (barrel) raised on a frame
+  add(g, cyl(0.05, 0.05, 0.7, 5), mat(POST), -0.55, 0.55, -0.55);
+  add(g, cyl(0.05, 0.05, 0.7, 5), mat(POST), -0.25, 0.55, -0.55);
+  add(g, cyl(0.26, 0.26, 0.34, 10), mat(0x3a6f86), -0.4, 1.05, -0.55); // water tank
+  add(g, cyl(0.27, 0.27, 0.05, 10), mat(0x2a5566), -0.4, 1.24, -0.55);
+  // alarm bell on a post + a coiled hose
+  add(g, cyl(0.02, 0.02, 0.5, 5), mat(POST), 0.62, 0.5, -0.5);
+  add(g, new THREE.SphereGeometry(0.1, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xc9a23b, { metalness: 0.6, roughness: 0.3 }), 0.62, 0.74, -0.5);
+  add(g, new THREE.TorusGeometry(0.13, 0.04, 6, 12), mat(0x2a2a2a), 0.5, 0.32, 0.5, { rx: Math.PI / 2 });
+  return g;
+}
+
 export function buildPangkalan() {
   const g = new THREE.Group();
   // tall stilts — it stands over the shoreline
@@ -277,6 +347,9 @@ export function buildRubble() {
 export const BUILDING_MODEL_BUILDERS = {
   istana: buildIstana,
   rumah_kampong: buildRumahKampong,
+  lumbung: buildLumbung,
+  kedai_runcit: buildKedaiRuncit,
+  balai_bomba: buildBalaiBomba,
   kebun: buildKebun,
   pangkalan: buildPangkalan,
   balai_pahlawan: buildBalaiPahlawan,

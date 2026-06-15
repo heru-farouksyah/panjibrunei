@@ -98,16 +98,20 @@ export function movementSystem(sim) {
     }
   });
 
-  // --- 2. separation + active yield ---
+  // --- 2. hard de-overlap (collision resolution) ---
+  // Weak steering let crowds pile up (gatherers especially). Instead, every
+  // overlapping pair is pushed fully apart: each unit moves HALF the overlap
+  // away from each neighbour. Both units do this, so a pair settles to exactly
+  // their combined radius and then stays put — no jitter, no drift off nodes.
+  // Applies to EVERY unit (gathering, idle, moving) so nothing ever stacks.
   pool.forEach((e) => {
     if (e.kind !== 'unit') return;
     const moving = e.path !== null;
-    const busy = e.state === 'gathering' || e.state === 'building';
     let pushX = 0;
     let pushZ = 0;
     let yielding = false;
 
-    hash.near(e.x, e.z, e.radius + 0.7, (o) => {
+    hash.near(e.x, e.z, e.radius + 1.0, (o) => {
       if (o === e || o.proto.domain !== e.proto.domain) return;
       let dx = e.x - o.x;
       let dz = e.z - o.z;
@@ -115,28 +119,25 @@ export function movementSystem(sim) {
       const minD = e.radius + o.radius;
       if (d >= minD) return;
       if (d < 1e-4) {
-        const a = (e.id * 2.399) % (Math.PI * 2);
+        // exactly stacked (e.g. fresh spawns): scatter deterministically by id
+        const a = (e.id * 2.3998277) % (Math.PI * 2);
         dx = Math.sin(a);
         dz = Math.cos(a);
         d = 0.001;
       }
-      let w = (minD - d) / minD;
-      // The other unit is moving and I am not: get out of its way decisively.
+      let push = (minD - d) * 0.5; // move half; the neighbour moves the rest
       if (!moving && o.path) {
-        w *= 2.6;
+        push *= 1.6; // step out of a mover's lane decisively
         yielding = true;
       }
-      pushX += (dx / d) * w;
-      pushZ += (dz / d) * w;
+      pushX += (dx / d) * push;
+      pushZ += (dz / d) * push;
     });
 
     if (pushX !== 0 || pushZ !== 0) {
       const len = Math.hypot(pushX, pushZ);
-      // idle units yielding to traffic clear the lane fast; idle units spread
-      // out firmly so they don't pile up; workers keep a little spacing but
-      // stay on their node; movers nudge modestly.
-      const cap = yielding ? 0.18 : busy ? 0.05 : moving ? 0.07 : 0.13;
-      const mv = Math.min(cap, len * 0.12);
+      const cap = yielding ? 0.34 : 0.26; // firm de-overlap, never teleport
+      const mv = Math.min(len, cap);
       const ux = (pushX / len) * mv;
       const uz = (pushZ / len) * mv;
       const domain = e.proto.domain;
@@ -150,8 +151,8 @@ export function movementSystem(sim) {
       }
     }
 
-    e.x = Math.max(0.2, Math.min(GRID - 0.2, e.x));
-    e.z = Math.max(0.2, Math.min(GRID - 0.2, e.z));
+    e.x = Math.max(0.2, Math.min(grid.size - 0.2, e.x));
+    e.z = Math.max(0.2, Math.min(grid.size - 0.2, e.z));
   });
 
   // --- 3. unjam stalled movers: skip a waypoint, then re-plan ---

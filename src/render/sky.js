@@ -3,18 +3,19 @@ import * as THREE from 'three';
 // A gradient sky dome — warm hazy horizon rising to a soft blue zenith.
 // Gives the scene atmospheric depth while keeping the stylized look. The
 // horizon color is meant to match the scene fog so terrain melts into it.
-export function buildSky(center, radius = 340) {
+export function buildSky(center, theme, radius = 340) {
+  const sc = (theme && theme.sky) || { top: 0x6f9ec6, mid: 0xaec6c4, horizon: 0xe4d4ad, sun: 0xffe6b0 };
   const geo = new THREE.SphereGeometry(radius, 24, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
     uniforms: {
-      uTop: { value: new THREE.Color(0x6f9ec6) },
-      uMid: { value: new THREE.Color(0xaec6c4) },
-      uHorizon: { value: new THREE.Color(0xe4d4ad) },
+      uTop: { value: new THREE.Color(sc.top) },
+      uMid: { value: new THREE.Color(sc.mid) },
+      uHorizon: { value: new THREE.Color(sc.horizon) },
       uSunDir: { value: new THREE.Vector3(0.55, 0.55, 0.35).normalize() },
-      uSun: { value: new THREE.Color(0xffe6b0) },
+      uSun: { value: new THREE.Color(sc.sun) },
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;

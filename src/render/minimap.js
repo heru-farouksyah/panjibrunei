@@ -36,15 +36,15 @@ export class Minimap {
 
     // baked terrain layer (redrawn only when nodes deplete)
     this.baked = document.createElement('canvas');
-    this.baked.width = GRID;
-    this.baked.height = GRID;
+    this.baked.width = this.sim.grid.size;
+    this.baked.height = this.sim.grid.size;
     this.bakeTerrain();
 
     const toWorld = (ev) => {
       const r = this.canvas.getBoundingClientRect();
       return {
-        x: ((ev.clientX - r.left) / r.width) * GRID,
-        z: ((ev.clientY - r.top) / r.height) * GRID,
+        x: ((ev.clientX - r.left) / r.width) * this.sim.grid.size,
+        z: ((ev.clientY - r.top) / r.height) * this.sim.grid.size,
       };
     };
     this.canvas.addEventListener('mousedown', (ev) => {
@@ -76,8 +76,8 @@ export class Minimap {
   bakeTerrain() {
     const ctx = this.baked.getContext('2d');
     const grid = this.sim.grid;
-    for (let z = 0; z < GRID; z++) {
-      for (let x = 0; x < GRID; x++) {
+    for (let z = 0; z < this.sim.grid.size; z++) {
+      for (let x = 0; x < this.sim.grid.size; x++) {
         ctx.fillStyle = TILE_COLORS[grid.typeAt(x, z)] ?? '#000';
         ctx.fillRect(x, z, 1, 1);
       }
@@ -102,7 +102,7 @@ export class Minimap {
 
   draw() {
     const { ctx, sim } = this;
-    const S = this.canvas.width / GRID;
+    const S = this.canvas.width / this.sim.grid.size;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.baked, 0, 0, this.canvas.width, this.canvas.height);
 
@@ -110,15 +110,15 @@ export class Minimap {
     const vis = sim.fog.visible[0];
     const exp = sim.fog.explored[0];
     ctx.fillStyle = 'rgba(0,0,0,0.92)';
-    for (let z = 0; z < GRID; z += 2) {
-      for (let x = 0; x < GRID; x += 2) {
-        if (!exp[z * GRID + x]) ctx.fillRect(x * S, z * S, S * 2, S * 2);
+    for (let z = 0; z < this.sim.grid.size; z += 2) {
+      for (let x = 0; x < this.sim.grid.size; x += 2) {
+        if (!exp[z * this.sim.grid.size + x]) ctx.fillRect(x * S, z * S, S * 2, S * 2);
       }
     }
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    for (let z = 0; z < GRID; z += 2) {
-      for (let x = 0; x < GRID; x += 2) {
-        const i = z * GRID + x;
+    for (let z = 0; z < this.sim.grid.size; z += 2) {
+      for (let x = 0; x < this.sim.grid.size; x += 2) {
+        const i = z * this.sim.grid.size + x;
         if (exp[i] && !vis[i]) ctx.fillRect(x * S, z * S, S * 2, S * 2);
       }
     }
@@ -128,7 +128,7 @@ export class Minimap {
       if (e.owner < 0) return;
       if (e.kind !== 'unit' && e.kind !== 'building') return;
       if (!sim.isVisibleToPlayer(0, e)) return;
-      const color = factionsData[sim.players[e.owner]?.factionId]?.color ?? '#fff';
+      const color = sim.players[e.owner]?.faction?.color ?? '#fff';
       ctx.fillStyle = color;
       if (e.kind === 'building') {
         const s = Math.max(3, e.size * S);

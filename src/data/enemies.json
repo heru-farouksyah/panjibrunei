@@ -1,0 +1,25 @@
+{
+  "_doc": "Themed enemy kingdoms. Each borrows a base Panji faction's hero/ultimate/bonus, then overrides the display name + banner colour and layers on a specialty modifier. Used for the 2 (Easy) or 4 (Normal) rival AI kingdoms.",
+  "themes": [
+    {
+      "id": "black_magic", "name": "Black Magic Cult", "color": "#7a3ca8",
+      "base": "badar", "specialty": "Dark sorcery — shadow warriors that strike from the treeline",
+      "extraMods": { "infHpMult": 1.12 }
+    },
+    {
+      "id": "drug_king", "name": "Drug King's Syndicate", "color": "#c2741f",
+      "base": "sakam", "specialty": "Crazed, drugged fighters that move and train faster",
+      "extraMods": {}
+    },
+    {
+      "id": "corruption", "name": "Corruption Master", "color": "#9a9637",
+      "base": "shahbandar", "specialty": "Bribery and graft flood their coffers with gold",
+      "extraMods": { "foodCostMult": 0.9 }
+    },
+    {
+      "id": "pirate_lord", "name": "Pirate Lord's Fleet", "color": "#2f7a86",
+      "base": "semaun", "specialty": "Hardened sea-raiders with very tough infantry",
+      "extraMods": { "infHpMult": 1.12 }
+    }
+  ]
+}

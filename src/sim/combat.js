@@ -108,8 +108,14 @@ function fireProjectile(sim, attacker, target, proto) {
   p.projArc = proto.projArc === true;
   p.projSplash = proto.splash ?? 0;
   p.projThrown = attacker.proto.tags?.includes('thrower') === true;
+  // ignition: firebomb throwers always set a blaze; archers do once the
+  // player has researched Fire Arrows
+  const mods = sim.players[attacker.owner]?.mods;
+  if (attacker.proto.firebomb) p.projIgnite = (proto.splash ?? 1) + 0.5;
+  else if (mods?.fireArrows && attacker.proto.tags?.includes('archer')) p.projIgnite = 0;
+  else p.projIgnite = -1;
   p.projOwnerEnt = attacker.id;
-  sim.emit('shoot', { x: attacker.x, z: attacker.z });
+  sim.emit('shoot', { x: attacker.x, z: attacker.z, thrown: p.projThrown, splash: p.projSplash });
 }
 
 function projectileImpact(sim, p) {
@@ -137,6 +143,8 @@ function projectileImpact(sim, p) {
       applyDamage(sim, attacker, target, p.projDmg, attackerProto);
     }
   }
+  // fire arrows / firebombs set the ground (and anything on it) alight
+  if (p.projIgnite >= 0) sim.fire.ignite(sim, p.x, p.z, p.projIgnite);
   sim.pool.kill(p);
 }
 

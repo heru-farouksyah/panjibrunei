@@ -67,24 +67,26 @@ export class Pathfinder {
     this.budgetPerTick = 6;
     this.cache = new Map(); // key -> waypoint array (shared, read-only)
     // Reusable search state, generation-stamped to avoid clearing.
-    this.g = new Float32Array(GRID * GRID);
-    this.parent = new Int32Array(GRID * GRID);
-    this.openStamp = new Int32Array(GRID * GRID);
-    this.closedStamp = new Int32Array(GRID * GRID);
+    const cells = grid.size * grid.size;
+    this.g = new Float32Array(cells);
+    this.parent = new Int32Array(cells);
+    this.openStamp = new Int32Array(cells);
+    this.closedStamp = new Int32Array(cells);
     this.generation = 0;
     this.heap = new BinaryHeap();
   }
 
   // Nearest passable tile to (tx, tz), spiraling outward. Returns index or -1.
   nearestPassable(tx, tz, domain, maxR = 6) {
-    if (this.grid.passable(tx, tz, domain)) return tz * GRID + tx;
+    const G = this.grid.size;
+    if (this.grid.passable(tx, tz, domain)) return tz * G + tx;
     for (let r = 1; r <= maxR; r++) {
       for (let dz = -r; dz <= r; dz++) {
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
           const x = tx + dx;
           const z = tz + dz;
-          if (this.grid.passable(x, z, domain)) return z * GRID + x;
+          if (this.grid.passable(x, z, domain)) return z * G + x;
         }
       }
     }
@@ -104,15 +106,16 @@ export class Pathfinder {
 
     const targetIdx = this.nearestPassable(tx, tz, domain);
     if (targetIdx < 0) return null;
-    const goalX = targetIdx % GRID;
-    const goalZ = (targetIdx / GRID) | 0;
+    const G = this.grid.size;
+    const goalX = targetIdx % G;
+    const goalZ = (targetIdx / G) | 0;
 
     const grid = this.grid;
     const gen = ++this.generation;
     const heap = this.heap;
     heap.clear();
 
-    const startIdx = sz * GRID + sx;
+    const startIdx = sz * G + sx;
     this.g[startIdx] = 0;
     this.parent[startIdx] = -1;
     this.openStamp[startIdx] = gen;
@@ -135,8 +138,8 @@ export class Pathfinder {
         break;
       }
 
-      const cx = cur % GRID;
-      const cz = (cur / GRID) | 0;
+      const cx = cur % G;
+      const cz = (cur / G) | 0;
       const h = octile(goalX - cx, goalZ - cz);
       if (h < bestH) {
         bestH = h;
@@ -154,7 +157,7 @@ export class Pathfinder {
               (!grid.passable(cx + dx, cz, domain) || !grid.passable(cx, cz + dz, domain))) {
             continue;
           }
-          const ni = nz * GRID + nx;
+          const ni = nz * G + nx;
           if (this.closedStamp[ni] === gen) continue;
           const step = dx !== 0 && dz !== 0 ? DIAG : 1;
           const ng = this.g[cur] + step;
@@ -172,7 +175,7 @@ export class Pathfinder {
     const path = [];
     let node = found ? targetIdx : bestIdx;
     while (node !== -1 && node !== startIdx) {
-      path.push({ x: (node % GRID) + 0.5, z: ((node / GRID) | 0) + 0.5 });
+      path.push({ x: (node % G) + 0.5, z: ((node / G) | 0) + 0.5 });
       node = this.parent[node];
     }
     path.reverse();

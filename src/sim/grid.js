@@ -3,14 +3,14 @@ import { GRID, TileType } from './constants.js';
 // Logical tile grid. Owns tile types and the heightfield (vertex heights are
 // (GRID+1)^2 so the render layer can build a mesh without recomputing).
 export class Grid {
-  constructor() {
-    this.size = GRID;
-    this.types = new Uint8Array(GRID * GRID);
-    this.vertexHeights = new Float32Array((GRID + 1) * (GRID + 1));
+  constructor(size = GRID) {
+    this.size = size;
+    this.types = new Uint8Array(size * size);
+    this.vertexHeights = new Float32Array((size + 1) * (size + 1));
     this.startZones = []; // [{x, y}] tile coords, player first
     this.props = [];      // [{type, x, z, rot, scale}] world-space placements
-    this.occupied = new Int32Array(GRID * GRID);  // building entity id + 1, 0 = free
-    this.resources = new Float32Array(GRID * GRID); // remaining amount on node tiles
+    this.occupied = new Int32Array(size * size);  // building entity id + 1, 0 = free
+    this.resources = new Float32Array(size * size); // remaining amount on node tiles
     this.fishTiles = new Set(); // tile indices of water tiles holding fish
   }
 

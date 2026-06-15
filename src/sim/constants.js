@@ -1,6 +1,10 @@
 // Logical world constants. The sim layer must never import Three.js.
 
-export const GRID = 96;            // logical grid is GRID x GRID tiles
+export const GRID = 96;            // default logical grid (GRID x GRID tiles)
+// Selectable map sizes. GRID (96) stays the default so seeded tests, which
+// never pass a size, generate byte-identical maps. The tile-index stride is the
+// grid's instance size everywhere, so any of these is internally consistent.
+export const MAP_SIZES = { small: 72, medium: 96, large: 128 };
 export const TILE = 1;             // world units per tile (render scale)
 export const TICK_RATE = 20;       // sim ticks per second
 export const TICK_MS = 1000 / TICK_RATE;

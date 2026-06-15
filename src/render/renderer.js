@@ -9,39 +9,54 @@ import { FogRenderer } from './fogRender.js';
 import { ProjectileRenderer } from './projectileRenderer.js';
 import { VFX } from './vfx.js';
 import { AmbientLife } from './ambient.js';
+import { FireRenderer } from './fireRenderer.js';
+import { getTheme } from './themes.js';
+import { getGraphics } from './settings.js';
 import { buildSky } from './sky.js';
+
+// Graphics-quality presets (Phase 12). Applied at construction; the Settings
+// menu hint tells the player changes take effect on the next match.
+const GFX = {
+  low:    { pixelRatio: 1,   shadows: false, shadowSize: 1024, ambient: 0.35 },
+  medium: { pixelRatio: 1.5, shadows: true,  shadowSize: 1024, ambient: 0.7 },
+  high:   { pixelRatio: 2,   shadows: true,  shadowSize: 2048, ambient: 1.0 },
+};
 
 // Owns the WebGL renderer, scene, lighting and all world meshes.
 // Style C: grounded semi-realistic tropical — warm golden sun, soft haze,
 // muted earthy palette, filmic tone mapping.
 export class GameRenderer {
-  constructor(container, sim) {
+  constructor(container, sim, themeId) {
     const grid = sim.grid;
     this.sim = sim;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const theme = getTheme(themeId);
+    this.theme = theme;
+    const gfx = GFX[getGraphics()] ?? GFX.high;
+    this.gfx = gfx;
+    this.renderer = new THREE.WebGLRenderer({ antialias: gfx.pixelRatio > 1 });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, gfx.pixelRatio));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = gfx.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = theme.exposure;
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    // warm hazy horizon; terrain melts into it via matching fog
-    this.scene.background = new THREE.Color(0xc7d2c8);
-    this.scene.fog = new THREE.FogExp2(0xdccca6, 0.0036);
+    // hazy horizon; terrain melts into it via matching fog
+    this.scene.background = new THREE.Color(theme.background);
+    this.scene.fog = new THREE.FogExp2(theme.fog, theme.fogDensity);
 
     // gradient sky dome behind everything
-    const center = GRID / 2;
-    this.scene.add(buildSky(center));
+    const center = grid.size / 2;
+    this.scene.add(buildSky(center, theme));
 
-    // Golden tropical sun + cool sky fill, higher-res soft shadows.
-    const sun = new THREE.DirectionalLight(0xffe1b0, 2.9);
+    // key sun + cool sky fill, soft shadows (coloured per theme).
+    const sun = new THREE.DirectionalLight(theme.sun.color, theme.sun.intensity);
     sun.position.set(center + 55, 88, center + 38);
     sun.target.position.set(center, 0, center);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.castShadow = gfx.shadows;
+    sun.shadow.mapSize.set(gfx.shadowSize, gfx.shadowSize);
     sun.shadow.camera.left = -80;
     sun.shadow.camera.right = 80;
     sun.shadow.camera.top = 80;
@@ -55,7 +70,7 @@ export class GameRenderer {
     this.sun = sun;
 
     // sky/ground hemisphere fill + a soft warm bounce from the far side
-    const hemi = new THREE.HemisphereLight(0xbcd2dd, 0x7a6638, 0.6);
+    const hemi = new THREE.HemisphereLight(theme.hemi.sky, theme.hemi.ground, theme.hemi.intensity);
     this.scene.add(hemi);
     const fill = new THREE.DirectionalLight(0xbfd0e0, 0.35);
     fill.position.set(center - 60, 50, center - 40);
@@ -70,10 +85,10 @@ export class GameRenderer {
     skirt.position.set(center, -1.6, center);
     this.scene.add(skirt);
 
-    this.terrain = buildTerrain(grid);
+    this.terrain = buildTerrain(grid, themeId);
     this.scene.add(this.terrain);
 
-    this.water = buildWater(grid);
+    this.water = buildWater(grid, themeId);
     this.scene.add(this.water);
 
     this.props = buildProps(grid);
@@ -83,7 +98,8 @@ export class GameRenderer {
     this.buildings = new BuildingRenderer(this.scene, sim);
     this.projectiles = new ProjectileRenderer(this.scene, sim);
     this.vfx = new VFX(this.scene, sim);
-    this.ambient = new AmbientLife(this.scene);
+    this.ambient = new AmbientLife(this.scene, gfx.ambient, grid.size);
+    this.fireRenderer = new FireRenderer(this.scene, sim);
 
     this.fogOfWar = new FogRenderer(this.scene, sim, this.terrain);
     this.fogOfWar.patchGroup(this.props.group);
@@ -133,6 +149,7 @@ export class GameRenderer {
     this.projectiles.update(alpha, isVisible);
     this.vfx.update(dt, alpha);
     this.ambient.update(dt, timeSec);
+    this.fireRenderer.update(timeSec, isVisible);
     this.renderer.render(this.scene, this.camera);
   }
 

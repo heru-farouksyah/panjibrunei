@@ -9,8 +9,10 @@ export class FogRenderer {
   constructor(scene, sim, terrainMesh) {
     this.sim = sim;
     this.version = -1;
-    this.data = new Uint8Array(GRID * GRID);
-    this.texture = new THREE.DataTexture(this.data, GRID, GRID, THREE.RedFormat, THREE.UnsignedByteType);
+    const size = sim.grid.size;
+    this.gridSize = size;
+    this.data = new Uint8Array(size * size);
+    this.texture = new THREE.DataTexture(this.data, size, size, THREE.RedFormat, THREE.UnsignedByteType);
     this.texture.magFilter = THREE.LinearFilter;
     this.texture.minFilter = THREE.LinearFilter;
     this.uniform = { value: this.texture };
@@ -32,7 +34,7 @@ export class FogRenderer {
         uniform sampler2D uFog;
         varying vec2 vXZ;
         void main() {
-          float f = texture2D(uFog, vXZ / ${GRID}.0).r;
+          float f = texture2D(uFog, vXZ / ${size}.0).r;
           // visible -> 0 alpha; explored -> dim; unexplored -> near black
           float alpha = mix(0.88, 0.0, smoothstep(0.0, 1.0, f));
           alpha = min(alpha, mix(0.88, 0.42, smoothstep(0.0, 0.55, f)));
@@ -68,7 +70,7 @@ export class FogRenderer {
         .replace('#include <common>', '#include <common>\nuniform sampler2D uPanjiFog;\nvarying vec2 vPanjiXZ;')
         .replace(
           '#include <dithering_fragment>',
-          `float panjiF = texture2D(uPanjiFog, vPanjiXZ / ${GRID}.0).r;
+          `float panjiF = texture2D(uPanjiFog, vPanjiXZ / ${this.gridSize}.0).r;
           if (panjiF < 0.18) discard;
           gl_FragColor.rgb *= mix(0.4, 1.0, smoothstep(0.2, 0.95, panjiF));
           #include <dithering_fragment>`
@@ -89,7 +91,7 @@ export class FogRenderer {
     this.version = fog.version;
     const vis = fog.visible[0];
     const exp = fog.explored[0];
-    for (let i = 0; i < GRID * GRID; i++) {
+    for (let i = 0; i < this.gridSize * this.gridSize; i++) {
       this.data[i] = vis[i] ? 255 : exp[i] ? 128 : 0;
     }
     this.texture.needsUpdate = true;

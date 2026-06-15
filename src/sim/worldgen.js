@@ -19,14 +19,14 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-function buildRiver(seed) {
+function buildRiver(seed, size) {
   const points = [];
   const phase = hash2(seed, 11, 7) * Math.PI * 2;
   for (let i = 0; i <= RIVER_SAMPLES; i++) {
     const t = i / RIVER_SAMPLES;
-    const x = t * GRID;
+    const x = t * size;
     const y =
-      GRID / 2 +
+      size / 2 +
       Math.sin(t * Math.PI * 2 * 1.1 + phase) * 9 +
       (fbm(seed + 31, t * 5, 0.5, 3) - 0.5) * 14;
     points.push({ x, y, t });
@@ -68,19 +68,27 @@ function placeCluster(grid, rng, river, cx, cy, radius, type, count) {
   }
 }
 
-export function generateWorld(seed = 1337) {
+export function generateWorld(seed = 1337, numZones = 2, size = GRID) {
   const rng = mulberry32(seed);
-  const grid = new Grid();
-  const river = buildRiver(seed);
+  const grid = new Grid(size);
+  const river = buildRiver(seed, size);
 
-  const starts = [
-    { x: 18, y: 18 },
-    { x: GRID - 18, y: GRID - 18 },
+  // Start zones spread around the map (player + rival kingdoms). Only as many
+  // as there are players are generated, so a 2-player map is identical to the
+  // classic layout (keeps seeded sim tests stable).
+  const M = 18;
+  const CANDIDATES = [
+    { x: M, y: M },               // 0 player — NW
+    { x: size - M, y: size - M }, // 1 — SE (farthest)
+    { x: size - M, y: M },        // 2 — NE
+    { x: M, y: size - M },        // 3 — SW
+    { x: size / 2, y: M - 2 },    // 4 — N-centre
   ];
+  const starts = CANDIDATES.slice(0, Math.max(2, Math.min(5, numZones)));
   grid.startZones = starts;
 
-  // --- Heightfield (vertex grid, (GRID+1)^2) ---
-  const n = GRID + 1;
+  // --- Heightfield (vertex grid, (size+1)^2) ---
+  const n = size + 1;
   for (let vz = 0; vz < n; vz++) {
     for (let vx = 0; vx < n; vx++) {
       let h =
@@ -113,8 +121,8 @@ export function generateWorld(seed = 1337) {
   }
 
   // --- Tile classification ---
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
       const cx = x + 0.5;
       const cy = y + 0.5;
       const { dist, t } = riverInfo(river, cx, cy);
@@ -138,8 +146,8 @@ export function generateWorld(seed = 1337) {
   for (let i = 0; i < jungleClusters; i++) {
     let guard = 0;
     while (guard++ < 60) {
-      const cx = 4 + rng() * (GRID - 8);
-      const cy = 4 + rng() * (GRID - 8);
+      const cx = 4 + rng() * (size - 8);
+      const cy = 4 + rng() * (size - 8);
       const { dist, t } = riverInfo(river, cx, cy);
       if (dist < river.widthAt(t) + 3.5) continue;
       if (starts.some((s) => Math.hypot(cx - s.x, cy - s.y) < 13)) continue;
@@ -175,10 +183,10 @@ export function generateWorld(seed = 1337) {
     placeCluster(grid, rng, river, s.x + Math.cos(ca) * 16, s.y + Math.sin(ca) * 16, 2.2, TileType.CAMPHOR, 3);
   }
   // neutral contested resources near (but not in) the river midline
-  placeCluster(grid, rng, river, GRID * 0.5 + 9, GRID * 0.32, 2.5, TileType.GOLD, 4);
-  placeCluster(grid, rng, river, GRID * 0.5 - 9, GRID * 0.68, 2.5, TileType.GOLD, 4);
-  placeCluster(grid, rng, river, GRID * 0.32, GRID * 0.5, 2.5, TileType.CAMPHOR, 4);
-  placeCluster(grid, rng, river, GRID * 0.68, GRID * 0.5, 2.5, TileType.CAMPHOR, 4);
+  placeCluster(grid, rng, river, size * 0.5 + 9, size * 0.32, 2.5, TileType.GOLD, 4);
+  placeCluster(grid, rng, river, size * 0.5 - 9, size * 0.68, 2.5, TileType.GOLD, 4);
+  placeCluster(grid, rng, river, size * 0.32, size * 0.5, 2.5, TileType.CAMPHOR, 4);
+  placeCluster(grid, rng, river, size * 0.68, size * 0.5, 2.5, TileType.CAMPHOR, 4);
 
   // Keep a clear ring at the exact start tiles (build space).
   for (const s of starts) {
@@ -195,15 +203,15 @@ export function generateWorld(seed = 1337) {
   }
 
   // --- Resource amounts on node tiles ---
-  for (let i = 0; i < GRID * GRID; i++) {
+  for (let i = 0; i < size * size; i++) {
     const amount = NODE_AMOUNT[grid.types[i]];
     if (amount) grid.resources[i] = amount;
   }
 
   // --- Fish spots: spread along the river, min spacing so they're contested ---
   const fishPlaced = [];
-  for (let y = 2; y < GRID - 2; y += 2) {
-    for (let x = 2; x < GRID - 2; x += 2) {
+  for (let y = 2; y < size - 2; y += 2) {
+    for (let x = 2; x < size - 2; x += 2) {
       if (grid.typeAt(x, y) !== TileType.WATER) continue;
       if (hash2(seed + 200, x, y) > 0.1) continue;
       if (fishPlaced.some((f) => Math.hypot(f.x - x, f.y - y) < 7)) continue;
@@ -223,8 +231,8 @@ export function generateWorld(seed = 1337) {
 
   // --- Prop placements (deterministic, consumed by the render layer) ---
   const props = grid.props;
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
       const t = grid.typeAt(x, y);
       const h = hash2(seed + 91, x, y);
       if (t === TileType.JUNGLE) {

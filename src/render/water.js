@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { TileType, WATER_LEVEL } from '../sim/constants.js';
+import { getTheme } from './themes.js';
 
 // One merged quad per water/ford tile, animated by a small custom shader:
 // moving ripples, fresnel toward the hazy sky, golden sun glints.
-export function buildWater(grid) {
+export function buildWater(grid, themeId) {
+  const wc = getTheme(themeId).water;
   const positions = [];
   const indices = [];
   let quad = 0;
@@ -31,9 +33,9 @@ export function buildWater(grid) {
     THREE.UniformsLib.fog,
     {
       uTime: { value: 0 },
-      uDeep: { value: new THREE.Color(0x1d4a42) },
-      uShallow: { value: new THREE.Color(0x3f7a68) },
-      uSky: { value: new THREE.Color(0xa9c3cd) },
+      uDeep: { value: new THREE.Color(wc.deep) },
+      uShallow: { value: new THREE.Color(wc.shallow) },
+      uSky: { value: new THREE.Color(wc.sky) },
       uSunDir: { value: new THREE.Vector3(0.55, 0.7, 0.35).normalize() },
       uFogMap: { value: null }, // fog-of-war texture, set by GameRenderer
       uFogOn: { value: 0 },
@@ -82,7 +84,7 @@ export function buildWater(grid) {
         float spec = pow(max(dot(reflect(-uSunDir, n), viewDir), 0.0), 70.0);
         col += vec3(1.0, 0.93, 0.78) * spec * 0.8;
         if (uFogOn > 0.5) {
-          float fw = texture2D(uFogMap, vWorldPos.xz / 96.0).r;
+          float fw = texture2D(uFogMap, vWorldPos.xz / ${grid.size.toFixed(1)}).r;
           col *= mix(0.03, 1.0, smoothstep(0.0, 0.95, fw));
         }
         gl_FragColor = vec4(col, 0.9);

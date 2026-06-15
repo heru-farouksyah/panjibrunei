@@ -1,22 +1,22 @@
 import * as THREE from 'three';
 import { TileType } from '../sim/constants.js';
 import { hash2 } from '../sim/rng.js';
+import { getTheme } from './themes.js';
 
-// Muted, earthy "grounded tropical" palette (style C).
-const TILE_COLORS = {
-  [TileType.GRASS]: new THREE.Color(0x5f7042),
-  [TileType.EARTH]: new THREE.Color(0x7c6a4b),
-  [TileType.SAND]: new THREE.Color(0xb2a078),
-  [TileType.WATER]: new THREE.Color(0x4e4b3c), // river bed, seen through water
-  [TileType.FORD]: new THREE.Color(0xb8a87c),
-  [TileType.JUNGLE]: new THREE.Color(0x455233),
-  [TileType.GOLD]: new THREE.Color(0x6f654d),
-  [TileType.CAMPHOR]: new THREE.Color(0x5d6c45),
-  [TileType.SAGO]: new THREE.Color(0x71814b),
-};
-const DRY_TINT = new THREE.Color(0x8a8462); // high ground dries out
-
-export function buildTerrain(grid) {
+export function buildTerrain(grid, themeId) {
+  const t = getTheme(themeId).terrain;
+  const TILE_COLORS = {
+    [TileType.GRASS]: new THREE.Color(t.grass),
+    [TileType.EARTH]: new THREE.Color(t.earth),
+    [TileType.SAND]: new THREE.Color(t.sand),
+    [TileType.WATER]: new THREE.Color(t.water), // river bed, seen through water
+    [TileType.FORD]: new THREE.Color(t.ford),
+    [TileType.JUNGLE]: new THREE.Color(t.jungle),
+    [TileType.GOLD]: new THREE.Color(t.gold),
+    [TileType.CAMPHOR]: new THREE.Color(t.camphor),
+    [TileType.SAGO]: new THREE.Color(t.sago),
+  };
+  const DRY_TINT = new THREE.Color(t.dry); // high ground dries out
   const size = grid.size;
   const n = size + 1;
   const positions = new Float32Array(n * n * 3);

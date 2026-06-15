@@ -177,6 +177,7 @@ sim.pool.forEach((e) => {
   if (e.owner === 0 && e.protoId === 'kebun') kebun = e;
 });
 check(kebun?.complete === true, 'kebun completed');
+P.resources.food = 50; // leave storage headroom so banked food can rise
 const foodBefore = P.gathered.food;
 sim.cmdFarm([freshVil[1] ?? freshVil[0]], kebun.id);
 run(sim, 45);

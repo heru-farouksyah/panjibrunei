@@ -76,8 +76,9 @@ function findNearbyNode(sim, x, z, tileType, radius = 9) {
 
 function startGatherTrip(sim, e) {
   // Walk to the assigned node (path resolves to nearest passable tile).
-  const tx = e.gatherTile % GRID;
-  const tz = (e.gatherTile / GRID) | 0;
+  const G = sim.grid.size;
+  const tx = e.gatherTile % G;
+  const tz = (e.gatherTile / G) | 0;
   e.state = 'toGather';
   sim.requestPathTo(e, tx, tz);
 }
@@ -102,8 +103,8 @@ export function economyArrive(sim, e) {
 
   if (o.type === 'gather') {
     if (e.state === 'toGather') {
-      const tx = e.gatherTile % GRID;
-      const tz = (e.gatherTile / GRID) | 0;
+      const tx = e.gatherTile % grid.size;
+      const tz = (e.gatherTile / grid.size) | 0;
       const near = Math.hypot(e.x - (tx + 0.5), e.z - (tz + 0.5)) < (e.proto.domain === 'water' ? 1.1 : 1.6);
       const stillThere = grid.resources[e.gatherTile] > 0;
       if (near && stillThere) {
@@ -176,9 +177,8 @@ export function economyArrive(sim, e) {
       const dist = Math.hypot(target.x - home.x, target.z - home.z);
       const player = sim.players[e.owner];
       const income = Math.max(4, Math.round(dist * 1.1 * player.mods.tradeMult));
-      player.resources.gold += income;
-      player.gathered.gold += income;
-      sim.emit('trade', { x: e.x, z: e.z, amount: income });
+      const banked = sim.addResource(e.owner, 'gold', income);
+      sim.emit('trade', { x: e.x, z: e.z, amount: banked });
       e.tradeGoing = true;
       sim.requestPathTo(e, target.x | 0, target.z | 0);
     }
@@ -225,11 +225,9 @@ function rolloverOrIdle(sim, e) {
 }
 
 function deposit(sim, e) {
-  const player = sim.players[e.owner];
-  if (player && e.carryAmount > 0) {
-    const amt = Math.round(e.carryAmount);
-    player.resources[e.carryType] = (player.resources[e.carryType] ?? 0) + amt;
-    player.gathered[e.carryType] += amt;
+  if (e.carryAmount > 0) {
+    // banked is clamped to storage capacity; the overflow is wasted
+    sim.addResource(e.owner, e.carryType, Math.round(e.carryAmount));
   }
   e.carryAmount = 0;
 }
@@ -323,11 +321,8 @@ export function economySystem(sim) {
       // passive income: the capital and kampong houses generate a steady
       // trickle of resources. Generalized over all resource types.
       if (e.proto.trickle) {
-        const player = sim.players[e.owner];
         for (const [res, perSec] of Object.entries(e.proto.trickle)) {
-          const amt = perSec / TICK_RATE;
-          player.resources[res] = (player.resources[res] ?? 0) + amt;
-          player.gathered[res] += amt;
+          sim.addResource(e.owner, res, perSec / TICK_RATE); // clamped to cap
         }
       }
 
@@ -361,8 +356,8 @@ export function economySystem(sim) {
 
 function depleteNode(sim, tileIdx, isFish) {
   const grid = sim.grid;
-  const x = tileIdx % GRID;
-  const z = (tileIdx / GRID) | 0;
+  const x = tileIdx % grid.size;
+  const z = (tileIdx / grid.size) | 0;
   if (isFish) {
     grid.fishTiles.delete(tileIdx);
     sim.emit('node-depleted', { x, z, fish: true });

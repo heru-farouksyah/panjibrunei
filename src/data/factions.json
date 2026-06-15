@@ -71,8 +71,8 @@
     "color": "#2f8d86",
     "hero": "hero_badar",
     "heroTitle": "Liau Badar, the Shadow Tactician",
-    "bonusText": "+1 line of sight; units in the treeline are hidden until they strike",
-    "mods": { "losBonus": 1, "jungleAmbush": true },
+    "bonusText": "+1 line of sight; faster foraging; ambushers strike harder; units in the treeline are hidden until they strike",
+    "mods": { "losBonus": 1, "jungleAmbush": true, "gatherMult": 1.12, "meleeAtk": 1 },
     "ult": {
       "id": "mata_strategi", "name": "Mata Strategi", "cooldown": 100,
       "desc": "Reveals the whole map for 10s; marked enemies take +25% damage for 15s."

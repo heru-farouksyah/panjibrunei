@@ -49,6 +49,39 @@
     "bonusVs": { "building": 5 }
   },
 
+  "pelempar_bom": {
+    "name": "Pelempar Bom", "domain": "land", "era": 2, "pop": 1,
+    "cost": { "timber": 30, "gold": 45, "camphor": 5 }, "trainTime": 12, "trainedAt": "balai_pahlawan",
+    "hp": 46, "armor": 0, "atk": 6, "range": 4.5, "atkSpeed": 2.6, "projSpeed": 7, "projArc": true,
+    "splash": 1.2, "firebomb": true,
+    "speed": 1.05, "los": 6, "tags": ["thrower", "military"],
+    "bonusVs": { "building": 1.5 }
+  },
+
+  "upah_pedang": {
+    "name": "Upahan Pedang", "domain": "land", "era": 1, "pop": 0,
+    "cost": { "gold": 70 }, "trainTime": 6, "trainedAt": "kedai_runcit",
+    "hp": 78, "armor": 2, "atk": 9, "range": 0, "atkSpeed": 1.4, "windup": 0.3,
+    "speed": 1.18, "los": 5, "tags": ["infantry", "military", "mercenary"],
+    "bonusVs": { "skirmisher": 1.4 }
+  },
+
+  "upah_panah": {
+    "name": "Upahan Pemanah", "domain": "land", "era": 1, "pop": 0,
+    "cost": { "gold": 85 }, "trainTime": 6, "trainedAt": "kedai_runcit",
+    "hp": 42, "armor": 1, "atk": 7, "range": 5, "atkSpeed": 1.6, "projSpeed": 9, "projArc": true,
+    "speed": 1.1, "los": 6, "tags": ["archer", "military", "mercenary"],
+    "bonusVs": { "infantry": 2.4 }
+  },
+
+  "upah_gergasi": {
+    "name": "Upahan Gergasi", "domain": "land", "era": 1, "pop": 0,
+    "cost": { "gold": 220, "camphor": 20 }, "trainTime": 10, "trainedAt": "kedai_runcit",
+    "hp": 280, "armor": 4, "atk": 22, "range": 0, "atkSpeed": 1.6, "windup": 0.4, "splash": 1.0,
+    "speed": 1.0, "los": 6, "tags": ["infantry", "military", "mercenary"],
+    "bonusVs": { "building": 2 }
+  },
+
   "perahu_nelayan": {
     "name": "Perahu Nelayan", "domain": "water", "era": 1, "pop": 1,
     "cost": { "timber": 45 }, "trainTime": 12, "trainedAt": "pangkalan",

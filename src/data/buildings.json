@@ -7,7 +7,16 @@
     "pop": 10, "los": 8,
     "trains": ["penduduk"],
     "dropoff": ["food", "timber", "gold", "camphor"],
-    "trickle": { "gold": 0.25, "food": 0.15 }
+    "trickle": { "gold": 0.25, "food": 0.15 },
+    "storage": { "food": 800, "timber": 800, "gold": 700, "camphor": 450 }
+  },
+
+  "lumbung": {
+    "name": "Lumbung", "size": 2, "hp": 700, "armor": 1,
+    "cost": { "timber": 70 }, "buildTime": 14, "era": 1,
+    "los": 3,
+    "dropoff": ["food", "timber", "gold", "camphor"],
+    "storage": { "food": 300, "timber": 300, "gold": 300, "camphor": 200 }
   },
 
   "rumah_kampong": {
@@ -15,6 +24,19 @@
     "cost": { "timber": 30 }, "buildTime": 12, "era": 1,
     "pop": 5, "los": 3,
     "trickle": { "gold": 0.05 }
+  },
+
+  "kedai_runcit": {
+    "name": "Kedai Runcit", "size": 2, "hp": 620, "armor": 1,
+    "cost": { "timber": 90, "gold": 60 }, "buildTime": 18, "era": 1,
+    "los": 4, "market": true,
+    "trains": ["upah_pedang", "upah_panah", "upah_gergasi"]
+  },
+
+  "balai_bomba": {
+    "name": "Balai Bomba", "size": 2, "hp": 700, "armor": 1,
+    "cost": { "timber": 80, "gold": 30 }, "buildTime": 16, "era": 1,
+    "los": 4, "douse": { "radius": 8 }
   },
 
   "kebun": {
@@ -35,7 +57,7 @@
     "name": "Balai Pahlawan", "size": 2, "hp": 1050, "armor": 1,
     "cost": { "timber": 130 }, "buildTime": 24, "era": 1,
     "los": 5,
-    "trains": ["pahlawan_kampilan", "penikam_keris", "pelempar_lembing", "pemanah", "lela_gunner"]
+    "trains": ["pahlawan_kampilan", "penikam_keris", "pelempar_lembing", "pemanah", "pelempar_bom", "lela_gunner"]
   },
 
   "gerai_tukang": {
@@ -50,7 +72,9 @@
       { "id": "woven_armor", "name": "Woven Armor", "desc": "+1 armor on all units",
         "cost": { "food": 150, "gold": 75 }, "time": 40, "era": 3, "effect": { "unitArmor": 1 } },
       { "id": "efficient_tools", "name": "Efficient Tools", "desc": "+15% gather rate",
-        "cost": { "food": 75, "timber": 75 }, "time": 35, "era": 2, "effect": { "gatherMult": 0.15 } }
+        "cost": { "food": 75, "timber": 75 }, "time": 35, "era": 2, "effect": { "gatherMult": 0.15 } },
+      { "id": "fire_arrows", "name": "Fire Arrows", "desc": "Archers set their targets ablaze",
+        "cost": { "timber": 80, "gold": 80 }, "time": 35, "era": 2, "effect": { "fireArrows": true } }
     ]
   },
 

@@ -72,8 +72,8 @@ export class CameraRig {
       const speed = (14 + this.dist * 0.6) * dt;
       this.target.x += (px / len) * speed;
       this.target.z += (pz / len) * speed;
-      this.target.x = Math.max(3, Math.min(GRID - 3, this.target.x));
-      this.target.z = Math.max(3, Math.min(GRID - 3, this.target.z));
+      this.target.x = Math.max(3, Math.min(this.grid.size - 3, this.target.x));
+      this.target.z = Math.max(3, Math.min(this.grid.size - 3, this.target.z));
     }
 
     this.dist += (this.targetDist - this.dist) * Math.min(1, dt * 7);

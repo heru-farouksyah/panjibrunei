@@ -4,23 +4,25 @@ import { GRID } from '../sim/constants.js';
 // Atmospheric life that makes the world feel alive: warm dust motes drifting
 // in the sunlight and a few birds wheeling overhead. Pure eye-candy, cheap.
 export class AmbientLife {
-  constructor(scene) {
+  constructor(scene, density = 1, size = GRID) {
     this.scene = scene;
 
     // --- drifting light motes (instanced points, looping upward) ---
-    const N = 460;
+    // density scales the mote count for the graphics-quality preset (Phase 12);
+    // size spreads them across the actual map (Phase 13)
+    const N = Math.max(40, Math.round(460 * density));
     const pos = new Float32Array(N * 3);
     const off = new Float32Array(N);
     for (let i = 0; i < N; i++) {
-      pos[i * 3] = Math.random() * GRID;
+      pos[i * 3] = Math.random() * size;
       pos[i * 3 + 1] = Math.random() * 7;
-      pos[i * 3 + 2] = Math.random() * GRID;
+      pos[i * 3 + 2] = Math.random() * size;
       off[i] = Math.random();
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('aOff', new THREE.BufferAttribute(off, 1));
-    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(GRID / 2, 3, GRID / 2), GRID);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(size / 2, 3, size / 2), size);
 
     this.moteMat = new THREE.ShaderMaterial({
       transparent: true,
@@ -68,8 +70,8 @@ export class AmbientLife {
       scene.add(g);
       this.birds.push({
         g, wingL, wingR,
-        cx: 18 + Math.random() * (GRID - 36),
-        cz: 18 + Math.random() * (GRID - 36),
+        cx: 18 + Math.random() * (size - 36),
+        cz: 18 + Math.random() * (size - 36),
         r: 6 + Math.random() * 12,
         alt: 9 + Math.random() * 5,
         speed: 0.18 + Math.random() * 0.16,

@@ -21,6 +21,14 @@ const DIFFICULTY = {
     maxEra: 4,
     trickle: 0, // no cheating on Normal
   },
+  hard: {
+    villagerScale: 1.15,
+    firstWave: 2.5 * 60 * TICK_RATE, // an early rush — defend or die
+    waveEvery: 1.8 * 60 * TICK_RATE,
+    waveSize: [7, 12, 18, 24],
+    maxEra: 4,
+    trickle: 2, // a light, declared resource edge so Hard out-produces you
+  },
 };
 
 // Scripted AI: economy ratios + expansion, counter-based army composition
@@ -142,7 +150,7 @@ export class AIController {
         // no nodes left nearby: work or build a farm
         const farms = (my.buildings.get('kebun') ?? []).filter((f) => f.complete);
         if (farms.length > 0) {
-          sim.cmdFarm([v.id], farms[(Math.random() * farms.length) | 0].id, this.owner);
+          sim.cmdFarm([v.id], farms[(sim.rng() * farms.length) | 0].id, this.owner);
         } else {
           this.tryBuild(my, 'kebun', basePos, [v]);
         }
@@ -178,7 +186,7 @@ export class AIController {
 
   findSpot(protoId, basePos, towardEnemy = 0) {
     const sim = this.sim;
-    const enemyHome = sim.grid.startZones[1 - this.owner];
+    const enemyHome = sim.nearestEnemyHome(this.owner);
     let cx = basePos.x;
     let cz = basePos.z;
     if (towardEnemy > 0) {
@@ -234,6 +242,18 @@ export class AIController {
     if (player.popCap - player.pop < 4 && player.popCap < 80) {
       const pending = (my.buildings.get('rumah_kampong') ?? []).some((b) => !b.complete);
       if (!pending) this.tryBuild(my, 'rumah_kampong', basePos);
+    }
+    // storage ahead of need: expand the granary BEFORE a resource caps out, or
+    // the AI's gathered surplus is wasted and its economy stalls. (Same lesson
+    // as towers — gate it so it never starves the build budget.)
+    if (player.resCap) {
+      const nearCap = Object.keys(player.resCap).some(
+        (r) => player.resCap[r] > 0 && player.resources[r] > player.resCap[r] * 0.85
+      );
+      const pendingStore = (my.buildings.get('lumbung') ?? []).some((b) => !b.complete);
+      if (nearCap && !pendingStore && this.countOf(my, 'lumbung') < 5) {
+        this.tryBuild(my, 'lumbung', basePos);
+      }
     }
     if (this.countOf(my, 'balai_pahlawan') === 0 && my.villagers.length >= 6) {
       this.tryBuild(my, 'balai_pahlawan', basePos);
@@ -349,12 +369,19 @@ export class AIController {
 
     if (!this.waveActive) {
       if (sim.tick >= this.nextWaveTick && my.military.length >= threshold) {
-        const enemyHome = sim.grid.startZones[1 - this.owner];
-        // target: nearest known enemy istana, else their start zone
+        // target the NEAREST rival kingdom (free-for-all) — a scouted enemy
+        // istana if known, otherwise that kingdom's home
+        const enemyHome = sim.nearestEnemyHome(this.owner);
         let target = { x: enemyHome.x, z: enemyHome.y };
-        sim.pool.forEach((e) => {
-          if (e.kind === 'building' && e.owner === 1 - this.owner && e.protoId === 'istana') {
-            if (sim.fog.tileExplored(this.owner, e.x | 0, e.z | 0)) target = { x: e.x, z: e.z };
+        let bestD = Infinity;
+        sim.pool.forEach((en) => {
+          if (en.kind !== 'building' || en.protoId !== 'istana') return;
+          if (en.owner === this.owner || en.owner < 0) return;
+          if (!sim.fog.tileExplored(this.owner, en.x | 0, en.z | 0)) return;
+          const d = (en.x - my.istana?.x) ** 2 + (en.z - my.istana?.z) ** 2;
+          if (d < bestD) {
+            bestD = d;
+            target = { x: en.x, z: en.z };
           }
         });
         // the boss stays home to guard the capital — never joins a wave
@@ -419,7 +446,9 @@ export class AIController {
 }
 
 export function aiSystem(sim) {
-  if (!sim.ai) return;
+  if (!sim.ais || sim.ais.length === 0) return;
   if (sim.tick % THINK_INTERVAL !== 0) return;
-  sim.ai.think();
+  // stagger the kingdoms across think-ticks so they don't all run on the same
+  // frame (smoother) and so their decisions feel independent
+  for (const ai of sim.ais) ai.think();
 }

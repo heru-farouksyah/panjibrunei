@@ -41,7 +41,8 @@ for (const [id, b] of Object.entries(buildingsData)) {
 
 // One flat entity shape for everything (units, buildings, projectiles).
 // Pooled: slots are reused, `alive` gates them. Reset must touch EVERY field.
-function blankEntity(id) {
+// Exported so save/load can rebuild pool slots at their original ids.
+export function blankEntity(id) {
   return {
     id,
     alive: false,

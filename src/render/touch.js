@@ -1,10 +1,5 @@
 import { MIN_DIST, MAX_DIST } from './cameraRig.js';
 
-// Top-left pause/resume glyphs: a back-chevron "‹" while running (tap to pause),
-// a play triangle while paused (tap to resume).
-const SVG_PAUSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg>';
-const SVG_RESUME = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5 L18 12 L8 19 Z"/></svg>';
-
 // Touch controls for phones/tablets, designed to reach feature parity with the
 // desktop mouse+keyboard scheme. Single finger: tap = select / command (or
 // place), drag = pan. Two fingers = pinch zoom. Plus on-screen controls:
@@ -100,7 +95,6 @@ export class TouchControls {
     tap('btn-stop', () => { this.sim.cmdStop(this.input.selectionIds()); this.vibrate(12); });
     tap('btn-build-ok', () => this.hud.confirmPlacement());
     tap('menu-btn', () => this.toggleMenu());
-    tap('pause-btn', () => { this.menuActions?.togglePause(); this.vibrate(12); this.syncButtons(); });
     tap('btn-select', () => { this.selectMode = !this.selectMode; this.syncButtons(); this.vibrate(8); });
 
     // control-group chips: tap = recall, long-press = assign current selection
@@ -140,16 +134,6 @@ export class TouchControls {
     if (okBtn) okBtn.style.display = this.hud.isPlacing() ? 'block' : 'none';
     const selBtn = document.getElementById('btn-select');
     if (selBtn) selBtn.classList.toggle('active', this.selectMode);
-    // pause/resume toggle: swap the glyph (and highlight) when the state flips
-    const pb = document.getElementById('pause-btn');
-    if (pb && this.menuActions?.isPaused) {
-      const paused = !!this.menuActions.isPaused();
-      if (paused !== this._pausedShown) {
-        this._pausedShown = paused;
-        pb.innerHTML = paused ? SVG_RESUME : SVG_PAUSE;
-        pb.classList.toggle('paused', paused);
-      }
-    }
     for (const chip of document.querySelectorAll('#group-bar .grp')) {
       const g = this.input.groups.get(Number(chip.dataset.g));
       const live = g && g.some((id) => this.sim.pool.get(id));

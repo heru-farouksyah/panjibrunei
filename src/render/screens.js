@@ -171,6 +171,9 @@ export function showTitle(onPlay, { onResume = null, onSettings = null } = {}) {
     const settings = el('button', 'diff-btn', row, '⚙ Settings');
     settings.onclick = () => onSettings();
   }
+  // companion mode: the Merge Kampong mini-game + journey map (separate page)
+  const merge = el('button', 'diff-btn', row, '🗺 Merge Kampong');
+  merge.onclick = () => { location.href = './merge.html'; };
   return overlay;
 }
 

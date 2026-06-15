@@ -36,9 +36,9 @@ const MIN = 60 * TICK_RATE;
   const wallMs = performance.now() - t0;
   console.log(`   (simulated ${(sim.tick / MIN).toFixed(1)} game-min in ${(wallMs / 1000).toFixed(1)}s wall)`);
   check(firstAttackTick > 0, `passive player gets attacked (first hit ~min ${(firstAttackTick / MIN).toFixed(1)})`);
-  check(firstAttackTick > 5 * MIN && firstAttackTick < 11 * MIN, 'first attack lands around minute 8');
+  check(firstAttackTick > 2 * MIN && firstAttackTick < 7 * MIN, 'first attack lands early (~minute 4)');
   check(gameOverTick > 0 && sim.winner === 1, `AI wins (min ${(gameOverTick / MIN).toFixed(1)})`);
-  check(gameOverTick < 23 * MIN, 'passive player loses by ~minute 20');
+  check(gameOverTick < 16 * MIN, 'passive player loses quickly (by ~minute 12)');
 
   // AI macro sanity at the end
   const ai = { villagers: 0, military: 0, buildings: 0 };

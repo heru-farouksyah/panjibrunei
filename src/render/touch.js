@@ -22,7 +22,7 @@ export class TouchControls {
     this.dragging = false;
     this.pinchDist = 0;
     this.lastTap = { t: 0, x: 0, y: 0 };
-    this.moveThresh = 12;     // px before a touch becomes a drag
+    this.moveThresh = 18;     // px before a touch becomes a drag (touch-friendly)
     this.selectMode = false;  // ⛶ toggle: single-finger drag = box select
     this.boxActive = false;   // one-shot box from a long-press
     this.lpTimer = 0;         // long-press timer id
@@ -154,8 +154,11 @@ export class TouchControls {
       this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
       this.dragging = true; // suppress tap when pinching
       clearTimeout(this.lpTimer);
-    } else if (this.touches.size === 1 && !this.hud.isPlacing() && this.input.mode === 'normal') {
-      // long-press (still finger) arms a one-shot box select
+    } else if (this.touches.size === 1 && !this.hud.isPlacing() && this.input.mode === 'normal'
+               && this.input.selection.size === 0) {
+      // Long-press (still finger) arms a one-shot box select — but ONLY when
+      // nothing is selected. With a unit selected, a press-hold means "issue an
+      // order" (e.g. gather that tree), so we never steal it for a box.
       const rec = [...this.touches.values()][0];
       clearTimeout(this.lpTimer);
       this.lpTimer = setTimeout(() => {
@@ -163,7 +166,7 @@ export class TouchControls {
           this.boxActive = true;
           this.vibrate(12);
         }
-      }, 350);
+      }, 420);
     }
   }
 
@@ -229,6 +232,9 @@ export class TouchControls {
           Math.max(rec.startX, rec.x), Math.max(rec.startY, rec.y), false
         );
         this.vibrate(8);
+        // ⛶ select is one-shot: drop back to pan so you can't get stuck box-
+        // selecting (which felt like the box "kept attaching to the finger").
+        if (this.selectMode) { this.selectMode = false; this.syncButtons(); }
       } else if (!dragged && rec) {
         this.handleTap(rec.startX, rec.startY);
       }

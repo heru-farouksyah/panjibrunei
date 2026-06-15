@@ -70,6 +70,33 @@ async function open(viewport) {
   });
   check('box-select toggles + grabs units', box.active && box.selected > 0, `${box.selected} units`);
 
+  // BUG FIX: a held touch must NOT arm box-select while a unit is selected
+  // (so press-hold on a tree gathers instead of the box "sticking to the finger").
+  const heldWithSel = await page.evaluate(async () => {
+    const { touch, input, sim } = window.__panji;
+    document.getElementById('btn-select').classList.remove('active'); touch.selectMode = false;
+    let uid = -1; sim.pool.forEach((e) => { if (uid < 0 && e.kind === 'unit' && e.owner === 0) uid = e.id; });
+    input.setSelection([uid]);
+    touch.touches.clear(); touch.boxActive = false;
+    touch.onStart({ preventDefault() {}, changedTouches: [{ identifier: 1, clientX: 440, clientY: 300 }] });
+    await new Promise((r) => setTimeout(r, 520));      // hold past the long-press delay
+    const armed = touch.boxActive; touch.touches.clear(); touch.boxActive = false;
+    return armed;
+  });
+  check('held touch with a unit selected does NOT box-select', heldWithSel === false);
+
+  // ...but with nothing selected, a held still-finger SHOULD arm box-select
+  const heldNoSel = await page.evaluate(async () => {
+    const { touch, input } = window.__panji;
+    touch.selectMode = false; input.setSelection([]);
+    touch.touches.clear(); touch.boxActive = false;
+    touch.onStart({ preventDefault() {}, changedTouches: [{ identifier: 2, clientX: 440, clientY: 300 }] });
+    await new Promise((r) => setTimeout(r, 520));
+    const armed = touch.boxActive; touch.touches.clear(); touch.boxActive = false;
+    return armed;
+  });
+  check('held touch with no selection still arms box-select', heldNoSel === true);
+
   // menu → save + settings
   await page.click('#menu-btn');
   check('menu opens', await vis(page, '#touch-menu'));

@@ -51,10 +51,16 @@ export function showDisclaimer(onContinue) {
 
 // A 4-slide how-to-play tutorial shown over the (paused) match. A Skip button
 // sits at the bottom-left. Calls onDone() when finished or skipped.
+// Each slide has a desktop `body` (mouse + keyboard) and a `touchBody` shown on
+// phones/tablets, where there is no right-click or keyboard.
 const TUTORIAL_SLIDES = [
   {
     icon: 'penduduk', title: '1 · Gather & Pile',
     body: 'Left-click a <b>Penduduk</b> (villager), then right-click a tree, ' +
+      'sago palm, gold rock, camphor grove or your farm to gather. They carry ' +
+      'the load back to your Istana on their own. Build more villagers and ' +
+      'houses to grow your kampong.',
+    touchBody: '<b>Tap</b> a <b>Penduduk</b> (villager), then <b>tap</b> a tree, ' +
       'sago palm, gold rock, camphor grove or your farm to gather. They carry ' +
       'the load back to your Istana on their own. Build more villagers and ' +
       'houses to grow your kampong.',
@@ -64,6 +70,10 @@ const TUTORIAL_SLIDES = [
     body: 'Select a villager and use the build menu to raise <b>Pagar</b> walls ' +
       'and <b>Kubu</b> watchtowers around your base and the river fords. ' +
       'Towers fire on any enemy that comes close — your first line of defence.',
+    touchBody: '<b>Tap</b> a villager, then pick a building from the bottom ' +
+      'card to raise <b>Pagar</b> walls and <b>Kubu</b> watchtowers around your ' +
+      'base and the river fords. Tap the map to place it. Towers fire on any ' +
+      'enemy that comes close — your first line of defence.',
   },
   {
     icon: 'pahlawan_kampilan', title: '3 · Attack',
@@ -71,6 +81,11 @@ const TUTORIAL_SLIDES = [
       'or press <b>A</b> then click to attack-move. <b>Kampilan</b> swordsmen and ' +
       '<b>Pemanah</b> archers fight units; your <b>Lela</b> destroyer smashes ' +
       'buildings. Mix them — archers beat infantry, skirmishers beat archers.',
+    touchBody: 'Tap the <b>Select</b> button (dashed square, bottom-right) — ' +
+      'or long-press — then drag a box over your army. <b>Tap an enemy</b> to ' +
+      'attack; <b>double-tap</b> empty ground to attack-move. <b>Kampilan</b> ' +
+      'swordsmen and <b>Pemanah</b> archers fight units; your <b>Lela</b> ' +
+      'destroyer smashes buildings. Mix them — archers beat infantry.',
   },
   {
     icon: 'hero', title: '4 · Win',
@@ -86,13 +101,14 @@ export function showTutorial(onDone) {
   let i = 0;
 
   const dots = TUTORIAL_SLIDES.map(() => '<span class="tut-dot"></span>').join('');
+  const touch = document.body.classList.contains('touch');
   const render = () => {
     const s = TUTORIAL_SLIDES[i];
     const last = i === TUTORIAL_SLIDES.length - 1;
     card.innerHTML =
       `<div class="tut-icon">${iconSVG(s.icon, 52)}</div>` +
       `<div class="tut-title">${s.title}</div>` +
-      `<div class="tut-body">${s.body}</div>` +
+      `<div class="tut-body">${touch && s.touchBody ? s.touchBody : s.body}</div>` +
       `<div class="tut-dots">${dots}</div>` +
       `<div class="tut-nav">` +
         `<button class="tut-skip">Skip</button>` +

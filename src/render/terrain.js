@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { TileType } from '../sim/constants.js';
-import { hash2 } from '../sim/rng.js';
+import { hash2, fbm } from '../sim/rng.js';
 import { getTheme } from './themes.js';
+
+const CSEED = 1234; // fixed seed for render-only colour noise
 
 export function buildTerrain(grid, themeId) {
   const t = getTheme(themeId).terrain;
@@ -24,6 +26,7 @@ export function buildTerrain(grid, themeId) {
   const indices = [];
 
   const c = new THREE.Color();
+  const rock = new THREE.Color();
   for (let vz = 0; vz < n; vz++) {
     for (let vx = 0; vx < n; vx++) {
       const vi = vz * n + vx;
@@ -45,11 +48,30 @@ export function buildTerrain(grid, themeId) {
         }
       }
       c.multiplyScalar(1 / Math.max(1, count));
-      if (h > 2.0) c.lerp(DRY_TINT, Math.min(0.45, (h - 2.0) * 0.35));
-      const jitter = 0.92 + hash2(7, vx, vz) * 0.16;
-      colors[vi * 3 + 0] = c.r * jitter;
-      colors[vi * 3 + 1] = c.g * jitter;
-      colors[vi * 3 + 2] = c.b * jitter;
+
+      // --- richer, gradient terrain shading (render-only, computed once) ---
+      // slope from the height field: steep faces read as rocky cliffs
+      const hL = grid.vertexHeight(vx - 1, vz), hR = grid.vertexHeight(vx + 1, vz);
+      const hD = grid.vertexHeight(vx, vz - 1), hU = grid.vertexHeight(vx, vz + 1);
+      const slope = Math.hypot(hR - hL, hU - hD) * 0.5;
+
+      // high ground dries out toward the pale dry/sand tint
+      if (h > 1.6) c.lerp(DRY_TINT, Math.min(0.5, (h - 1.6) * 0.3));
+      // steep ground darkens & desaturates into rock/cliff faces
+      if (slope > 0.8) {
+        rock.copy(c).multiplyScalar(0.55);
+        c.lerp(rock, Math.min(0.72, (slope - 0.8) * 0.7));
+      }
+
+      // smooth large-scale mottling = the gradient look, plus a little grain
+      const big = fbm(CSEED, vx * 0.045, vz * 0.045, 4);   // 0..1 soft patches
+      const grain = hash2(7, vx, vz);
+      let bright = 0.80 + big * 0.36 + (grain - 0.5) * 0.10;
+      if (h < 0.6) bright *= 0.9; // damp lowlands a touch darker / wetter
+
+      colors[vi * 3 + 0] = c.r * bright;
+      colors[vi * 3 + 1] = c.g * bright;
+      colors[vi * 3 + 2] = c.b * bright;
     }
   }
 

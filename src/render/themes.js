@@ -34,6 +34,22 @@ export const THEMES = {
     exposure: 1.24,
   },
 
+  desert: {
+    name: 'Desert Citadel',
+    blurb: 'golden dunes, rocky cliffs & a teal oasis',
+    terrain: {
+      grass: 0x8a8a4a, earth: 0xb59a66, sand: 0xd8c089, water: 0x2f4a48,
+      ford: 0xccbb86, jungle: 0x6f7a3e, gold: 0xb39a5c, camphor: 0x7a8048,
+      sago: 0x9aa257, dry: 0xe2cf9a,
+    },
+    water: { deep: 0x12544c, shallow: 0x36a892, sky: 0xc6e6da },
+    sky: { top: 0x6f9ec6, mid: 0xcdbf98, horizon: 0xead49c, sun: 0xfff0c2 },
+    background: 0xd9caa0, fog: 0xe2d3a4, fogDensity: 0.0028,
+    sun: { color: 0xfff0c8, intensity: 3.1 },
+    hemi: { sky: 0xe0d6b0, ground: 0x8a6e44, intensity: 0.62 },
+    exposure: 1.26,
+  },
+
   mountain: {
     name: 'Highland Mountains',
     blurb: 'cool stone, pine green & misty air',

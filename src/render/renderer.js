@@ -76,10 +76,12 @@ export class GameRenderer {
     fill.position.set(center - 60, 50, center - 40);
     this.scene.add(fill);
 
-    // Dark earth skirt so the map edge doesn't drop straight into sky.
+    // Map-edge skirt so the edge doesn't drop straight into sky — tinted a dark
+    // shade of the theme background so it blends with the palette (not brown).
+    const skirtColor = new THREE.Color(theme.background).multiplyScalar(0.42);
     const skirt = new THREE.Mesh(
       new THREE.PlaneGeometry(900, 900),
-      new THREE.MeshStandardMaterial({ color: 0x3d3a2c, roughness: 1 })
+      new THREE.MeshStandardMaterial({ color: skirtColor, roughness: 1 })
     );
     skirt.rotation.x = -Math.PI / 2;
     skirt.position.set(center, -1.6, center);

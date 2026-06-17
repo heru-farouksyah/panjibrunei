@@ -35,10 +35,11 @@ export class FogRenderer {
         varying vec2 vXZ;
         void main() {
           float f = texture2D(uFog, vXZ / ${size}.0).r;
-          // visible -> 0 alpha; explored -> dim; unexplored -> near black
-          float alpha = mix(0.88, 0.0, smoothstep(0.0, 1.0, f));
-          alpha = min(alpha, mix(0.88, 0.42, smoothstep(0.0, 0.55, f)));
-          gl_FragColor = vec4(0.01, 0.02, 0.015, alpha);
+          // visible -> 0 alpha; explored -> light dim; unexplored -> soft dark blue
+          // (softer max alpha so the edge fades gently and matches the blue theme)
+          float alpha = mix(0.66, 0.0, smoothstep(0.0, 1.0, f));
+          alpha = min(alpha, mix(0.66, 0.28, smoothstep(0.0, 0.6, f)));
+          gl_FragColor = vec4(0.07, 0.11, 0.17, alpha);
         }
       `,
     });

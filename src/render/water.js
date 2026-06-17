@@ -85,7 +85,7 @@ export function buildWater(grid, themeId) {
         col += vec3(1.0, 0.93, 0.78) * spec * 0.8;
         if (uFogOn > 0.5) {
           float fw = texture2D(uFogMap, vWorldPos.xz / ${grid.size.toFixed(1)}).r;
-          col *= mix(0.03, 1.0, smoothstep(0.0, 0.95, fw));
+          col *= mix(0.16, 1.0, smoothstep(0.0, 0.95, fw));
         }
         gl_FragColor = vec4(col, 0.9);
         #include <fog_fragment>

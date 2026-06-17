@@ -39,7 +39,8 @@ async function open(viewport) {
     return r && r.left < 70 && r.top < 80 && Math.min(r.width, r.height) >= 44;
   }));
   check('no separate pause button (folded into menu)', await page.evaluate(() => !document.getElementById('pause-btn')));
-  check('menu / select / group-bar visible', (await vis(page, '#menu-btn')) && (await vis(page, '#btn-select')) && (await vis(page, '#group-bar')));
+  check('menu + group-bar visible', (await vis(page, '#menu-btn')) && (await vis(page, '#group-bar')));
+  check('Stop / Select buttons removed', await page.evaluate(() => !document.getElementById('btn-stop') && !document.getElementById('btn-select')));
   check('phone hides zoom buttons (pinch instead)', !(await vis(page, '#zoom-in')) && !(await vis(page, '#zoom-out')));
   check('phone hides unit info panel', !(await vis(page, '#panel .sel-info')));
   check('graphics auto-Low (shadows off)', await page.evaluate(() => window.__panji.gameRenderer.gfx.shadows === false));
@@ -61,20 +62,19 @@ async function open(viewport) {
   });
   check('control group set + recall', grp.recalled.length === 1 && grp.recalled[0] === grp.uid);
 
-  // box-select toggle + selection
+  // box-select grabs on-screen units (now long-press only — no toggle button)
   const box = await page.evaluate(() => {
-    const { touch, input } = window.__panji;
-    document.getElementById('btn-select').click();
+    const { input } = window.__panji;
     input.setSelection([]); input.boxSelect(0, 0, innerWidth, innerHeight, false);
-    return { active: touch.selectMode, selected: input.selection.size };
+    return { selected: input.selection.size };
   });
-  check('box-select toggles + grabs units', box.active && box.selected > 0, `${box.selected} units`);
+  check('box-select grabs on-screen units', box.selected > 0, `${box.selected} units`);
 
   // BUG FIX: a held touch must NOT arm box-select while a unit is selected
   // (so press-hold on a tree gathers instead of the box "sticking to the finger").
   const heldWithSel = await page.evaluate(async () => {
     const { touch, input, sim } = window.__panji;
-    document.getElementById('btn-select').classList.remove('active'); touch.selectMode = false;
+    touch.selectMode = false;
     let uid = -1; sim.pool.forEach((e) => { if (uid < 0 && e.kind === 'unit' && e.owner === 0) uid = e.id; });
     input.setSelection([uid]);
     touch.touches.clear(); touch.boxActive = false;
@@ -96,6 +96,34 @@ async function open(viewport) {
     return armed;
   });
   check('held touch with no selection still arms box-select', heldNoSel === true);
+
+  // command card auto-collapses to the left icon on unit select; portrait reopens
+  const card = await page.evaluate(() => {
+    const { input, sim, hud } = window.__panji;
+    let id = -1; sim.pool.forEach((e) => { if (id < 0 && e.kind === 'unit' && e.owner === 0) id = e.id; });
+    input.setSelection([id]); hud.refreshPanel();
+    const collapsed = document.getElementById('panel').classList.contains('cmd-collapsed');
+    document.querySelector('#panel .portrait').click();
+    const expanded = !document.getElementById('panel').classList.contains('cmd-collapsed');
+    return { collapsed, expanded };
+  });
+  check('command card auto-collapses to icon + portrait reopens', card.collapsed && card.expanded);
+
+  // building placement: release bubble exists, tap aims, ✓ commits a valid build
+  const place = await page.evaluate(() => {
+    const { touch, hud, sim } = window.__panji;
+    hud.startPlacement('rumah_kampong');
+    const bubble = !!document.getElementById('place-confirm');
+    touch.handleTap(450, 220);
+    const armed = touch.bubbleArmed;
+    const s = sim.grid.startZones[0]; hud.ghostTile = { tx: s.x + 3, tz: s.y + 3 };
+    const valid = hud.placeValid();
+    const before = (() => { let n = 0; sim.pool.forEach((e) => { if (e.kind === 'building' && e.owner === 0) n++; }); return n; })();
+    touch.bubbleArmed = true; if (valid) touch.confirmPlace();
+    const after = (() => { let n = 0; sim.pool.forEach((e) => { if (e.kind === 'building' && e.owner === 0) n++; }); return n; })();
+    return { bubble, armed, built: valid ? after > before : true };
+  });
+  check('build placement: release bubble + tap-aim + ✓ commits', place.bubble && place.armed && place.built);
 
   // menu → save + settings
   await page.click('#menu-btn');
@@ -120,10 +148,17 @@ async function open(viewport) {
   }));
   check('tablet shows zoom buttons', (await vis(page, '#zoom-in')) && (await vis(page, '#zoom-out')));
   check('tablet uses bigger tiles (--tile 74px)', await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--tile').trim() === '74px'));
-  // select a unit so the panel + info show
-  await page.evaluate(() => { const { input, sim } = window.__panji; let id = -1; sim.pool.forEach((e) => { if (id < 0 && e.kind === 'unit' && e.owner === 0) id = e.id; }); input.setSelection([id]); });
-  await page.waitForTimeout(200);
-  check('tablet keeps the unit info panel', await vis(page, '#panel .sel-info'));
+  // select a unit (card auto-collapses), then expand via the portrait: the
+  // roomy tablet card keeps the unit info panel when open
+  const tabletPanel = await page.evaluate(() => {
+    const { input, sim, hud } = window.__panji;
+    let id = -1; sim.pool.forEach((e) => { if (id < 0 && e.kind === 'unit' && e.owner === 0) id = e.id; });
+    input.setSelection([id]); hud.refreshPanel();
+    document.querySelector('#panel .portrait').click(); // expand
+    const info = document.querySelector('#panel .sel-info');
+    return getComputedStyle(info).display !== 'none' && info.offsetWidth > 0;
+  });
+  check('tablet keeps the unit info panel when expanded', tabletPanel);
   check('tablet: no console errors', errors.length === 0, errors.slice(0, 2).join(' | '));
   await page.screenshot({ path: '/tmp/mobile-tablet.png' });
   await ctx.close();

@@ -134,10 +134,8 @@ export class TouchControls {
     const tap = (id, fn) => { const b = document.getElementById(id); if (b) b.addEventListener('click', fn); };
     tap('zoom-in', () => { this.rig.targetDist = Math.max(MIN_DIST, this.rig.targetDist * 0.8); });
     tap('zoom-out', () => { this.rig.targetDist = Math.min(MAX_DIST, this.rig.targetDist * 1.25); });
-    tap('btn-stop', () => { this.sim.cmdStop(this.input.selectionIds()); this.vibrate(12); });
-    tap('btn-build-ok', () => this.hud.confirmPlacement());
     tap('menu-btn', () => this.toggleMenu());
-    tap('btn-select', () => { this.selectMode = !this.selectMode; this.syncButtons(); this.vibrate(8); });
+    // (Stop and box-select buttons were removed; box-select is via long-press.)
 
     // control-group chips: tap = recall, long-press = assign current selection
     for (const chip of document.querySelectorAll('#group-bar .grp')) {
@@ -172,11 +170,7 @@ export class TouchControls {
   }
 
   syncButtons() {
-    const okBtn = document.getElementById('btn-build-ok');
-    if (okBtn) okBtn.style.display = 'none'; // replaced by the floating "build here" bubble
-    this.positionPlaceBubble();
-    const selBtn = document.getElementById('btn-select');
-    if (selBtn) selBtn.classList.toggle('active', this.selectMode);
+    this.positionPlaceBubble(); // building placement uses the floating "build here" bubble
     for (const chip of document.querySelectorAll('#group-bar .grp')) {
       const g = this.input.groups.get(Number(chip.dataset.g));
       const live = g && g.some((id) => this.sim.pool.get(id));

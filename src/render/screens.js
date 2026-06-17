@@ -81,11 +81,11 @@ const TUTORIAL_SLIDES = [
       'or press <b>A</b> then click to attack-move. <b>Kampilan</b> swordsmen and ' +
       '<b>Pemanah</b> archers fight units; your <b>Lela</b> destroyer smashes ' +
       'buildings. Mix them — archers beat infantry, skirmishers beat archers.',
-    touchBody: 'Tap the <b>Select</b> button (dashed square, bottom-right) — ' +
-      'or long-press — then drag a box over your army. <b>Tap an enemy</b> to ' +
-      'attack; <b>double-tap</b> empty ground to attack-move. <b>Kampilan</b> ' +
-      'swordsmen and <b>Pemanah</b> archers fight units; your <b>Lela</b> ' +
-      'destroyer smashes buildings. Mix them — archers beat infantry.',
+    touchBody: '<b>Long-press</b> then drag a box over your army to select it. ' +
+      '<b>Tap an enemy</b> to attack; <b>double-tap</b> empty ground to ' +
+      'attack-move. <b>Kampilan</b> swordsmen and <b>Pemanah</b> archers fight ' +
+      'units; your <b>Lela</b> destroyer smashes buildings. Mix them — archers ' +
+      'beat infantry.',
   },
   {
     icon: 'hero', title: '4 · Win',

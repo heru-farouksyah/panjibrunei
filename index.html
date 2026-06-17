@@ -256,6 +256,16 @@
     body.touch #zoom-in, body.touch #zoom-out { right: calc(12px + env(safe-area-inset-right)); }
     body.touch #btn-select { right: calc(12px + env(safe-area-inset-right)); }
     body.touch #btn-stop { right: calc(72px + env(safe-area-inset-right)); }
+    /* "build here" release bubble (touch building placement) */
+    #place-confirm { position: fixed; transform: translate(-50%, -50%); display: none; gap: 10px; z-index: 70; }
+    #place-confirm button { pointer-events: auto; width: 48px; height: 48px; border-radius: 50%; border: none; font-size: 22px; font-weight: 800; box-shadow: var(--panel-edge); cursor: pointer; }
+    #place-confirm .pc-ok { background: #5fa244; color: #fff; }
+    #place-confirm.invalid .pc-ok { background: #b5563a; opacity: 0.7; }
+    #place-confirm .pc-cancel { background: rgba(255,255,255,0.92); color: var(--ink); }
+    /* touch: auto-hidden command card — tap the portrait to reveal the build menu */
+    body.touch #panel.cmd-collapsed .actions { display: none; }
+    body.touch #panel.cmd-collapsed .portrait { position: relative; }
+    body.touch #panel.cmd-collapsed .portrait::after { content: 'tap ▸ build'; display: block; font-size: 9px; color: var(--brass); font-weight: 700; margin-top: 3px; text-align: center; }
     /* on-screen pause/settings/save menu */
     #touch-menu {
       position: fixed; inset: 0; background: rgba(8, 10, 6, 0.6);

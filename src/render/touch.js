@@ -46,6 +46,7 @@ export class TouchControls {
     this.dom.addEventListener('touchcancel', (e) => this.onEnd(e), { passive: false });
 
     this.buildMenu();
+    this.buildPlaceBubble();
     this.wireButtons();
     setInterval(() => this.syncButtons(), 150);
   }
@@ -78,6 +79,45 @@ export class TouchControls {
       else if (act === 'save') a?.save();
       this.toggleMenu(false);
     });
+  }
+
+  // ---- "build here" release bubble (building placement) -------------------
+  // Builds-only confirm flow: a tap aims the ghost, dragging scrolls the map,
+  // and this floating bubble (at the ghost) commits the build — so scrolling
+  // never drops a building by accident.
+  buildPlaceBubble() {
+    const w = document.createElement('div');
+    w.id = 'place-confirm';
+    w.style.display = 'none';
+    w.innerHTML = `<button class="pc-ok" title="Build here">✓</button><button class="pc-cancel" title="Cancel">✕</button>`;
+    document.body.appendChild(w);
+    this.placeBubble = w;
+    this.bubbleArmed = false;
+    w.querySelector('.pc-ok').addEventListener('click', (e) => { e.stopPropagation(); this.confirmPlace(); });
+    w.querySelector('.pc-cancel').addEventListener('click', (e) => { e.stopPropagation(); this.cancelPlace(); });
+  }
+
+  confirmPlace() {
+    if (!this.hud.isPlacing() || !this.hud.placeValid()) { this.vibrate(20); return; }
+    const s = this.hud.ghostScreen();
+    this.hud.confirmPlacement(s ? s.x : window.innerWidth / 2, s ? s.y : window.innerHeight / 2);
+    this.vibrate(16);
+    this.bubbleArmed = false;
+    this.syncButtons();
+  }
+
+  cancelPlace() { this.input.setMode('normal'); this.bubbleArmed = false; this.hidePlaceBubble(); this.vibrate(8); }
+  hidePlaceBubble() { if (this.placeBubble) this.placeBubble.style.display = 'none'; }
+
+  positionPlaceBubble() {
+    if (!this.hud.isPlacing()) { this.bubbleArmed = false; this.hidePlaceBubble(); return; }
+    if (!this.bubbleArmed) { this.hidePlaceBubble(); return; }
+    const s = this.hud.ghostScreen();
+    if (!s) { this.hidePlaceBubble(); return; }
+    this.placeBubble.style.display = 'flex';
+    this.placeBubble.style.left = `${s.x}px`;
+    this.placeBubble.style.top = `${Math.max(40, s.y - 52)}px`;
+    this.placeBubble.classList.toggle('invalid', !this.hud.placeValid());
   }
 
   toggleMenu(force) {
@@ -133,7 +173,8 @@ export class TouchControls {
 
   syncButtons() {
     const okBtn = document.getElementById('btn-build-ok');
-    if (okBtn) okBtn.style.display = this.hud.isPlacing() ? 'block' : 'none';
+    if (okBtn) okBtn.style.display = 'none'; // replaced by the floating "build here" bubble
+    this.positionPlaceBubble();
     const selBtn = document.getElementById('btn-select');
     if (selBtn) selBtn.classList.toggle('active', this.selectMode);
     for (const chip of document.querySelectorAll('#group-bar .grp')) {
@@ -195,7 +236,18 @@ export class TouchControls {
       const movedAll = Math.hypot(rec.x - rec.startX, rec.y - rec.startY);
       if (movedAll > this.moveThresh) { this.dragging = true; if (!this.boxActive) clearTimeout(this.lpTimer); }
 
-      if (this.hud.isPlacing()) { this.hud.updateGhostScreen(rec.x, rec.y); return; }
+      if (this.hud.isPlacing()) {
+        // builds: dragging scrolls the map; the ghost stays where you aimed and
+        // the "build here" bubble tracks it. A tap (handleTap) re-aims the ghost.
+        if (this.dragging && rec.px !== undefined) {
+          const dx = rec.x - rec.px, dy = rec.y - rec.py;
+          const scale = this.rig.dist * 0.0022;
+          this.rig.target.x -= dx * scale;
+          this.rig.target.z -= dy * scale;
+        }
+        this.positionPlaceBubble();
+        return;
+      }
 
       // box select (toggle mode or long-press): draw the marquee
       if ((this.selectMode || this.boxActive) && this.dragging) {
@@ -259,7 +311,14 @@ export class TouchControls {
   hideBox() { this.input.boxEl.style.display = 'none'; }
 
   handleTap(x, y) {
-    if (this.hud.isPlacing()) { this.hud.updateGhostScreen(x, y); this.hud.confirmPlacement(x, y); return; }
+    if (this.hud.isPlacing()) {
+      // aim the ghost at the tap; the floating bubble then commits the build
+      this.hud.updateGhostScreen(x, y);
+      this.bubbleArmed = true;
+      this.positionPlaceBubble();
+      this.vibrate(6);
+      return;
+    }
     if (this.input.mode === 'place' && this.input.placeHandler) {
       this.input.placeHandler(this.input.groundAt(x, y));
       return;

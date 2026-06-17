@@ -97,6 +97,13 @@ export class HUD {
     this.actions = el('div', 'actions', this.panel);
     this.panel.style.display = 'none';
 
+    this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    // touch: the command card auto-hides for unit selections; tapping the
+    // portrait toggles it back so the player can reach the build menu.
+    this.portrait.addEventListener('click', () => {
+      if (this.isTouch) this.panel.classList.toggle('cmd-collapsed');
+    });
+
     // floating tooltip for command tiles
     this.tip = el('div', null, document.body);
     this.tip.id = 'tooltip';
@@ -257,6 +264,9 @@ export class HUD {
     this.lastKey = key;
     this.renderActions(ents);
     if (isNew) {
+      // touch: auto-hide the command card for a fresh UNIT selection (declutter,
+      // per the mobile flow); buildings keep it open for production options.
+      if (this.isTouch) this.panel.classList.toggle('cmd-collapsed', ents.every((e) => e.kind === 'unit'));
       this.panel.classList.remove('pop');
       void this.panel.offsetWidth;
       this.panel.classList.add('pop');
@@ -491,6 +501,8 @@ export class HUD {
         this.refreshPanel();
       }
     };
+    // touch: start the ghost at screen centre so the first aim-tap is nearby
+    if (this.isTouch) this.mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     this.updateGhost();
   }
 
@@ -503,10 +515,28 @@ export class HUD {
     const p = this.input.groundAt(this.mouse.x, this.mouse.y);
     if (!p || !this.placing) return;
     const { tx, tz } = this.placeTile(p);
+    this.ghostTile = { tx, tz };
+    this.gr.buildings.moveGhost(tx, tz, this.placeValid());
+  }
+
+  // Is the current ghost tile a legal, affordable placement?
+  placeValid() {
+    if (!this.placing || !this.ghostTile) return false;
+    const { tx, tz } = this.ghostTile;
     const proto = this.sim.protos.buildings[this.placing.protoId];
-    const valid = this.sim.canPlace(this.placing.protoId, tx, tz) &&
+    return this.sim.canPlace(this.placing.protoId, tx, tz) &&
       this.sim.canAfford(0, this.sim.costOf(0, proto));
-    this.gr.buildings.moveGhost(tx, tz, valid);
+  }
+
+  // Screen-space position of the ghost centre (for the touch "build here" bubble).
+  ghostScreen() {
+    if (!this.placing || !this.ghostTile) return null;
+    const out = { x: 0, y: 0 };
+    const ok = this.input.screenPos(
+      { x: this.ghostTile.tx + this.placing.size / 2, z: this.ghostTile.tz + this.placing.size / 2, proto: {} },
+      out
+    );
+    return ok ? out : null;
   }
 
   // Move the placement ghost to a screen point (touch dragging).

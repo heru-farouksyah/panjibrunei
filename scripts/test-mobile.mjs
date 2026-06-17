@@ -39,7 +39,8 @@ async function open(viewport) {
     return r && r.left < 70 && r.top < 80 && Math.min(r.width, r.height) >= 44;
   }));
   check('no separate pause button (folded into menu)', await page.evaluate(() => !document.getElementById('pause-btn')));
-  check('menu + group-bar visible', (await vis(page, '#menu-btn')) && (await vis(page, '#group-bar')));
+  check('menu visible', await vis(page, '#menu-btn'));
+  check('control-group bar hidden by default (opt-in in Settings)', !(await vis(page, '#group-bar')));
   check('Stop / Select buttons removed', await page.evaluate(() => !document.getElementById('btn-stop') && !document.getElementById('btn-select')));
   check('phone hides zoom buttons (pinch instead)', !(await vis(page, '#zoom-in')) && !(await vis(page, '#zoom-out')));
   check('phone hides unit info panel', !(await vis(page, '#panel .sel-info')));

@@ -131,21 +131,30 @@ async function open(viewport) {
   });
   check('command card auto-collapses to icon + portrait reopens', card.collapsed && card.expanded);
 
-  // building placement: release bubble exists, tap aims, ✓ commits a valid build
+  // building placement: release bubble exists, tap aims, ✓ commits at the exact
+  // validated tile (regression: the old reprojection could fail → green→red).
   const place = await page.evaluate(() => {
-    const { touch, hud, sim } = window.__panji;
+    const { touch, hud, sim, input } = window.__panji;
+    let id = -1; sim.pool.forEach((e) => { if (id < 0 && e.kind === 'unit' && e.owner === 0 && e.proto.tags?.includes('villager')) id = e.id; });
+    input.setSelection([id]);
     hud.startPlacement('rumah_kampong');
     const bubble = !!document.getElementById('place-confirm');
     touch.handleTap(450, 220);
     const armed = touch.bubbleArmed;
-    const s = sim.grid.startZones[0]; hud.ghostTile = { tx: s.x + 3, tz: s.y + 3 };
-    const valid = hud.placeValid();
+    // aim at a genuinely placeable tile near the start
+    const s = sim.grid.startZones[0]; let tile = null;
+    for (let r = 2; r < 16 && !tile; r++) for (let dz = -r; dz <= r && !tile; dz++) for (let dx = -r; dx <= r && !tile; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      if (sim.canPlace('rumah_kampong', s.x + dx, s.y + dz)) tile = { tx: s.x + dx, tz: s.y + dz };
+    }
+    hud.ghostTile = tile; touch.bubbleArmed = true;
     const before = (() => { let n = 0; sim.pool.forEach((e) => { if (e.kind === 'building' && e.owner === 0) n++; }); return n; })();
-    touch.bubbleArmed = true; if (valid) touch.confirmPlace();
+    touch.confirmPlace();
     const after = (() => { let n = 0; sim.pool.forEach((e) => { if (e.kind === 'building' && e.owner === 0) n++; }); return n; })();
-    return { bubble, armed, built: valid ? after > before : true };
+    return { bubble, armed, built: after > before, ended: !hud.isPlacing(), red: document.getElementById('place-confirm').classList.contains('invalid') };
   });
-  check('build placement: release bubble + tap-aim + ✓ commits', place.bubble && place.armed && place.built);
+  check('build: release bubble + ✓ commits, placement ends, no red flip',
+    place.bubble && place.armed && place.built && place.ended && !place.red);
 
   // menu → save + settings
   await page.click('#menu-btn');

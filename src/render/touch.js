@@ -113,8 +113,7 @@ export class TouchControls {
 
   confirmPlace() {
     if (!this.hud.isPlacing() || !this.hud.placeValid()) { this.vibrate(20); return; }
-    const s = this.hud.ghostScreen();
-    this.hud.confirmPlacement(s ? s.x : window.innerWidth / 2, s ? s.y : window.innerHeight / 2);
+    this.hud.confirmAtGhost(); // build at the exact validated tile (no reprojection)
     this.vibrate(16);
     this.bubbleArmed = false;
     this.positionPlaceBubble();
@@ -136,7 +135,7 @@ export class TouchControls {
     if (hasUnit) this.sim.cmdContext(ids, a.x, a.z, a.targetId);
   }
 
-  hidePlaceBubble() { if (this.placeBubble) this.placeBubble.style.display = 'none'; }
+  hidePlaceBubble() { if (this.placeBubble) { this.placeBubble.style.display = 'none'; this.placeBubble.classList.remove('invalid'); } }
 
   // screen position of the aimed ground point (for the order bubble)
   aimScreen() {

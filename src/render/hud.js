@@ -599,6 +599,15 @@ export class HUD {
     this.input.placeHandler?.(p);
   }
 
+  // Build at the EXACT validated ghost tile — avoids the screen→ground
+  // reprojection rounding that could land on a neighbouring (invalid) tile and
+  // make cmdBuild reject it (the "tap ✓ → bubble turns red" bug).
+  confirmAtGhost() {
+    if (!this.placing || !this.ghostTile) return;
+    const c = this.placing.size / 2;
+    this.input.placeHandler?.({ x: this.ghostTile.tx + c, z: this.ghostTile.tz + c });
+  }
+
   isPlacing() {
     return !!this.placing;
   }

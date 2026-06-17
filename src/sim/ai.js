@@ -7,25 +7,25 @@ const THINK_INTERVAL = 2 * TICK_RATE; // slow think-tick, every 2s
 const DIFFICULTY = {
   easy: {
     villagerScale: 0.6,
-    firstWave: 4.5 * 60 * TICK_RATE,
-    waveEvery: 2.4 * 60 * TICK_RATE,
-    waveSize: [5, 8, 10, 12],
+    firstWave: 3 * 60 * TICK_RATE,
+    waveEvery: 2 * 60 * TICK_RATE,
+    waveSize: [4, 7, 10, 12],
     maxEra: 3,
     trickle: 0, // resource trickle knob (cheats); 0 = honest
   },
   normal: {
     villagerScale: 1,
-    firstWave: 2.5 * 60 * TICK_RATE, // raids early so the game stays active
-    waveEvery: 1.6 * 60 * TICK_RATE,
-    waveSize: [5, 9, 13, 17],
+    firstWave: 1.4 * 60 * TICK_RATE, // raids very early so the pressure is on
+    waveEvery: 1.2 * 60 * TICK_RATE,
+    waveSize: [3, 8, 13, 17],
     maxEra: 4,
     trickle: 0, // no cheating on Normal
   },
   hard: {
     villagerScale: 1.15,
-    firstWave: 1.5 * 60 * TICK_RATE, // an early rush — defend or die
-    waveEvery: 1.1 * 60 * TICK_RATE,
-    waveSize: [7, 12, 18, 24],
+    firstWave: 0.8 * 60 * TICK_RATE, // an immediate rush — defend or die
+    waveEvery: 0.9 * 60 * TICK_RATE,
+    waveSize: [4, 10, 18, 24],
     maxEra: 4,
     trickle: 2, // a light, declared resource edge so Hard out-produces you
   },

@@ -11,6 +11,9 @@ import { AudioManager } from './render/audio.js';
 import { showDisclaimer, showTitle, showFactionSelect, showEndScreen, showTutorial, showRotatePrompt, showSettings, showLoading, hideLoading } from './render/screens.js';
 import { DeployController } from './render/deploy.js';
 import { hasSave, readSave, writeSave } from './render/settings.js';
+import { loadProfile, completeMission, saveProfile } from './render/profile.js';
+import { showCampaign, showMissionResult } from './render/campaign.js';
+import { TICK_RATE } from './sim/constants.js';
 import factionsData from './data/factions.json' with { type: 'json' };
 
 const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -18,6 +21,9 @@ const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in wi
 // One AudioManager for the whole page (matches restart via reload, so a single
 // instance is correct). Shared by the title/settings screens and the match.
 const audio = new AudioManager();
+
+// Persistent meta-progression profile (XP, mission stars, daily streak, chests).
+const profile = loadProfile();
 
 // Brief on-screen confirmation (save, etc.)
 function toast(msg) {
@@ -91,6 +97,9 @@ function startMatch(playerFaction, difficulty, opts = {}) {
   let ended = false;
   let paused = false;
   let booted = false;
+  // Campaign mission scoring: ★ win · ★ under par time · ★ Istana never below 60%.
+  const mission = opts.mission || null;
+  let minIstanaFrac = 1;
 
   // Tutorial → deployment → battle. The match stays paused through both;
   // deployment lets the player place their starting army where they like.
@@ -141,13 +150,27 @@ function startMatch(playerFaction, difficulty, opts = {}) {
       }
       if (ev.type === 'game-over' && !ended) {
         ended = true;
-        showEndScreen(sim, ev.winner, {
-          onReplay: () => {
-            sessionStorage.setItem('panji-restart', JSON.stringify({ faction: playerFaction, difficulty, theme: opts.theme }));
-            location.reload();
-          },
-          onChangeBanner: () => location.reload(),
-        });
+        if (mission) {
+          const win = ev.winner === 0;
+          const minutes = sim.tick / TICK_RATE / 60;
+          const stars = win ? 1 + (minutes <= mission.parMin ? 1 : 0) + (minIstanaFrac >= 0.6 ? 1 : 0) : 0;
+          const xp = win ? 40 + stars * 30 + ({ easy: 0, normal: 20, hard: 50 }[mission.difficulty] || 0) : 15;
+          const xpResult = completeMission(profile, mission.id, stars, xp);
+          let gotChest = false;
+          if (win) { profile.chests += 1; gotChest = true; saveProfile(profile); }
+          showMissionResult(profile, audio, {
+            win, stars, mission, xpResult, gotChest,
+            onContinue: () => goCampaign(),
+          });
+        } else {
+          showEndScreen(sim, ev.winner, {
+            onReplay: () => {
+              sessionStorage.setItem('panji-restart', JSON.stringify({ faction: playerFaction, difficulty, theme: opts.theme }));
+              location.reload();
+            },
+            onChangeBanner: () => location.reload(),
+          });
+        }
       }
     }
     gameRenderer.consumeEvents(events);
@@ -171,6 +194,17 @@ function startMatch(playerFaction, difficulty, opts = {}) {
     if (steps === MAX_TICKS_PER_FRAME && accumulator >= TICK_MS) accumulator = 0;
     overlay.markTicks(steps);
     handleEvents(sim.drainEvents());
+
+    // track the player's Istana health for the flawless (★3) mission objective
+    if (mission && !ended && steps > 0) {
+      let frac = 1;
+      sim.pool.forEach((e) => {
+        if (e.kind === 'building' && e.owner === 0 && e.protoId === 'istana') {
+          frac = Math.min(frac, e.hp / (e.maxHp || e.proto?.hp || e.hp));
+        }
+      });
+      minIstanaFrac = Math.min(minIstanaFrac, frac);
+    }
 
     cameraRig.update(dtMs / 1000);
     // alpha = fraction of the way to the next tick, for entity interpolation.
@@ -203,17 +237,31 @@ if (restart) {
   const mapSize = q.get('size') ? parseInt(q.get('size'), 10) : undefined;
   startMatch('semaun', 'normal', { tutorial: false, theme, mapSize }); // headless testing shortcut
 } else {
-  // Disclaimer → title → faction select → match (with the how-to-play tutorial).
-  // The title offers "Resume last game" (if a save exists) and Settings.
-  showDisclaimer(() => {
-    const title = () => showTitle(
-      () => showFactionSelect((faction, difficulty, theme, seed, mapSize) =>
-        startMatch(faction, difficulty, { tutorial: true, theme, seed, mapSize })),
-      {
-        onResume: hasSave() ? () => startMatch(null, null, { loadSnapshot: readSave() }) : null,
-        onSettings: () => showSettings(audio),
-      }
-    );
-    title();
+  // Disclaimer → title → Campaign (journey map) or Skirmish → match.
+  showDisclaimer(() => goHome());
+}
+
+// Title hub: Campaign (the engagement loop) + Skirmish (free match) + Resume.
+function goHome() {
+  showTitle(
+    () => showFactionSelect((faction, difficulty, theme, seed, mapSize) =>
+      startMatch(faction, difficulty, { tutorial: true, theme, seed, mapSize })),
+    {
+      onCampaign: () => goCampaign(),
+      onResume: hasSave() ? () => startMatch(null, null, { loadSnapshot: readSave() }) : null,
+      onSettings: () => showSettings(audio),
+    }
+  );
+}
+
+// Campaign journey map → pick a mission → run it as a scored match.
+function goCampaign() {
+  showCampaign(profile, audio, {
+    onMission: (m) => startMatch(m.faction, m.difficulty, {
+      theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m,
+      tutorial: m.id === 'muara' && !profile.stars['muara'], // teach on the very first mission
+    }),
+    onBack: () => goHome(),
+    onSettings: () => showSettings(audio),
   });
 }

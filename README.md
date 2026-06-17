@@ -65,11 +65,13 @@ and graphics that auto-default to **Low** on small devices.
   difficulties** (Easy / Normal / Hard) chosen at setup.
 - **Procedural hero portraits** on the faction cards (drop-in for real art via a
   `portrait` field in `factions.json`).
-- **Merge Kampong** — a companion merge mini-game (`merge.html`, reachable from
-  the title screen) with a **journey map** (light-blue gradient world + dashed
-  roads + star nodes), a tiered merge loop, generators/energy, orders, a daily
-  streak, a Kampong Pass and a mystery box. All currency is **in-game only**
-  (educational build — no real-money purchases).
+- **Campaign + engagement loop** — a **journey map** (light-blue gradient world,
+  dashed roads, star-rated mission nodes that unlock in sequence), a persistent
+  **profile** (XP/levels + cosmetic unlocks), a **daily login streak**, a
+  **campaign pass**, and a post-victory **reward chest** with a scored
+  mission-result screen (★ win · ★ under par time · ★ flawless). All rewards are
+  **in-game / cosmetic only** — no real-money path (educational build). Pick
+  **Campaign** or **Skirmish** from the title.
 
 ## Docs
 
@@ -93,7 +95,7 @@ node scripts/test-content.mjs          # settings/save/seed (needs npm run dev)
 node scripts/test-qa.mjs               # themes + gfx presets (needs npm run dev)
 node scripts/test-mapsize-render.mjs   # map-size render (spawns its own server)
 node scripts/test-mobile.mjs           # mobile/tablet touch UI (file://)
-node scripts/test-merge.mjs            # Merge Kampong + journey map (file://)
+node scripts/test-campaign.mjs        # campaign/profile/daily/chest (file://)
 node scripts/balance.mjs               # AI-vs-AI balance harness (DIFF=hard too)
 ```
 

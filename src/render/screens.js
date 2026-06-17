@@ -153,14 +153,20 @@ export function showRotatePrompt() {
 }
 
 // Title screen -> faction select -> match.
-export function showTitle(onPlay, { onResume = null, onSettings = null } = {}) {
+export function showTitle(onSkirmish, { onCampaign = null, onResume = null, onSettings = null } = {}) {
   const overlay = el('div', 'screen-overlay', document.body);
   el('h1', 'screen-title', overlay, 'PANJI BRUNEI');
   el('div', 'screen-sub', overlay, 'Banners of the river kingdom');
   el('div', 'title-flavor', overlay,
     'From the myths of Awang Semaun to the resistance of Haji Saman — raise your banner, work the river, and unite the kampongs.');
-  const btn = el('button', 'start-btn', overlay, 'Play');
-  btn.onclick = () => { overlay.remove(); onPlay(); };
+
+  // Campaign is the headline (the journey/progression loop); Skirmish is a free match.
+  if (onCampaign) {
+    const camp = el('button', 'start-btn', overlay, '🗺 Campaign');
+    camp.onclick = () => { overlay.remove(); onCampaign(); };
+  }
+  const skirmish = el('button', onCampaign ? 'diff-btn' : 'start-btn', overlay, onCampaign ? 'Skirmish (free match)' : 'Play');
+  skirmish.onclick = () => { overlay.remove(); onSkirmish(); };
 
   const row = el('div', 'screen-row', overlay);
   if (onResume) {
@@ -171,9 +177,6 @@ export function showTitle(onPlay, { onResume = null, onSettings = null } = {}) {
     const settings = el('button', 'diff-btn', row, '⚙ Settings');
     settings.onclick = () => onSettings();
   }
-  // companion mode: the Merge Kampong mini-game + journey map (separate page)
-  const merge = el('button', 'diff-btn', row, '🗺 Merge Kampong');
-  merge.onclick = () => { location.href = './merge.html'; };
   return overlay;
 }
 

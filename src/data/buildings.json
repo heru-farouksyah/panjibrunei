@@ -1,7 +1,8 @@
 {
-  "_doc": "All building stats. size = footprint in tiles (square). Times in seconds. dropoff lists resource types villagers/boats can deposit. shore = footprint must touch water. Eras gate availability.",
+  "_doc": "All building stats. size = footprint in tiles (square). Times in seconds. dropoff lists resource types villagers/boats can deposit. shore = footprint must touch water. Eras gate availability. `desc` is shown in the command card / selection panel (tap a tile on touch to read it).",
 
   "istana": {
+    "desc": "Your seat of power. MISSION: hold your Istana — and slay the enemy Boss or raze their Istana — to win. It stores all resources and trains villagers.",
     "name": "Istana", "size": 3, "hp": 2400, "armor": 3,
     "cost": { "timber": 275, "gold": 100 }, "buildTime": 60, "era": 1,
     "pop": 10, "los": 8,
@@ -12,6 +13,7 @@
   },
 
   "lumbung": {
+    "desc": "A storehouse — villagers drop off timber, food, gold and camphor here, and it raises your storage cap.",
     "name": "Lumbung", "size": 2, "hp": 700, "armor": 1,
     "cost": { "timber": 70 }, "buildTime": 14, "era": 1,
     "los": 3,
@@ -20,6 +22,7 @@
   },
 
   "rumah_kampong": {
+    "desc": "A kampong house — raises your population cap by 5 so you can train more villagers and soldiers.",
     "name": "Rumah Kampong", "size": 2, "hp": 550, "armor": 0,
     "cost": { "timber": 30 }, "buildTime": 12, "era": 1,
     "pop": 5, "los": 3,
@@ -27,6 +30,7 @@
   },
 
   "kedai_runcit": {
+    "desc": "A market — buy and sell resources for gold, and hire mercenary fighters with gold.",
     "name": "Kedai Runcit", "size": 2, "hp": 620, "armor": 1,
     "cost": { "timber": 90, "gold": 60 }, "buildTime": 18, "era": 1,
     "los": 4, "market": true,
@@ -34,18 +38,21 @@
   },
 
   "balai_bomba": {
+    "desc": "Firefighters — automatically douse nearby fires before they spread through your kampong.",
     "name": "Balai Bomba", "size": 2, "hp": 700, "armor": 1,
     "cost": { "timber": 80, "gold": 30 }, "buildTime": 16, "era": 1,
     "los": 4, "douse": { "radius": 8 }
   },
 
   "kebun": {
+    "desc": "A padi farm (sawah) — villagers harvest a steady supply of food here without depleting the land.",
     "name": "Kebun", "size": 2, "hp": 140, "armor": 0,
     "cost": { "timber": 45 }, "buildTime": 9, "era": 1,
     "los": 2, "farm": { "rate": 0.85 }
   },
 
   "pangkalan": {
+    "desc": "A waterfront dock — builds fishing boats, war perahu and trade ships. Must touch water.",
     "name": "Pangkalan", "size": 2, "hp": 850, "armor": 1,
     "cost": { "timber": 110 }, "buildTime": 22, "era": 1,
     "los": 6, "shore": true,
@@ -54,6 +61,7 @@
   },
 
   "balai_pahlawan": {
+    "desc": "The barracks — trains your army: Kampilan swordsmen, archers, keris stabbers, javelin throwers and the Lela cannon.",
     "name": "Balai Pahlawan", "size": 2, "hp": 1050, "armor": 1,
     "cost": { "timber": 130 }, "buildTime": 24, "era": 1,
     "los": 5,
@@ -61,6 +69,7 @@
   },
 
   "gerai_tukang": {
+    "desc": "The workshop — research upgrades (sharper weapons, armour, fire arrows, faster gathering) to strengthen your kingdom.",
     "name": "Gerai Tukang", "size": 2, "hp": 800, "armor": 1,
     "cost": { "timber": 100, "gold": 50 }, "buildTime": 19, "era": 2,
     "los": 4,
@@ -79,6 +88,7 @@
   },
 
   "kubu": {
+    "desc": "A watchtower — fires arrows at any enemy that comes near. Your first line of defence; place them at chokepoints and fords.",
     "name": "Kubu", "size": 1, "hp": 720, "armor": 2,
     "cost": { "timber": 90, "gold": 40 }, "buildTime": 19, "era": 1,
     "los": 9, "tags": ["tower"],
@@ -86,12 +96,14 @@
   },
 
   "pagar": {
+    "desc": "A defensive wall — cheap and tough. Channel the enemy into your towers.",
     "name": "Pagar", "size": 1, "hp": 380, "armor": 2,
     "cost": { "timber": 5 }, "buildTime": 6, "era": 2,
     "los": 1, "tags": ["wall"]
   },
 
   "surau": {
+    "desc": "A prayer house — slowly heals nearby units and trickles a little camphor.",
     "name": "Surau", "size": 2, "hp": 620, "armor": 1,
     "cost": { "timber": 80, "gold": 25 }, "buildTime": 16, "era": 2,
     "los": 4,
@@ -100,12 +112,14 @@
   },
 
   "panggung_panji": {
+    "desc": "A hero shrine — summon your faction's legendary Panji hero to lead your army.",
     "name": "Panggung Panji", "size": 2, "hp": 950, "armor": 2,
     "cost": { "timber": 150, "gold": 100, "camphor": 50 }, "buildTime": 28, "era": 3,
     "los": 5, "hero": true
   },
 
   "mahkota_monument": {
+    "desc": "A grand wonder — raise it, then hold it for 5 minutes to win by monument.",
     "name": "Mahkota Monument", "size": 3, "hp": 4500, "armor": 3,
     "cost": { "food": 800, "timber": 800, "gold": 800, "camphor": 250 },
     "buildTime": 80, "era": 4,

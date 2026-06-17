@@ -363,8 +363,9 @@ export class HUD {
       if (e.kind === 'building' && e.demolishing) {
         extra += `<div class="sub building">Tearing down…</div>`;
       }
+      const descLine = e.proto.desc ? `<div class="sel-desc">${e.proto.desc}</div>` : '';
       return `<div class="sel-name">${e.proto.name}</div>
-        <div class="sub">${Math.ceil(e.hp)} / ${e.maxHp} HP${e.armor ? ` · ${e.armor} armor` : ''}</div>${extra}`;
+        <div class="sub">${Math.ceil(e.hp)} / ${e.maxHp} HP${e.armor ? ` · ${e.armor} armor` : ''}</div>${extra}${descLine}`;
     }
     const counts = {};
     for (const e of ents) counts[e.proto.name] = (counts[e.proto.name] ?? 0) + 1;
@@ -389,7 +390,14 @@ export class HUD {
     }
     if (onClick) {
       btn.onclick = () => {
-        this.hideTip();
+        // touch has no hover — show the description on tap (briefly), then act.
+        if (this.isTouch && tipText) {
+          this.showTip(btn, `<b>${name}</b><br>${tipText}`);
+          clearTimeout(this._tapTipT);
+          this._tapTipT = setTimeout(() => this.hideTip(), 3400);
+        } else {
+          this.hideTip();
+        }
         onClick();
         // touch: after tapping an item, fold the card back into the corner icon
         // so the map is clear (e.g. to place the building you just picked).
@@ -444,7 +452,7 @@ export class HUD {
         const locked = p.era > player.era || !sim.canAfford(0, cost);
         this.tile(grid, {
           icon: protoId, name: p.name, cost,
-          desc: `${p.era > 1 ? ERAS[p.era - 1].name + ' · ' : ''}place this building`,
+          desc: `${p.desc || 'Place this building.'}${p.era > 1 ? ` (needs ${ERAS[p.era - 1].name})` : ''}`,
           disabled: locked,
           onClick: () => this.startPlacement(protoId),
         });

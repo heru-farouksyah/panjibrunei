@@ -301,6 +301,9 @@ export class HUD {
     const key = ents.map((e) => e.id).join(',');
     this.renderPortrait(ents);
     this.selInfo.innerHTML = this.renderInfo(ents);
+    // a single selected building shows its info + description (kept visible even
+    // on small phones, to fill the command-panel space the user asked about).
+    this.panel.classList.toggle('sel-building', ents.length === 1 && ents[0].kind === 'building');
     if (throttled && key === this.lastKey) return;
     const isNew = key !== this.lastKey;
     this.lastKey = key;

@@ -93,8 +93,22 @@ export class TouchControls {
     document.body.appendChild(w);
     this.placeBubble = w;
     this.bubbleArmed = false;
-    w.querySelector('.pc-ok').addEventListener('click', (e) => { e.stopPropagation(); this.confirmPlace(); });
-    w.querySelector('.pc-cancel').addEventListener('click', (e) => { e.stopPropagation(); this.cancelPlace(); });
+    this.aim = null; // pending unit-order target {x,z,targetId} awaiting ✓
+    w.querySelector('.pc-ok').addEventListener('click', (e) => { e.stopPropagation(); this.onConfirm(); });
+    w.querySelector('.pc-cancel').addEventListener('click', (e) => { e.stopPropagation(); this.onCancel(); });
+  }
+
+  // ✓ commits whichever aim is active: a building placement OR a unit order.
+  onConfirm() {
+    if (this.hud.isPlacing()) { this.confirmPlace(); return; }
+    if (this.aim) { this.commitOrder(); this.vibrate(16); this.positionPlaceBubble(); }
+  }
+
+  onCancel() {
+    if (this.hud.isPlacing()) { this.input.setMode('normal'); this.bubbleArmed = false; }
+    this.aim = null;
+    this.hidePlaceBubble();
+    this.vibrate(8);
   }
 
   confirmPlace() {
@@ -103,21 +117,57 @@ export class TouchControls {
     this.hud.confirmPlacement(s ? s.x : window.innerWidth / 2, s ? s.y : window.innerHeight / 2);
     this.vibrate(16);
     this.bubbleArmed = false;
-    this.syncButtons();
+    this.positionPlaceBubble();
   }
 
-  cancelPlace() { this.input.setMode('normal'); this.bubbleArmed = false; this.hidePlaceBubble(); this.vibrate(8); }
+  // Issue the standard context order (move / gather / attack / rally) at the
+  // aimed spot — the "release to commit" for ALL units, so a tap never fires an
+  // order by accident (dragging only scrolls).
+  commitOrder() {
+    const a = this.aim; this.aim = null;
+    if (!a) return;
+    const ids = this.input.selectionIds();
+    let hasUnit = false;
+    for (const id of ids) {
+      const en = this.sim.pool.get(id);
+      if (en?.kind === 'unit') hasUnit = true;
+      if (en?.kind === 'building' && en.owner === 0) this.sim.cmdSetRally(id, a.x, a.z);
+    }
+    if (hasUnit) this.sim.cmdContext(ids, a.x, a.z, a.targetId);
+  }
+
   hidePlaceBubble() { if (this.placeBubble) this.placeBubble.style.display = 'none'; }
 
+  // screen position of the aimed ground point (for the order bubble)
+  aimScreen() {
+    if (!this.aim) return null;
+    const out = { x: 0, y: 0 };
+    return this.input.screenPos({ x: this.aim.x, z: this.aim.z, proto: {} }, out) ? out : null;
+  }
+
+  // place/track the confirm bubble for whichever aim is active (build or order)
   positionPlaceBubble() {
-    if (!this.hud.isPlacing()) { this.bubbleArmed = false; this.hidePlaceBubble(); return; }
-    if (!this.bubbleArmed) { this.hidePlaceBubble(); return; }
-    const s = this.hud.ghostScreen();
-    if (!s) { this.hidePlaceBubble(); return; }
+    if (this.hud.isPlacing()) {
+      if (!this.bubbleArmed) { this.hidePlaceBubble(); return; }
+      const s = this.hud.ghostScreen();
+      if (!s) { this.hidePlaceBubble(); return; }
+      this.showBubble(s, !this.hud.placeValid());
+      return;
+    }
+    if (this.aim && this.input.selection.size > 0) {
+      const s = this.aimScreen();
+      if (!s) { this.hidePlaceBubble(); return; }
+      this.showBubble(s, false);
+      return;
+    }
+    this.hidePlaceBubble();
+  }
+
+  showBubble(s, invalid) {
     this.placeBubble.style.display = 'flex';
     this.placeBubble.style.left = `${s.x}px`;
     this.placeBubble.style.top = `${Math.max(40, s.y - 52)}px`;
-    this.placeBubble.classList.toggle('invalid', !this.hud.placeValid());
+    this.placeBubble.classList.toggle('invalid', invalid);
   }
 
   toggleMenu(force) {
@@ -166,7 +216,7 @@ export class TouchControls {
 
   recallGroup(n) {
     const ids = (this.input.groups.get(n) ?? []).filter((id) => this.sim.pool.get(id));
-    if (ids.length) { this.input.setSelection(ids); this.vibrate(10); }
+    if (ids.length) { this.input.setSelection(ids); this.aim = null; this.positionPlaceBubble(); this.vibrate(10); }
   }
 
   syncButtons() {
@@ -255,6 +305,7 @@ export class TouchControls {
         const scale = this.rig.dist * 0.0022;
         this.rig.target.x -= dx * scale;
         this.rig.target.z -= dy * scale;
+        this.positionPlaceBubble(); // keep the order/build bubble glued to its spot
       }
     }
   }
@@ -280,6 +331,7 @@ export class TouchControls {
           Math.max(rec.startX, rec.x), Math.max(rec.startY, rec.y), false
         );
         this.vibrate(8);
+        this.aim = null; // new selection → drop any pending order aim
         // ⛶ select is one-shot: drop back to pan so you can't get stuck box-
         // selecting (which felt like the box "kept attaching to the finger").
         if (this.selectMode) { this.selectMode = false; this.syncButtons(); }
@@ -324,31 +376,28 @@ export class TouchControls {
 
     const hit = this.input.pickEntity(x, y);
     if (hit && hit.owner === 0) {
+      // tapping your own unit/building selects it (and clears any pending aim)
+      this.aim = null;
       if (isDouble && hit.kind === 'unit') this.selectAllOfTypeOnScreen(hit.protoId);
       else this.input.setSelection([hit.id]);
+      this.positionPlaceBubble();
       this.vibrate(8);
       return;
     }
 
     const ids = this.input.selectionIds();
     if (ids.length > 0) {
+      // AIM the order: drop the Release bubble at the spot (commit on ✓). The
+      // order isn't issued on the tap, so dragging the map never fires it.
       const p = this.input.groundAt(x, y);
       if (!p) return;
-      const target = hit;
-      let hasUnit = false;
-      for (const id of ids) {
-        const en = this.sim.pool.get(id);
-        if (en?.kind === 'unit') hasUnit = true;
-        if (en?.kind === 'building' && en.owner === 0) this.sim.cmdSetRally(id, p.x, p.z);
-      }
-      if (hasUnit) {
-        // double-tap empty ground = attack-move; otherwise normal context order
-        if (isDouble && !target) this.sim.cmdAttackMove(ids, p.x, p.z);
-        else this.sim.cmdContext(ids, p.x, p.z, target ? target.id : -1);
-        this.vibrate(15);
-      }
+      this.aim = { x: p.x, z: p.z, targetId: hit ? hit.id : -1 };
+      this.positionPlaceBubble();
+      this.vibrate(6);
     } else if (!hit) {
       this.input.setSelection([]);
+      this.aim = null;
+      this.positionPlaceBubble();
     }
   }
 

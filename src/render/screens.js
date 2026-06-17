@@ -60,10 +60,10 @@ const TUTORIAL_SLIDES = [
       'sago palm, gold rock, camphor grove or your farm to gather. They carry ' +
       'the load back to your Istana on their own. Build more villagers and ' +
       'houses to grow your kampong.',
-    touchBody: '<b>Tap</b> a <b>Penduduk</b> (villager), then <b>tap</b> a tree, ' +
-      'sago palm, gold rock, camphor grove or your farm to gather. They carry ' +
-      'the load back to your Istana on their own. Build more villagers and ' +
-      'houses to grow your kampong.',
+    touchBody: '<b>Tap</b> a <b>Penduduk</b> (villager), tap a tree, sago palm, ' +
+      'gold rock, camphor grove or your farm to aim, then tap the <b>✓</b> bubble ' +
+      'to send them gathering. (Dragging just scrolls the map.) They carry the ' +
+      'load back to your Istana on their own.',
   },
   {
     icon: 'kubu', title: '2 · Protect',
@@ -82,10 +82,10 @@ const TUTORIAL_SLIDES = [
       '<b>Pemanah</b> archers fight units; your <b>Lela</b> destroyer smashes ' +
       'buildings. Mix them — archers beat infantry, skirmishers beat archers.',
     touchBody: '<b>Long-press</b> then drag a box over your army to select it. ' +
-      '<b>Tap an enemy</b> to attack; <b>double-tap</b> empty ground to ' +
-      'attack-move. <b>Kampilan</b> swordsmen and <b>Pemanah</b> archers fight ' +
-      'units; your <b>Lela</b> destroyer smashes buildings. Mix them — archers ' +
-      'beat infantry.',
+      'Tap a target or spot, then tap the <b>✓</b> bubble to commit the order ' +
+      '(dragging just scrolls). <b>Kampilan</b> swordsmen and <b>Pemanah</b> ' +
+      'archers fight units; your <b>Lela</b> destroyer smashes buildings. Mix ' +
+      'them — archers beat infantry.',
   },
   {
     icon: 'hero', title: '4 · Win',

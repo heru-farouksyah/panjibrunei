@@ -97,6 +97,27 @@ async function open(viewport) {
   });
   check('held touch with no selection still arms box-select', heldNoSel === true);
 
+  // ORDER release flow (all units): a tap aims (no order yet), ✓ commits it
+  const order = await page.evaluate(() => {
+    const { touch, input, sim } = window.__panji;
+    let uid = -1; sim.pool.forEach((e) => { if (uid < 0 && e.kind === 'unit' && e.owner === 0) uid = e.id; });
+    input.setSelection([uid]);
+    // find a screen point that's empty ground (no entity under it) to aim at
+    let pt = null;
+    for (const [sx, sy] of [[700, 300], [760, 260], [820, 330], [650, 360], [500, 360], [760, 180], [600, 320]]) {
+      if (!input.pickEntity(sx, sy) && input.groundAt(sx, sy)) { pt = [sx, sy]; break; }
+    }
+    if (!pt) return { skip: true };
+    touch.aim = null;
+    touch.handleTap(pt[0], pt[1]);             // aim only — must NOT issue an order
+    const aimed = !!touch.aim;
+    const bubble = getComputedStyle(document.getElementById('place-confirm')).display !== 'none';
+    touch.onConfirm();                          // ✓ commits the order
+    return { aimed, bubble, committed: touch.aim === null };
+  });
+  check('tap a spot AIMS the order (bubble shown, not issued)', order.skip || (order.aimed && order.bubble), order.skip ? 'no empty point' : '');
+  check('✓ commits the unit order + clears aim', order.skip || order.committed);
+
   // command card auto-collapses to the left icon on unit select; portrait reopens
   const card = await page.evaluate(() => {
     const { input, sim, hud } = window.__panji;

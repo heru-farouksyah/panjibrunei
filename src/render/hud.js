@@ -349,6 +349,9 @@ export class HUD {
       btn.onclick = () => {
         this.hideTip();
         onClick();
+        // touch: after tapping an item, fold the card back into the corner icon
+        // so the map is clear (e.g. to place the building you just picked).
+        if (this.isTouch) this.panel.classList.add('cmd-collapsed');
       };
     }
     return btn;

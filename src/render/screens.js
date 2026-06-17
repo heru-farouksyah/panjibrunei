@@ -2,7 +2,7 @@ import factionsData from '../data/factions.json' with { type: 'json' };
 import { iconSVG } from './icons.js';
 import { THEMES, THEME_IDS, DEFAULT_THEME } from './themes.js';
 import { MAP_SIZES } from '../sim/constants.js';
-import { getGraphics, setGraphics, GFX_LEVELS } from './settings.js';
+import { getGraphics, setGraphics, GFX_LEVELS, getControlGroups, setControlGroups } from './settings.js';
 import { heroPortraitSVG } from './portraits.js';
 
 function el(tag, cls, parent, text) {
@@ -219,6 +219,18 @@ export function showSettings(audio, { onClose } = {}) {
     gfxBtns[lvl] = b;
   }
   el('div', 'settings-hint', panel, 'Graphics changes apply to the next match (and lighting now).');
+
+  // on-screen control-group bar (1–5) — touch players can hide it to declutter
+  const cgRow = el('div', 'settings-row', panel);
+  el('span', 'settings-label', cgRow, 'Control groups (1–5)');
+  let cgOn = getControlGroups();
+  const cg = el('button', 'diff-btn' + (cgOn ? ' chosen' : ''), cgRow, cgOn ? 'Shown' : 'Hidden');
+  cg.onclick = () => {
+    cgOn = !cgOn; setControlGroups(cgOn);
+    cg.classList.toggle('chosen', cgOn); cg.textContent = cgOn ? 'Shown' : 'Hidden';
+    document.body.classList.toggle('hide-groups', !cgOn);
+  };
+  el('div', 'settings-hint', panel, 'Tap a number to recall a saved squad; long-press to assign the current selection.');
 
   // controls reference
   const help = el('div', 'settings-help', panel);

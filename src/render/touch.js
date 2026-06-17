@@ -1,4 +1,5 @@
 import { MIN_DIST, MAX_DIST } from './cameraRig.js';
+import { getControlGroups } from './settings.js';
 
 // Touch controls for phones/tablets, designed to reach feature parity with the
 // desktop mouse+keyboard scheme. Single finger: tap = select / command (or
@@ -36,6 +37,7 @@ export class TouchControls {
       const minEdge = Math.min(screen.width || 9999, screen.height || 9999);
       this.deviceClass = minEdge >= 600 ? 'tablet' : 'phone';
       document.body.classList.add(this.deviceClass);
+      if (!getControlGroups()) document.body.classList.add('hide-groups');
     }
 
     this.dom.addEventListener('touchstart', (e) => this.onStart(e), { passive: false });

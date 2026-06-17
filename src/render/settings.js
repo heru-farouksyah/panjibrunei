@@ -4,7 +4,12 @@
 
 const GFX_KEY = 'panji.gfx';
 const SAVE_KEY = 'panji.save';
+const GROUPS_KEY = 'panji.groups';
 export const GFX_LEVELS = ['low', 'medium', 'high'];
+
+// Whether the on-screen 1–5 control-group bar (touch) is shown. Default on.
+export function getControlGroups() { return localStorage.getItem(GROUPS_KEY) !== 'off'; }
+export function setControlGroups(on) { localStorage.setItem(GROUPS_KEY, on ? 'on' : 'off'); }
 
 export function getGraphics() {
   const v = localStorage.getItem(GFX_KEY);

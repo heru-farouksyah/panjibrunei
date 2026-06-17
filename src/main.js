@@ -70,7 +70,7 @@ function startMatch(playerFaction, difficulty, opts = {}) {
   const gameRenderer = new GameRenderer(container, sim, theme);
   const cameraRig = new CameraRig(gameRenderer.camera, gameRenderer.renderer.domElement, sim.grid);
   const input = new InputController(sim, gameRenderer, cameraRig);
-  const hud = new HUD(sim, gameRenderer, input, cameraRig);
+  const hud = new HUD(sim, gameRenderer, input, cameraRig, audio);
   const touch = new TouchControls(sim, gameRenderer, cameraRig, input, hud);
   audio.world(theme); // start the per-theme ambient bed + score (once unlocked)
   const minimap = new Minimap(sim, cameraRig, input, audio);
@@ -207,6 +207,7 @@ function startMatch(playerFaction, difficulty, opts = {}) {
     }
 
     cameraRig.update(dtMs / 1000);
+    if (!paused && !ended) audio.ambientWork(sim); // chop/mine/hammer work sounds
     // alpha = fraction of the way to the next tick, for entity interpolation.
     gameRenderer.render(
       accumulator / TICK_MS, now / 1000, dtMs / 1000,

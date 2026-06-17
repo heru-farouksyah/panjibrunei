@@ -328,6 +328,40 @@ export class AudioManager {
     }
   }
 
+  // ---- ambient work soundscape --------------------------------------------
+  // Called each frame; samples the player's villagers/builders and plays soft,
+  // repeating work cues (chop / mine / hammer / dig) while labour is happening.
+  ambientWork(sim) {
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+    const now = performance.now();
+    if (now - (this._workScan ?? 0) < 120) return; // throttle the scan
+    this._workScan = now;
+    let timber = false, gold = false, food = false, building = false;
+    sim.pool.forEach((e) => {
+      if (e.owner !== 0) return;
+      if (e.kind === 'unit' && e.state === 'gathering') {
+        if (e.carryType === 'timber' || e.carryType === 'camphor') timber = true;
+        else if (e.carryType === 'gold') gold = true;
+        else food = true;
+      } else if (e.kind === 'building' && !e.complete && (e.builders ?? 0) > 0) {
+        building = true;
+      }
+    });
+    this._workCue('chop', timber, 600);
+    this._workCue('mine', gold, 700);
+    this._workCue('hammer', building, 540);
+    this._workCue('dig', food, 880);
+  }
+
+  _workCue(name, active, everyMs) {
+    if (!active) return;
+    this._workLast = this._workLast || {};
+    const now = performance.now();
+    if (now - (this._workLast[name] ?? 0) < everyMs * (0.8 + Math.random() * 0.5)) return; // jitter
+    this._workLast[name] = now;
+    this.play(name, { rateLimitMs: 0 });
+  }
+
   // ---- event routing -------------------------------------------------------
   // Route sim events to cues. Returns true for events that warrant a minimap
   // attack ping (used by the HUD/minimap).
@@ -453,6 +487,22 @@ const PATCHES = {
   crackle(a, when, vol) {
     // unused as a one-shot; the fire loop builds its own sustained source
     a.noiseBurst(when, 0.2, vol, { type: 'bandpass', freq: 650, q: 0.7 });
+  },
+  // --- work sounds (ambient, played repeatedly while villagers labour) ---
+  chop(a, when, vol) {
+    a.blip(170, 0.07, 'triangle', vol * 0.7, when);                              // dull axe thunk
+    a.noiseBurst(when, 0.07, vol * 0.6, { type: 'lowpass', freq: 520, q: 1 });
+  },
+  mine(a, when, vol) {
+    a.blip(820 + Math.random() * 300, 0.05, 'square', vol * 0.5, when);          // pick clink
+    a.noiseBurst(when, 0.05, vol * 0.7, { type: 'highpass', freq: 3000, q: 0.8 });
+  },
+  hammer(a, when, vol) {
+    a.blip(300, 0.05, 'square', vol * 0.5, when);                                // builder's knock
+    a.noiseBurst(when, 0.05, vol * 0.6, { type: 'bandpass', freq: 1200, q: 1.2 });
+  },
+  dig(a, when, vol) {
+    a.noiseBurst(when, 0.13, vol, { type: 'lowpass', freq: 1300, q: 0.5 });      // harvest/fish rustle
   },
 };
 

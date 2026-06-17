@@ -183,11 +183,27 @@
 
     #monument-banner {
       position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
-      padding: 6px 16px; background: rgba(40, 30, 10, 0.92);
+      padding: 6px 16px; background: var(--panel-bg);
       border: 1px solid var(--brass); border-radius: 8px;
-      color: #e8c96a; font-size: 14px; font-weight: 600; letter-spacing: 1px;
+      color: var(--ink); font-size: 14px; font-weight: 700; letter-spacing: 1px;
       z-index: 70; text-align: center;
     }
+    /* kingdom advisor banner — occasional contextual messages */
+    #advisor {
+      position: fixed; top: 108px; left: 50%; transform: translateX(-50%) translateY(-8px);
+      display: none; align-items: center; gap: 10px; max-width: 86vw;
+      background: var(--panel-bg); border: 1px solid var(--brass-dim);
+      border-left: 3px solid var(--fc, var(--brass)); border-radius: 10px;
+      padding: 8px 14px; box-shadow: var(--panel-edge);
+      color: var(--ink); font-size: 14px; font-weight: 600; z-index: 72;
+      opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+    }
+    #advisor.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #advisor.warn { border-left-color: #d9892a; }
+    #advisor.warn .adv-herald { color: #d9892a; }
+    .adv-herald { display: flex; color: var(--fc, var(--brass)); flex: 0 0 auto; }
+    .adv-text { line-height: 1.35; }
+    @media (max-width: 860px), (pointer: coarse) { #advisor { top: 132px; font-size: 13px; max-width: 70vw; padding: 7px 12px; } }
     #hotkey-help {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       padding: 18px 26px; background: rgba(12, 14, 10, 0.96);
@@ -590,10 +606,10 @@
     #toast {
       position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
       max-width: 90vw; padding: 9px 20px; z-index: 125; pointer-events: none; text-align: center;
-      background: linear-gradient(180deg, rgba(40,28,12,0.95), rgba(22,16,8,0.95));
+      background: var(--panel-bg);
       border: 1px solid var(--brass-dim); border-radius: 9px;
-      color: #f0e2bd; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.5); opacity: 0;
+      color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: 0.3px;
+      box-shadow: var(--panel-edge); opacity: 0;
     }
     #toast.show { animation: toast-in 0.5s ease forwards; }
     @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

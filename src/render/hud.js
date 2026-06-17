@@ -60,14 +60,16 @@ function costText(cost) {
 // DOM game HUD: carved top resource bar + bottom portrait/command panel +
 // ghost building placement. Reads sim state; issues sim commands.
 export class HUD {
-  constructor(sim, gameRenderer, input, cameraRig) {
+  constructor(sim, gameRenderer, input, cameraRig, audio = null) {
     this.sim = sim;
     this.gr = gameRenderer;
     this.input = input;
     this.rig = cameraRig;
+    this.audio = audio;
     this.placing = null;
     this.mouse = { x: 0, y: 0 };
     this.idleCycle = 0;
+    this._advisorCD = {}; // per-message cooldown timestamps for the kingdom advisor
 
     // --- top resource bar ---
     this.top = el('div', null, document.body);
@@ -113,6 +115,11 @@ export class HUD {
     this.monumentEl.id = 'monument-banner';
     this.monumentEl.style.display = 'none';
 
+    // kingdom advisor — occasional contextual messages ("the kingdom speaks")
+    this.advisorEl = el('div', null, document.body);
+    this.advisorEl.id = 'advisor';
+    this.advisorEl.style.display = 'none';
+
     this.idleBtn = el('button', null, document.body,
       `<span class="ic-wrap">${iconSVG('penduduk', 18)}</span><span class="idle-n">0</span>`);
     this.idleBtn.id = 'idle-btn';
@@ -148,6 +155,7 @@ export class HUD {
     setInterval(() => {
       this.refreshTop();
       this.refreshPanel(true);
+      this.advisorCheck();
     }, 200);
 
     // opening objective hint
@@ -166,6 +174,40 @@ export class HUD {
     this.toast.classList.add('show');
     clearTimeout(this._toastT);
     this._toastT = setTimeout(() => { this.toast.style.display = 'none'; }, ms);
+  }
+
+  // The kingdom advisor speaks. `kind` 'info'|'warn'; optional key+cdMs throttle
+  // repeats of the same message (e.g. low-resource warnings).
+  say(text, kind = 'info', key = null, cdMs = 0) {
+    const now = performance.now();
+    if (key) {
+      if (now - (this._advisorCD[key] ?? -1e9) < cdMs) return;
+      this._advisorCD[key] = now;
+    }
+    const color = this.factionColor(0);
+    this.advisorEl.className = kind === 'warn' ? 'warn' : '';
+    this.advisorEl.style.setProperty('--fc', color);
+    this.advisorEl.innerHTML =
+      `<span class="adv-herald">${iconSVG('hero', 22)}</span>` +
+      `<span class="adv-text">${text}</span>`;
+    this.advisorEl.style.display = 'flex';
+    this.advisorEl.classList.remove('show');
+    void this.advisorEl.offsetWidth;
+    this.advisorEl.classList.add('show');
+    clearTimeout(this._advT);
+    this._advT = setTimeout(() => { this.advisorEl.style.display = 'none'; }, 4200);
+    this.audio?.play?.(kind === 'warn' ? 'advisor_warn' : 'advisor');
+  }
+
+  // Periodic state-based advisor lines (low resources, full population).
+  advisorCheck() {
+    const p = this.sim.players[0];
+    if (!p || this.sim.winner >= 0) return;
+    const r = p.resources;
+    if (r.timber < 60) this.say('Our timber runs low, Panglima.', 'warn', 'lowtimber', 50000);
+    else if (r.gold < 45) this.say('We are short on gold.', 'warn', 'lowgold', 50000);
+    else if (r.food < 60) this.say('Our food stores dwindle.', 'warn', 'lowfood', 50000);
+    if (p.popCap > 0 && p.pop >= p.popCap) this.say('The kampong is full — raise more houses.', 'warn', 'popcap', 35000);
   }
 
   refreshTop() {
@@ -566,6 +608,17 @@ export class HUD {
       if (ev.type === 'era-up' && ev.owner === 0) {
         this.refreshTop();
         this.showEraBanner(ERAS[this.sim.players[0].era - 1].name);
+        this.say('We have risen to a new age!');
+      } else if (ev.type === 'building-done' && ev.owner === 0) {
+        this.say('A new building rises in the kampong.', 'info', 'build', 16000);
+      } else if (ev.type === 'monument-started') {
+        this.say('A great monument is being raised — defend it!');
+      } else if (ev.type === 'boss-slain') {
+        this.say('An enemy champion has fallen!');
+      } else if (ev.type === 'kingdom-defeated') {
+        this.say('A rival kingdom is no more!');
+      } else if ((ev.type === 'damaged' || (ev.type === 'death' && ev.kind === 'building')) && ev.owner === 0) {
+        this.say('We are under attack, Panglima!', 'warn', 'attack', 22000);
       }
     }
   }

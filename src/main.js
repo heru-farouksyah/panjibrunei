@@ -13,6 +13,7 @@ import { DeployController } from './render/deploy.js';
 import { hasSave, readSave, writeSave } from './render/settings.js';
 import { loadProfile, completeMission, saveProfile } from './render/profile.js';
 import { showCampaign, showMissionResult } from './render/campaign.js';
+import { showMuara } from './render/muara.js';
 import { TICK_RATE } from './sim/constants.js';
 import factionsData from './data/factions.json' with { type: 'json' };
 
@@ -154,14 +155,7 @@ function startMatch(playerFaction, difficulty, opts = {}) {
           const win = ev.winner === 0;
           const minutes = sim.tick / TICK_RATE / 60;
           const stars = win ? 1 + (minutes <= mission.parMin ? 1 : 0) + (minIstanaFrac >= 0.6 ? 1 : 0) : 0;
-          const xp = win ? 40 + stars * 30 + ({ easy: 0, normal: 20, hard: 50 }[mission.difficulty] || 0) : 15;
-          const xpResult = completeMission(profile, mission.id, stars, xp);
-          let gotChest = false;
-          if (win) { profile.chests += 1; gotChest = true; saveProfile(profile); }
-          showMissionResult(profile, audio, {
-            win, stars, mission, xpResult, gotChest,
-            onContinue: () => goCampaign(),
-          });
+          awardMission(mission, win, stars);
         } else {
           showEndScreen(sim, ev.winner, {
             onReplay: () => {
@@ -232,6 +226,8 @@ if (restart) {
   sessionStorage.removeItem('panji-restart');
   const { faction, difficulty, theme } = JSON.parse(restart);
   startMatch(faction, difficulty, { tutorial: false, theme });
+} else if (new URLSearchParams(location.search).has('muara')) {
+  import('./render/campaignData.js').then(({ missionById }) => startMuara(missionById('muara'))); // preview/test shortcut
 } else if (new URLSearchParams(location.search).has('quickstart')) {
   const q = new URLSearchParams(location.search);
   const theme = q.get('theme') || undefined;
@@ -255,13 +251,41 @@ function goHome() {
   );
 }
 
+// Score a finished mission and show the reward screen (shared by the RTS
+// missions and the Muara naval mini-game).
+function awardMission(mission, win, stars) {
+  const xp = win ? 40 + stars * 30 + ({ easy: 0, normal: 20, hard: 50 }[mission.difficulty] || 0) : 15;
+  const xpResult = completeMission(profile, mission.id, stars, xp);
+  let gotChest = false;
+  if (win) { profile.chests += 1; gotChest = true; saveProfile(profile); }
+  showMissionResult(profile, audio, {
+    win, stars, mission, xpResult, gotChest,
+    onContinue: () => goCampaign(),
+  });
+}
+
+// "Landing at Muara" is a different game: a top-down naval arena survival,
+// not the RTS. It plugs into the same reward loop via awardMission.
+function startMuara(m) {
+  showMuara(audio, {
+    mission: m,
+    onResult: ({ win, stars, quit }) => {
+      if (quit) { goCampaign(); return; } // bailed out — no score, back to the map
+      awardMission(m, win, stars);
+    },
+  });
+}
+
 // Campaign journey map → pick a mission → run it as a scored match.
 function goCampaign() {
   showCampaign(profile, audio, {
-    onMission: (m) => startMatch(m.faction, m.difficulty, {
-      theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m,
-      tutorial: m.id === 'muara' && !profile.stars['muara'], // teach on the very first mission
-    }),
+    onMission: (m) => {
+      if (m.id === 'muara') { startMuara(m); return; } // intro = naval arena mini-game
+      startMatch(m.faction, m.difficulty, {
+        theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m,
+        tutorial: m.id === 'ayer' && !profile.stars['ayer'], // teach on the first RTS mission
+      });
+    },
     onBack: () => goHome(),
     onSettings: () => showSettings(audio),
   });

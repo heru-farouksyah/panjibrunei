@@ -367,6 +367,25 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 14px; z-index: 200; color: var(--ink); padding: 16px; overflow: auto;
     }
+    /* Landing at Muara — naval arena mini-game: full-bleed canvas, no padding */
+    .screen-overlay.muara { padding: 0; gap: 0; overflow: hidden; background: #6fa9cf; touch-action: none; }
+    .muara-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .muara-quit {
+      position: absolute; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+      width: 38px; height: 38px; border-radius: 50%; border: none; z-index: 3;
+      background: rgba(255,255,255,0.82); color: var(--ink); font-size: 24px; line-height: 1;
+      font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(20,50,70,0.35);
+      display: flex; align-items: center; justify-content: center; padding: 0 4px 2px 0;
+    }
+    .muara-quit:active { transform: scale(0.92); }
+    .muara-toast {
+      position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%) translateY(10px);
+      background: rgba(20,45,65,0.82); color: #fff; padding: 9px 16px; border-radius: 999px;
+      font-size: 14px; font-weight: 600; white-space: nowrap; max-width: 90vw; text-align: center;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 3;
+      box-shadow: 0 4px 16px rgba(20,50,70,0.4);
+    }
+    .muara-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .screen-title { font-size: clamp(30px, 8vw, 46px); letter-spacing: 8px; color: var(--brass); margin: 0; text-shadow: 0 2px 12px rgba(0,0,0,0.7); text-align: center; }
     .screen-sub { opacity: 0.8; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; text-align: center; }
     .faction-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 230px)); gap: 12px; margin: 10px 0; max-width: 96vw; }

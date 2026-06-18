@@ -94,12 +94,17 @@ export function showCampaign(profile, audio, { onMission, onBack, onSettings }) 
 
   function showBrief(m) {
     const stars = profile.stars[m.id] || 0;
-    modal(`<div class="m-title">${m.name}</div><div class="m-sub">${m.blurb}</div>` +
-      `<div class="brief-row"><span>Banner</span><b>${m.faction}</b></div>` +
-      `<div class="brief-row"><span>Difficulty</span><b>${m.difficulty}</b></div>` +
-      `<div class="brief-stars">★ win &nbsp; ★ under ${m.parMin} min &nbsp; ★ no building lost</div>` +
+    const naval = m.mode === 'naval';
+    const meta = naval
+      ? `<div class="brief-row"><span>Mode</span><b>Naval arena</b></div>` +
+        `<div class="brief-row"><span>Controls</span><b>Drag to steer · auto-fire</b></div>` +
+        `<div class="brief-stars">★ clear 30 raiders &nbsp; ★ under 3 min &nbsp; ★ hull above 60%</div>`
+      : `<div class="brief-row"><span>Banner</span><b>${m.faction}</b></div>` +
+        `<div class="brief-row"><span>Difficulty</span><b>${m.difficulty}</b></div>` +
+        `<div class="brief-stars">★ win &nbsp; ★ under ${m.parMin} min &nbsp; ★ no building lost</div>`;
+    modal(`<div class="m-title">${m.name}</div><div class="m-sub">${m.blurb}</div>` + meta +
       `<div class="m-sub small">Stars earned: ${stars}/3</div>`,
-      [{ label: 'March!', primary: true, fn: () => { overlay.remove(); onMission(m); } }, { label: 'Back' }]);
+      [{ label: naval ? 'Set sail!' : 'March!', primary: true, fn: () => { overlay.remove(); onMission(m); } }, { label: 'Back' }]);
     audio?.play?.('ui_click');
   }
 

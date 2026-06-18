@@ -5,8 +5,8 @@
 export const MISSIONS = [
   {
     id: 'muara', name: 'Landing at Muara', x: 70, y: 250, prev: null,
-    faction: 'semaun', difficulty: 'easy', theme: 'water_village', mapSize: 72, seed: 101, parMin: 11,
-    blurb: 'Awang Semaun comes ashore. Carve out a foothold and break the first warband.',
+    faction: 'semaun', difficulty: 'easy', mode: 'naval', parMin: 3,
+    blurb: 'Awang Semaun sails the Muara channel alone. Steer your war perahu, let it loose on the raider boats swarming in, and break through to the beach.',
   },
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',

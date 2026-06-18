@@ -102,6 +102,8 @@ export function showCampaign(profile, audio, { onMission, onBack, onSettings }) 
       stars: ['beat the gold target', 'beat it early', 'out-earn every rival'], cta: 'Open the tamu!' },
     explore: { mode: 'Village adventure', ctrl: 'Left side to move · tap to talk',
       stars: ['collect all 5 baskets', 'finish under 2½ min', 'no bicycle bumps'], cta: 'Come ashore!' },
+    climb: { mode: 'Platform climber', ctrl: 'Hold left / right to steer',
+      stars: ['reach the Tamu', 'collect 30 coins', 'climb under 1½ min'], cta: 'Start climbing!' },
   };
   function showBrief(m) {
     const stars = profile.stars[m.id] || 0;

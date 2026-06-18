@@ -17,9 +17,9 @@ export const MISSIONS = [
   },
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',
-    faction: 'shahbandar', difficulty: 'normal', mode: 'tycoon',
-    tycoon: { secs: 80, target: 650, startGold: 60 },
-    blurb: 'The market is contested ground. Run your stalls, keep them stocked through the rush, and out-trade three rival kampongs before the bell.',
+    faction: 'shahbandar', difficulty: 'normal', mode: 'climb',
+    climb: { goal: 3600, coins: 30, par: 1.5 },
+    blurb: 'Race to the floating Tamu high above. Bounce up the market-garden platforms, grab coins and balloons, and climb to the banner at the top — don’t fall!',
   },
   {
     id: 'sungai', name: 'Sungai Damuan', x: 410, y: 170, prev: 'pasar',

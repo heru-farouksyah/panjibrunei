@@ -488,6 +488,20 @@
       opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 4; box-shadow: 0 4px 16px rgba(20,50,70,0.4);
     }
     .ty-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* Skirmish at the Tamu — vertical platform climber */
+    .screen-overlay.climb { padding: 0; gap: 0; overflow: hidden; background: #bfe9f5; touch-action: none; }
+    .cl-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .cl-quit { position: absolute; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); width: 38px; height: 38px; border-radius: 50%; border: none; z-index: 4; background: rgba(255,255,255,0.85); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(20,50,70,0.35); display: flex; align-items: center; justify-content: center; padding: 0 4px 2px 0; }
+    .cl-hud { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 14px; z-index: 3; display: flex; gap: 12px; background: rgba(20,55,65,0.5); color: #fff; padding: 7px 13px; border-radius: 12px; font-size: 15px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+    .cl-hud b { color: #ffe08a; }
+    .cl-prog { position: absolute; left: 14px; top: calc(54px + env(safe-area-inset-top)); bottom: 100px; width: 8px; z-index: 3; background: rgba(255,255,255,0.35); border-radius: 5px; overflow: hidden; }
+    .cl-prog span { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(0deg, #3fae6a, #7fe0a0); transition: height 0.15s; }
+    .cl-left, .cl-right { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); width: 76px; height: 76px; border-radius: 50%; border: none; z-index: 4; background: rgba(255,255,255,0.8); color: var(--ink); font-size: 40px; font-weight: 800; line-height: 1; cursor: pointer; box-shadow: 0 3px 12px rgba(40,90,120,0.35); display: flex; align-items: center; justify-content: center; padding-bottom: 6px; user-select: none; -webkit-user-select: none; }
+    .cl-left { left: calc(18px + env(safe-area-inset-left)); }
+    .cl-right { right: calc(18px + env(safe-area-inset-right)); }
+    .cl-left:active, .cl-right:active { background: var(--brass); color: #fff; transform: scale(0.94); }
+    .cl-toast { position: absolute; left: 50%; top: 24%; transform: translateX(-50%) translateY(-8px); background: rgba(20,55,65,0.82); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: 90vw; text-align: center; opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 4; box-shadow: 0 6px 20px rgba(20,50,70,0.4); }
+    .cl-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .screen-title { font-size: clamp(30px, 8vw, 46px); letter-spacing: 8px; color: var(--brass); margin: 0; text-shadow: 0 2px 12px rgba(0,0,0,0.7); text-align: center; }
     .screen-sub { opacity: 0.8; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; text-align: center; }
     .faction-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 230px)); gap: 12px; margin: 10px 0; max-width: 96vw; }

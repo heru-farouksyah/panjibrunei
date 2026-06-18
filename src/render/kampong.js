@@ -328,6 +328,8 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const clock = new THREE.Clock(); let stepAcc = 0;
   function tick() {
     const dt = Math.min(0.05, clock.getDelta()); if (!won) elapsed += dt; const tnow = clock.elapsedTime;
+    if (sfx.ready) sfx.music();   // upbeat bed once audio is unlocked
+
     let ix = stick.dx, iy = stick.dy;
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1; if (keys.has('d') || keys.has('arrowright')) ix += 1;
     if (keys.has('w') || keys.has('arrowup')) iy -= 1; if (keys.has('s') || keys.has('arrowdown')) iy += 1;

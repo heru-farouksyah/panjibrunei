@@ -30,9 +30,9 @@ export const MISSIONS = [
   },
   {
     id: 'kianggeh', name: 'Kianggeh Stand', x: 520, y: 240, prev: 'sungai',
-    faction: 'saman', difficulty: 'normal', mode: 'td',
-    td: { waves: 6, kampongHp: 100, startGold: 175 },
-    blurb: 'A people’s resistance forms at the stream. Plant defenders along the banks and hold the kampong through every wave of raiders.',
+    faction: 'saman', difficulty: 'normal', mode: 'farm',
+    farm: { quota: 8, day: 210, can: 6 },
+    blurb: 'Peace by the stream — tend the kampong farm. Hoe the soil, plant, water from the well and harvest your crops to fill the cart before the day ends. Mind the chicken!',
   },
   {
     id: 'kotabatu', name: 'Siege of Kota Batu', x: 620, y: 150, prev: 'kianggeh',

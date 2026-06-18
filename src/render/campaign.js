@@ -103,7 +103,9 @@ export function showCampaign(profile, audio, { onMission, onBack, onSettings }) 
     explore: { mode: 'Village adventure', ctrl: 'Left side to move · tap to talk',
       stars: ['collect all 5 baskets', 'finish under 2½ min', 'no bicycle bumps'], cta: 'Come ashore!' },
     climb: { mode: 'Platform climber', ctrl: 'Hold left / right to steer',
-      stars: ['reach the Tamu', 'collect 30 coins', 'climb under 1½ min'], cta: 'Start climbing!' },
+      stars: ['reach the Tamu', 'collect coins', 'climb fast'], cta: 'Start climbing!' },
+    farm: { mode: 'Farming day', ctrl: 'Move · tap action to tend crops',
+      stars: ['fill the cart (8 crops)', 'a bumper harvest (12+)', 'finish with time to spare'], cta: 'Start the day!' },
   };
   function showBrief(m) {
     const stars = profile.stars[m.id] || 0;

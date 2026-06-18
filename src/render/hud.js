@@ -147,6 +147,10 @@ export class HUD {
     };
 
     window.addEventListener('mousemove', (e) => {
+      // On touch devices a tap fires a compatibility mousemove at the tap point —
+      // ignore it, or it would re-aim the placement ghost (e.g. to the ✓ bubble).
+      // Touch aiming goes through TouchControls → updateGhostScreen instead.
+      if (this.isTouch) return;
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
       if (this.placing) this.updateGhost();

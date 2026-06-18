@@ -229,12 +229,17 @@ export class TouchControls {
 
   // ---- gestures ------------------------------------------------------------
   onStart(e) {
-    e.preventDefault();
+    let any = false;
     for (const t of e.changedTouches) {
+      // a touch that begins on the ✓/✕ bubble belongs to that button — don't let
+      // the canvas register it (it would re-aim the ghost to the mark's spot).
+      if (this.onBubble(t.clientX, t.clientY)) continue;
       this.touches.set(t.identifier, {
         x: t.clientX, y: t.clientY, startX: t.clientX, startY: t.clientY, t: performance.now(),
       });
+      any = true;
     }
+    if (any) e.preventDefault();
     if (this.touches.size === 2) {
       const [a, b] = [...this.touches.values()];
       this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -355,7 +360,17 @@ export class TouchControls {
 
   hideBox() { this.input.boxEl.style.display = 'none'; }
 
+  // Is a screen point on (or near) the ✓/✕ confirm bubble? Used to keep canvas
+  // taps from re-aiming the ghost when the player is tapping the bubble.
+  onBubble(x, y) {
+    if (!this.placeBubble || this.placeBubble.style.display === 'none') return false;
+    const r = this.placeBubble.getBoundingClientRect();
+    const pad = 14;
+    return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+  }
+
   handleTap(x, y) {
+    if (this.onBubble(x, y)) return; // the bubble's buttons handle their own taps
     if (this.hud.isPlacing()) {
       // aim the ghost at the tap; the floating bubble then commits the build
       this.hud.updateGhostScreen(x, y);

@@ -15,9 +15,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function showClimb(audio, { mission, onResult } = {}) {
   const cfg = mission?.climb || {};
-  const GOAL = cfg.goalY || 92;          // world height (Y) to reach
-  const COIN_STAR = cfg.coins || 20;
-  const PAR_MIN = cfg.par || 1.6;
+  const GOAL = cfg.goalY || 64;          // world height (Y) to reach (shorter = easier)
+  const COIN_STAR = cfg.coins || 12;
+  const PAR_MIN = cfg.par || 2.5;
   const X = 9;                            // half-width of the tower (wraps)
   const rand = (a, b) => a + Math.random() * (b - a);
   const sfx = new KAudio();
@@ -64,13 +64,13 @@ export function showClimb(audio, { mission, onResult } = {}) {
   const plats = [], coins = [], balloons = [];
   function platMesh(kind) {
     const g = new THREE.Group();
-    const grass = toon(new THREE.CylinderGeometry(1.6, 1.45, 0.4, 16), kind === 'break' ? 0xcabfa0 : 0x6fc05a, { thickness: 0.04 }); g.add(grass);
-    const dirt = toon(new THREE.CylinderGeometry(1.45, 1.0, 0.8, 16), kind === 'break' ? 0xa9966f : 0xa9743a, { thickness: 0.04 }); place(dirt, 0, -0.55, 0); g.add(dirt);
+    const grass = toon(new THREE.CylinderGeometry(2.1, 1.9, 0.4, 16), kind === 'break' ? 0xcabfa0 : 0x6fc05a, { thickness: 0.04 }); g.add(grass);
+    const dirt = toon(new THREE.CylinderGeometry(1.9, 1.3, 0.8, 16), kind === 'break' ? 0xa9966f : 0xa9743a, { thickness: 0.04 }); place(dirt, 0, -0.55, 0); g.add(dirt);
     g.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
     if (kind === 'move') { const m = toon(new THREE.SphereGeometry(0.18, 8, 7), 0xffffff, { thickness: 0.02 }); place(m, 0, 0.3, 0); g.add(m); }
     return g;
   }
-  function addPlat(x, y, kind) { const g = platMesh(kind); g.position.set(x, y, 0); scene.add(g); plats.push({ g, x, y, r: 1.6, kind, vx: kind === 'move' ? (Math.random() < 0.5 ? -1 : 1) * rand(2, 3.4) : 0, broken: false }); return plats[plats.length - 1]; }
+  function addPlat(x, y, kind) { const g = platMesh(kind); g.position.set(x, y, 0); scene.add(g); plats.push({ g, x, y, r: 2.1, kind, vx: kind === 'move' ? (Math.random() < 0.5 ? -1 : 1) * rand(1.2, 2.1) : 0, broken: false }); return plats[plats.length - 1]; }
   function addCoin(x, y) { const g = new THREE.Group(); const c = toon(new THREE.CylinderGeometry(0.34, 0.34, 0.08, 14), 0xe7b53c, { thickness: 0.02 }); c.rotation.x = Math.PI / 2; g.add(c); g.position.set(x, y, 0); scene.add(g); coins.push({ g, x, y, got: false }); }
   function addBalloon(x, y) { const g = new THREE.Group(); const b = toon(new THREE.SphereGeometry(0.5, 14, 12), 0xe23b4e, { thickness: 0.03 }); b.scale.set(1, 1.2, 1); g.add(b); const str = toon(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 4), 0x444, { outline: false }); place(str, 0, -0.7, 0); g.add(str); g.position.set(x, y, 0); scene.add(g); balloons.push({ g, x, y, got: false, bob: rand(0, 6.28) }); }
 
@@ -78,12 +78,13 @@ export function showClimb(audio, { mission, onResult } = {}) {
   addPlat(0, 0, 'normal');
   let topY = 0;
   while (topY < GOAL) {
-    topY += rand(2.6, 4.2);
-    const x = rand(-X + 1, X - 1); const climbed = topY / GOAL; const roll = Math.random();
-    const kind = climbed > 0.45 && roll > 0.85 ? 'break' : climbed > 0.2 && roll > 0.78 ? 'move' : 'normal';
+    topY += rand(1.9, 3.0);          // closer together = easier to chain bounces
+    const x = rand(-X + 1.5, X - 1.5); const climbed = topY / GOAL; const roll = Math.random();
+    // tricky platforms appear later and rarer
+    const kind = climbed > 0.7 && roll > 0.9 ? 'break' : climbed > 0.45 && roll > 0.86 ? 'move' : 'normal';
     addPlat(x, topY, kind);
-    if (Math.random() < 0.4) addCoin(x + rand(-1, 1), topY + rand(1, 2));
-    if (Math.random() < 0.08) addBalloon(rand(-X + 1, X - 1), topY + rand(1.5, 3));
+    if (Math.random() < 0.55) addCoin(x + rand(-1, 1), topY + rand(1, 2));
+    if (Math.random() < 0.12) addBalloon(rand(-X + 1.5, X - 1.5), topY + rand(1.5, 3));
   }
   // Tamu banner platform at the top (the goal)
   const goalP = addPlat(0, GOAL, 'normal'); goalP.r = 2.2; goalP.g.scale.set(1.4, 1, 1.4);
@@ -91,7 +92,7 @@ export function showClimb(audio, { mission, onResult } = {}) {
   place(banner, 0, GOAL + 1.6, 0); scene.add(banner);
 
   // ---- physics + state ---------------------------------------------------
-  const GRAV = -42, JUMP = 20.5, MOVE = 11;
+  const GRAV = -36, JUMP = 21, MOVE = 13;   // floatier + stronger hop + snappier steering = more forgiving
   const player = { x: 0, y: 1, vy: JUMP, vx: 0, face: 1 };
   let camY = 6, maxY = 0, coinN = 0, dir = 0, started = 0, elapsed = 0, running = true, ended = false, won = false, raf = 0;
 
@@ -126,7 +127,7 @@ export function showClimb(audio, { mission, onResult } = {}) {
       const prev = player.y - player.vy * dt;
       for (const p of plats) {
         if (p.broken) continue;
-        if (Math.abs(player.x - p.x) < p.r + 0.3 && player.y <= p.y + 0.4 && prev >= p.y + 0.1) {
+        if (Math.abs(player.x - p.x) < p.r + 0.7 && player.y <= p.y + 0.6 && prev >= p.y - 0.1) {
           player.vy = JUMP * (p.kind === 'goal' ? 0.7 : 1); player.y = p.y + 0.4; sfx.hop();
           if (p.kind === 'break') { p.broken = true; p.g.visible = false; }
           break;
@@ -139,7 +140,7 @@ export function showClimb(audio, { mission, onResult } = {}) {
     for (const bal of balloons) { if (bal.got) continue; bal.bob += dt * 3; bal.g.position.y = bal.y + Math.sin(bal.bob) * 0.2; if (Math.abs(player.x - bal.x) < 1.1 && Math.abs(player.y - bal.y) < 1.2) { bal.got = true; bal.g.visible = false; player.vy = JUMP * 2.1; sfx.win(); toast('Balloon boost! 🎈', 900); } }
     // win / lose
     if (maxY >= GOAL) finish(true);
-    else if (player.y < camY - 13) finish(false);
+    else if (player.y < camY - 17) finish(false);   // more room to recover before a fall ends the run
     // present
     const sx = clamp(player.x, -X, X);
     climber.position.set(player.x, player.y, 0); climber.rotation.y = player.face > 0 ? 0.4 : -0.4;

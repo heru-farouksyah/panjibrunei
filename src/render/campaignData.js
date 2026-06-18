@@ -18,7 +18,7 @@ export const MISSIONS = [
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',
     faction: 'shahbandar', difficulty: 'normal', mode: 'climb',
-    climb: { goalY: 92, coins: 20, par: 1.6 },
+    climb: { goalY: 64, coins: 12, par: 2.5 },
     blurb: 'Race to the floating Tamu high above. Bounce up the market-garden platforms, grab coins and balloons, and climb to the banner at the top — don’t fall!',
   },
   {

@@ -281,14 +281,30 @@ export class Sim {
   }
 
   spawnStartingBases() {
-    // --- every enemy kingdom: istana + a few villagers + a champion boss
+    // --- every enemy kingdom: istana + villagers + a champion boss.
+    // enemyScale > 1 (set by missions like Defence of Kampong Ayer) gives the
+    // foe ~scale× the player's whole force: a fortified capital, double the
+    // villagers, a spread of buildings and a standing army.
+    const escale = this.opts.enemyScale || 1;
     for (let owner = 1; owner < this.numPlayers; owner++) {
       const e = this.grid.startZones[owner];
-      this.spawnBuilding('istana', owner, e.x - 1, e.y - 1, true);
-      for (let i = 0; i < 3; i++) {
-        this.spawnUnit('penduduk', owner, e.x - 0.6 + i * 0.9, e.y + 2.6);
+      const cap = this.spawnBuilding('istana', owner, e.x - 1, e.y - 1, true);
+      if (cap && escale > 1) { cap.maxHp = Math.round(cap.maxHp * escale); cap.hp = cap.maxHp; }
+      if (escale > 1) {
+        const vN = Math.round(5 * escale);
+        for (let i = 0; i < vN; i++) this.spawnUnit('penduduk', owner, e.x - 1.8 + (i % 5) * 0.9, e.y + 2.6 + Math.floor(i / 5) * 0.9);
+        for (let i = 0; i < Math.round(2 * escale); i++) this.spawnFreeBuilding(owner, 'rumah_kampong', e.x - 6, e.y + 1 + i * 2);
+        for (let i = 0; i < Math.round(escale); i++) this.spawnFreeBuilding(owner, 'kebun', e.x + 6, e.y + 1 + i * 2);
+        for (let i = 0; i < Math.round(escale); i++) this.spawnFreeBuilding(owner, 'lumbung', e.x + 6, e.y - 3 - i * 2);
+        for (let i = 0; i < Math.round(escale); i++) this.spawnFreeBuilding(owner, 'kubu', e.x - 5 + i * 10, e.y - 5);
+        this.spawnFreeBuilding(owner, 'balai_pahlawan', e.x, e.y - 7);
+        const sw = Math.round(5 * escale), ar = Math.round(5 * escale), de = Math.round(escale);
+        for (let i = 0; i < sw; i++) this.spawnUnit('pahlawan_kampilan', owner, e.x - 2.2 + (i % 5) * 0.9, e.y - 4 - Math.floor(i / 5) * 0.9);
+        for (let i = 0; i < ar; i++) this.spawnUnit('pemanah', owner, e.x - 7, e.y - 2.2 + (i % 5) * 0.9 + Math.floor(i / 5) * 5);
+        for (let i = 0; i < de; i++) this.spawnUnit('lela_gunner', owner, e.x + (i ? 2.5 : -2.5), e.y + 5.5);
+      } else {
+        for (let i = 0; i < 3; i++) this.spawnUnit('penduduk', owner, e.x - 0.6 + i * 0.9, e.y + 2.6);
       }
-      // a champion BOSS guards each enemy capital from the start
       this.spawnBoss(owner);
     }
 

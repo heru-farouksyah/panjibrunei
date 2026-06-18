@@ -61,7 +61,9 @@ function startMatch(playerFaction, difficulty, opts = {}) {
     const others = factionIds.filter((f) => f !== playerFaction);
     const aiFaction = others[(Math.random() * others.length) | 0];
     // Easy = 2 rival kingdoms, Normal = 4 (a bigger free-for-all).
-    const numEnemies = difficulty === 'easy' ? 2 : 4;
+    // Missions can override the count and scale the foe (e.g. Ayer: one enemy
+    // at 2× the player's whole force).
+    const numEnemies = opts.numEnemies ?? (difficulty === 'easy' ? 2 : 4);
     theme = opts.theme;
     sim = new Sim({
       seed: Number.isFinite(opts.seed) ? opts.seed : (Math.random() * 1e9) | 0,
@@ -70,6 +72,7 @@ function startMatch(playerFaction, difficulty, opts = {}) {
       aiFaction,
       difficulty,
       numEnemies,
+      enemyScale: opts.enemyScale || 1,
       richStart: true, // free villagers + buildings + diamond army for the player
       theme,           // render-only, but stored in the snapshot for resume
     });
@@ -337,6 +340,7 @@ function launchMission(m) {
     default:
       return startMatch(m.faction, m.difficulty, {
         theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m, reveal: !!m.reveal,
+        enemyScale: m.enemyScale, numEnemies: m.enemies,
         tutorial: m.id === 'ayer' && !profile.stars['ayer'], // teach on the first RTS mission
       });
   }

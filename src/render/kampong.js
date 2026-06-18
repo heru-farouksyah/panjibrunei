@@ -84,9 +84,17 @@ export function showKampong(audio, { mission, onResult } = {}) {
   water.rotation.x = -Math.PI / 2; water.position.y = -0.2; water.receiveShadow = true; scene.add(water);
 
   // ---- boardwalk ---------------------------------------------------------
-  const PLAZA = { x0: -16, x1: 16, z0: -8, z1: 16 };
-  const PIER = { x0: -3, x1: 3, z0: -22, z1: -8 };
-  const WALK = [PLAZA, PIER]; const DECK_Y = 0.6;
+  const DECK_Y = 0.6;
+  // a branching boardwalk network — a bigger, more tangled water village.
+  // adjacent rects overlap so the player crosses junctions seamlessly.
+  const HUB   = { x0: -12, x1: 12,  z0: -6,  z1: 16 };   // central square
+  const SOUTH = { x0: -3,  x1: 3,   z0: 14,  z1: 26 };   // entry pier (start)
+  const NORTH = { x0: -3,  x1: 3,   z0: -26, z1: -4 };   // pier to the waterfront finish
+  const WEST  = { x0: -30, x1: -10, z0: 2,   z1: 12 };   // west wing
+  const WESTN = { x0: -30, x1: -20, z0: -14, z1: 4 };    // spur north off the west wing
+  const EAST  = { x0: 10,  x1: 30,  z0: 0,   z1: 12 };   // east wing
+  const EASTN = { x0: 20,  x1: 30,  z0: -12, z1: 2 };    // spur north off the east wing
+  const WALK = [HUB, SOUTH, NORTH, WEST, WESTN, EAST, EASTN];
   const plankTex = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = '#c79a5e'; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(90,60,30,0.5)'; g.lineWidth = 3;
@@ -102,16 +110,41 @@ export function showKampong(audio, { mission, onResult } = {}) {
     m.add(new THREE.Mesh(m.geometry, outlineMaterial(0.05))); wgrp.add(m);
     for (let x = r.x0 + 1.5; x < r.x1; x += 5) for (let z = r.z0 + 1.5; z < r.z1; z += 5) { const pole = toon(new THREE.CylinderGeometry(0.22, 0.26, 4, 7), 0x6e4f30, { thickness: 0.03 }); place(pole, x, -1.4, z); wgrp.add(pole); }
   }
-  deck(PLAZA); deck(PIER);
+  WALK.forEach(deck);
   function railing(x0, z0, x1, z1) {
     const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), ang = Math.atan2(dz, dx);
+    if (len < 0.8) return;
     const rail = toon(new THREE.BoxGeometry(len, 0.12, 0.12), 0xb98a4e, { thickness: 0.02 }); rail.position.set((x0 + x1) / 2, DECK_Y + 0.85, (z0 + z1) / 2); rail.rotation.y = -ang; wgrp.add(rail);
-    const n = Math.floor(len / 2);
+    const n = Math.max(1, Math.floor(len / 2));
     for (let i = 0; i <= n; i++) { const t = i / n; const post = toon(new THREE.BoxGeometry(0.14, 0.95, 0.14), 0xa97c43, { thickness: 0.02 }); place(post, x0 + dx * t, DECK_Y + 0.45, z0 + dz * t); wgrp.add(post); }
   }
-  railing(PLAZA.x0, PLAZA.z1, PLAZA.x1, PLAZA.z1); railing(PLAZA.x0, PLAZA.z0, PLAZA.x0, PLAZA.z1); railing(PLAZA.x1, PLAZA.z0, PLAZA.x1, PLAZA.z1);
-  railing(PLAZA.x0, PLAZA.z0, PIER.x0, PLAZA.z0); railing(PIER.x1, PLAZA.z0, PLAZA.x1, PLAZA.z0);
-  railing(PIER.x0, PIER.z0 + 2, PIER.x0, PLAZA.z0); railing(PIER.x1, PIER.z0 + 2, PIER.x1, PLAZA.z0);
+  // auto-railing: fence every deck edge that faces open water; skip junctions
+  // (segments whose immediate outside is covered by another walkable rect).
+  const coveredPt = (px, pz) => WALK.some((r) => px >= r.x0 - 0.05 && px <= r.x1 + 0.05 && pz >= r.z0 - 0.05 && pz <= r.z1 + 0.05);
+  function railEdges() {
+    for (const r of WALK) {
+      const sides = [
+        { hor: true, fixed: r.z0, lo: r.x0, hi: r.x1, ox: 0, oz: -0.6 },
+        { hor: true, fixed: r.z1, lo: r.x0, hi: r.x1, ox: 0, oz: 0.6 },
+        { hor: false, fixed: r.x0, lo: r.z0, hi: r.z1, ox: -0.6, oz: 0 },
+        { hor: false, fixed: r.x1, lo: r.z0, hi: r.z1, ox: 0.6, oz: 0 },
+      ];
+      for (const sd of sides) {
+        const len = sd.hi - sd.lo, n = Math.max(1, Math.round(len));
+        let run = null;
+        for (let i = 0; i < n; i++) {
+          const tm = sd.lo + len * ((i + 0.5) / n);
+          const mx = sd.hor ? tm : sd.fixed, mz = sd.hor ? sd.fixed : tm;
+          const open = !coveredPt(mx + sd.ox, mz + sd.oz);
+          if (open && run === null) run = sd.lo + len * (i / n);
+          if (!open && run !== null) { emitRail(sd, run, sd.lo + len * (i / n)); run = null; }
+        }
+        if (run !== null) emitRail(sd, run, sd.hi);
+      }
+    }
+  }
+  function emitRail(sd, a, b) { if (sd.hor) railing(a, sd.fixed, b, sd.fixed); else railing(sd.fixed, a, sd.fixed, b); }
+  railEdges();
 
   // ---- stilt houses ------------------------------------------------------
   const HC = [0x4f9ad0, 0xe0b24a, 0xd9695a, 0x6cae6a, 0xc88fbf, 0xd98b46];
@@ -126,10 +159,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const door = toon(new THREE.BoxGeometry(0.9, 1.5, 0.1), 0x7a4f2c, { thickness: 0.02 }); place(door, 0, 1.65 + 0.75, d / 2 + 0.02); g.add(door);
     if (collide) addSolid(x, z, Math.max(w, d) * 0.5 + 0.2);
   }
-  house(-16, 18, 0.2, HC[0], 5, 4.5, 3); house(-9, 19, -0.15, HC[1], 4.5, 4, 2.8); house(-1, 20, 0.05, HC[2], 5, 4.5, 3.2);
-  house(8, 19, -0.1, HC[3], 4.5, 4, 2.8); house(16, 18.5, -0.3, HC[4], 5, 4.5, 3);
-  house(-20, 8, 1.5, HC[5], 5, 5, 3); house(-20, 0, 1.55, HC[2], 4.5, 4.5, 2.8); house(20, 7, -1.5, HC[3], 5, 5, 3); house(20, -1, -1.55, HC[0], 4.5, 4.5, 2.8);
-  house(-7, 12, 0.1, HC[4], 3.6, 3.6, 2.4); house(10, 13, -0.1, HC[1], 3.6, 3.6, 2.4);
+  // backdrop houses ringing the village (over the water, decorative)
+  house(-9, -30, 0.15, HC[0], 5, 4.5, 3, false); house(0, -31, 0.05, HC[2], 5, 5, 3.4, false); house(9, -30, -0.15, HC[3], 5, 4.5, 3, false);
+  house(-7, 33, 0.1, HC[1], 4.5, 4, 2.8, false); house(7, 33, -0.1, HC[5], 4.5, 4, 2.8, false);
+  house(-35, 8, 1.5, HC[2], 5, 5, 3, false); house(-35, -4, 1.5, HC[4], 4.5, 4.5, 2.8, false);
+  house(35, 6, -1.5, HC[5], 5, 5, 3, false); house(35, -5, -1.5, HC[1], 4.5, 4.5, 2.8, false);
+  // the "painted houses" landmarks beside the two HIDDEN baskets (the clue)
+  house(-26, -17, 0.1, HC[4], 5, 4.5, 3, false); house(26, -15, -0.1, HC[0], 5, 4.5, 3, false);
+  // obstacle houses ON the decks to weave around
+  house(-7, 12, 0.1, HC[3], 3.6, 3.6, 2.4); house(8, 13, -0.1, HC[1], 3.6, 3.6, 2.4);
+  house(-18, 10, 0.2, HC[5], 3.4, 3.4, 2.4); house(18, 10, -0.2, HC[2], 3.4, 3.4, 2.4);
 
   // ---- traditional dress -------------------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => {
@@ -171,16 +210,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
     addSolid(x, z, 1.7);
     vendors.push({ x, z, clue, spoken: false });
   }
-  stall(-11, 4, 0.4, 0xd9695a, { baju: 0x8a2f3a, hatColor: 0x141414, head: 'songkok' }, 'Eh, two baskets drifted to the far corners by the painted houses — follow the beacons, adik!');
-  stall(9, -2, -0.5, 0x4f9ad0, { baju: 0x244f8a, head: 'songkok' }, 'I saw a basket near the pier railing. The lanterns will guide you to the rest.');
-  stall(2, 9, 3.0, 0xe0b24a, { baju: 0x6a2f7a, head: 'tudung', hatColor: 0xead6e6, female: true }, 'Take them all to the waterfront jetty where the boat waits. Mind the bicycles!');
+  stall(-6, 8, 0.3, 0xd9695a, { baju: 0x8a2f3a, hatColor: 0x141414, head: 'songkok' }, 'Two baskets are tucked up the narrow spurs, by the painted houses. Talk to me and I’ll light the beacons — follow them, adik!');
+  stall(-22, 8, 1.2, 0x4f9ad0, { baju: 0x244f8a, head: 'songkok' }, 'Look to the far ends of the wings — a basket waits at each. The lanterns mark the boardwalks.');
+  stall(22, 8, -1.2, 0xe0b24a, { baju: 0x6a2f7a, head: 'tudung', hatColor: 0xead6e6, female: true }, 'When you have all five, bring them to the waterfront jetty in the north, where the boat waits. Mind the bicycles, ya!');
 
   // lanterns + boats + waterfront arch
   function lantern(x, z) { const pole = toon(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), 0x6a4f30, { thickness: 0.02 }); place(pole, x, DECK_Y + 1.2, z); wgrp.add(pole); const bulb = toon(new THREE.SphereGeometry(0.22, 12, 10), 0xffe08a, { thickness: 0.02, emissive: 0xffb84d }); place(bulb, x, DECK_Y + 2.45, z); wgrp.add(bulb); }
-  [[-3, -8], [3, -8], [-3, -16], [3, -16], [-14, 14], [14, 14]].forEach(([x, z]) => lantern(x, z));
+  [[-3, -4], [3, -4], [-3, -14], [3, -14], [-3, -24], [3, -24], [-12, 4], [12, 2], [-22, 4], [22, 3], [-6, 16], [6, 16]].forEach(([x, z]) => lantern(x, z));
   function perahu(x, z, rot, color) { const g = new THREE.Group(); g.position.set(x, -0.05, z); g.rotation.y = rot; wgrp.add(g); const hull = toon(new THREE.CapsuleGeometry(0.55, 2.4, 6, 12), color, { thickness: 0.04 }); hull.rotation.z = Math.PI / 2; hull.scale.set(1, 1, 0.55); place(hull, 0, 0.25, 0); g.add(hull); const mast = toon(new THREE.CylinderGeometry(0.05, 0.05, 2, 6), 0x6a4f30, { thickness: 0.02 }); place(mast, 0, 1.2, 0); g.add(mast); }
-  perahu(-2.4, -23.5, 0.3, 0xd9695a); perahu(2.4, -24, -0.2, 0x4f9ad0);
-  const finishZ = PIER.z0 + 1;
+  perahu(-2.6, -28.5, 0.3, 0xd9695a); perahu(2.6, -29, -0.2, 0x4f9ad0); perahu(-5.5, -27.5, 0.8, 0x6cae6a);
+  const finishZ = NORTH.z0 + 1.5;
   for (const sx of [-1, 1]) { const post = toon(new THREE.CylinderGeometry(0.16, 0.18, 3.4, 8), 0x8a5a32, { thickness: 0.03 }); place(post, sx * 2.6, 1.5, finishZ); wgrp.add(post); }
   const wfBanner = toon(new THREE.BoxGeometry(6, 1.0, 0.12), 0x2f7f78, { thickness: 0.03, map: canvasTex(384, 64, (g, w, h) => { g.fillStyle = '#2f7f78'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = `bold ${h * 0.5}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TEPIAN  AIR  ·  WATERFRONT', w / 2, h / 2); }) });
   place(wfBanner, 0, 3.4, finishZ); wgrp.add(wfBanner);
@@ -197,7 +236,11 @@ export function showKampong(audio, { mission, onResult } = {}) {
     place(beam, 0, 3.2, 0); g.add(beam); beam.visible = !hidden;
     items.push({ x, z, g, beam, hidden, taken: false });
   }
-  basket(13, 12, false); basket(-1.5, 3.2, false); basket(2, -15, false); basket(-14.5, 13.5, true); basket(15.5, 13, true);
+  basket(0, 9, false);       // hub — the obvious starter
+  basket(-28, 7, false);     // far west wing end
+  basket(28, 6, false);      // far east wing end
+  basket(-26, -10, true);    // NW spur — hidden by a painted house (needs a clue)
+  basket(26, -8, true);      // NE spur — hidden by a painted house (needs a clue)
 
   // ---- bicycles ----------------------------------------------------------
   const bikes = [];
@@ -210,11 +253,15 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const rider = person({ baju: 0x2f7d6b, head: 'songkok', sampin: false, scale: 0.92 }); rider.group.position.set(-0.1, 0.5, 0); g.add(rider.group);
     bikes.push({ g, z, dir, speed, x0, x1, x: dir > 0 ? x0 : x1, bellCd: 0 });
   }
-  bicycle(0.5, 1, 5.5, -14, 14); bicycle(7, -1, 4.5, -14, 14); bicycle(-13, 1, 4, PIER.x0 + 0.5, 0);
+  bicycle(2, 1, 6, -10, 10);      // hub lower lane
+  bicycle(12, -1, 5, -10, 10);    // hub upper lane
+  bicycle(7, 1, 5.5, -28, -12);   // west wing
+  bicycle(6, -1, 5.5, 12, 28);    // east wing
+  bicycle(-14, 1, 4, -2.5, 2.5);  // north pier toward the waterfront
 
   // ---- player (traditional dress) ----------------------------------------
   const kidP = person({ baju: 0x1f6f5a, seluar: 0x16554a, head: 'songkok', hatColor: 0x14140f, sampin: true });
-  const kid = kidP.group; wgrp.add(kid); kid.position.set(0, DECK_Y, 13);
+  const kid = kidP.group; wgrp.add(kid); kid.position.set(0, DECK_Y, 22); kid.rotation.y = Math.PI;
   const legs = kidP.legs, arms = kidP.arms;
   // a woven rattan sling bag for carrying the baskets
   const bag = toon(new THREE.BoxGeometry(0.42, 0.5, 0.22), 0xb5894f, { thickness: 0.03 }); place(bag, 0.16, 1.15, -0.3); kid.add(bag);
@@ -222,7 +269,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const PLAYER_R = 0.5;
 
   // ---- camera ------------------------------------------------------------
-  let camYaw = Math.PI, camPitch = 0.5, camDist = 9;
+  let camYaw = 0, camPitch = 0.5, camDist = 9;   // camera behind the player, looking north into the village
   const tmpV = new THREE.Vector3();
   function updateCamera(instant) {
     const tx = kid.position.x, ty = kid.position.y + 1.6, tz = kid.position.z;
@@ -267,12 +314,14 @@ export function showKampong(audio, { mission, onResult } = {}) {
   q('.kq-quit').onclick = () => { sfx.unlock(); endMission(false, true); };
   q('.kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; };
   talkBtn.onclick = tryTalk;
-  let nearVendor = null, dialogOpen = false;
+  let nearVendor = null, dialogOpen = false, firstTalk = true;
   function showBanner(txt, ms = 2200) { banner.textContent = txt; banner.classList.add('show'); clearTimeout(showBanner._t); showBanner._t = setTimeout(() => banner.classList.remove('show'), ms); }
   function tryTalk() {
     if (!nearVendor || dialogOpen || won) return;
     sfx.unlock(); sfx.talk();
-    q('.kq-text').textContent = nearVendor.clue; dialog.hidden = false; dialogOpen = true;
+    // open the very first conversation with the customary greeting
+    const greet = firstTalk ? 'Assalamualaikum, adik! ' : ''; firstTalk = false;
+    q('.kq-text').textContent = greet + nearVendor.clue; dialog.hidden = false; dialogOpen = true;
     if (!nearVendor.spoken) { nearVendor.spoken = true; let n = 0; for (const it of items) if (!it.taken && it.hidden && !it.beam.visible) { it.beam.visible = true; n++; } if (n) { sfx.clue(); showBanner('A clue! Hidden baskets revealed ✨'); } }
   }
 
@@ -340,7 +389,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
       if (d < 1.1 && stun <= 0) { const a = Math.atan2(kid.position.z - bk.z, kid.position.x - bk.x); kid.position.x += Math.cos(a) * 1.6; kid.position.z += Math.sin(a) * 1.6; collide(kid.position); clampWalk(kid.position); stun = 0.5; bikeHits++; sfx.bump(); showBanner('Awas! A bicycle! 🚲', 1200); }
     }
 
-    if (!won && collected >= TOTAL && kid.position.z < PIER.z0 + 5) finishWin();
+    if (!won && collected >= TOTAL && kid.position.z < NORTH.z0 + 5) finishWin();
     elTime.textContent = fmt(elapsed);
     updateCamera(false);
     if (stick.id === null) joy.style.opacity = '0'; else { joy.style.opacity = '1'; joy.style.left = stick.ox + 'px'; joy.style.top = stick.oy + 'px'; joy.style.setProperty('--kx', stick.dx * MAXR + 'px'); joy.style.setProperty('--ky', stick.dy * MAXR + 'px'); }

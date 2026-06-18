@@ -6,8 +6,8 @@ export const MISSIONS = [
   {
     id: 'muara', name: 'Landing at Muara', x: 70, y: 250, prev: null,
     faction: 'semaun', difficulty: 'easy', mode: 'explore',
-    explore: { baskets: 5, par: 2.5 },
-    blurb: 'Awang Semaun comes ashore at Kampong Ayer. Wander the stilt-village boardwalks, gather the 5 lost baskets, ask the vendors for clues, dodge the bicycles — then carry everything to the waterfront jetty.',
+    explore: { par: 4 },
+    blurb: 'Awang Semaun comes ashore at Kampong Ayer. Cross three stilt villages by bridge: find the Boatman’s fish for a plank to mend the first bridge, win the Brass Key to unlock the next, then gather the cargo baskets and load the waterfront boat. Greet folk, dodge bicycles, solve each puzzle to reach the next.',
   },
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',

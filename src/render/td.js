@@ -31,6 +31,8 @@ const RAIDERS = {
   gergasi:  { name: 'Gergasi',  hp: 240, speed: 14, dps: 34, bite: 1, gold: 24, r: 24, col: '#8c2f8a' },
 };
 
+import { Audio as KAudio } from './kampongAudio.js';
+
 export function showTowerDefense(audio, { mission, onResult }) {
   const td = mission?.td || {};
   const COLS = 5;
@@ -52,6 +54,11 @@ export function showTowerDefense(audio, { mission, onResult }) {
         `<span class="td-nm">${t.name}</span><span class="td-co">${t.cost}g</span></button>`).join('') +
     `</div>`;
   document.body.appendChild(overlay);
+  // upbeat anime-opening-style background music (starts on first gesture)
+  const bgm = new KAudio();
+  const startBgm = () => { bgm.unlock(); bgm.music({ ambience: false }); };
+  overlay.addEventListener('pointerdown', startBgm, { once: true });
+  addEventListener('keydown', startBgm, { once: true });
 
   const canvas = overlay.querySelector('.td-canvas');
   const ctx = canvas.getContext('2d');
@@ -349,6 +356,7 @@ export function showTowerDefense(audio, { mission, onResult }) {
   function cleanup() {
     window.removeEventListener('resize', resize);
     window.removeEventListener('keydown', onKey);
+    removeEventListener('keydown', startBgm); bgm.close();
     overlay.remove();
   }
 

@@ -16,6 +16,8 @@ const GOODS = [
   { good: 'Kraf', icon: '🧺', tint: '#c2a878' },   // crafts
 ];
 
+import { Audio as KAudio } from './kampongAudio.js';
+
 export function showTycoon(audio, { mission, onResult }) {
   const cfg = mission?.tycoon || {};
   const SECS = cfg.secs || 80;
@@ -43,6 +45,11 @@ export function showTycoon(audio, { mission, onResult }) {
     `<div class="ty-stalls" id="ty-stalls"></div>` +
     `<div class="ty-toast" id="ty-toast"></div>`;
   document.body.appendChild(overlay);
+  // upbeat anime-opening-style background music (starts on first gesture)
+  const bgm = new KAudio();
+  const startBgm = () => { bgm.unlock(); bgm.music({ ambience: false }); };
+  overlay.addEventListener('pointerdown', startBgm, { once: true });
+  addEventListener('keydown', startBgm, { once: true });
   overlay.querySelector('.ty-quit').onclick = () => { audio?.play?.('ui_click'); finish(false, true); };
 
   const goldEl = overlay.querySelector('#ty-gold');
@@ -171,7 +178,7 @@ export function showTycoon(audio, { mission, onResult }) {
     cleanup();
     onResult?.({ win: quit ? false : win, stars: quit ? 0 : stars, minutes: (SECS - time) / 60, quit });
   }
-  function cleanup() { window.removeEventListener('resize', noop); overlay.remove(); }
+  function cleanup() { window.removeEventListener('resize', noop); removeEventListener('keydown', startBgm); bgm.close(); overlay.remove(); }
   function noop() {}
 
   // debug/test hook

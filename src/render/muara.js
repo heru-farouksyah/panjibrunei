@@ -39,6 +39,8 @@ const UPGRADES = [
   { id: 'repair', name: 'Repair Crew',  desc: 'heal 45 HP now', icon: '❤️', apply: (s) => { s.hp = Math.min(s.maxHp, s.hp + 45); }, repeatable: true },
 ];
 
+import { Audio as KAudio } from './kampongAudio.js';
+
 export function showMuara(audio, { mission, onResult }) {
   // ---- per-mission tuning -------------------------------------------------
   const cfg = mission?.naval || {};
@@ -63,6 +65,11 @@ export function showMuara(audio, { mission, onResult }) {
     `<div class="muara-toast"></div>` +
     `<div class="muara-cards" hidden><div class="mc-title">Choose an upgrade</div><div class="mc-row"></div></div>`;
   document.body.appendChild(overlay);
+  // upbeat anime-opening-style background music (starts on first gesture)
+  const bgm = new KAudio();
+  const startBgm = () => { bgm.unlock(); bgm.music({ ambience: false }); };
+  overlay.addEventListener('pointerdown', startBgm, { once: true });
+  addEventListener('keydown', startBgm, { once: true });
   const canvas = overlay.querySelector('.muara-canvas');
   const ctx = canvas.getContext('2d');
   const toastEl = overlay.querySelector('.muara-toast');
@@ -449,6 +456,7 @@ export function showMuara(audio, { mission, onResult }) {
     window.removeEventListener('resize', resize);
     window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', sEnd);
+    removeEventListener('keydown', startBgm); bgm.close();
     overlay.remove();
   }
 

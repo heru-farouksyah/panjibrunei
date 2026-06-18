@@ -17,33 +17,41 @@ export class Audio {
     this.ready = true;
     this._ambience();
   }
-  // an upbeat, modern, spirit-raising loop: 4-on-the-floor kick, off-beat hats,
-  // a driving bass and a bright major arpeggio over a I–V–vi–IV progression.
+  // An ORIGINAL anime-opening-style theme (shounen J-rock energy — not a copy of
+  // any real song): fast rock drums (kick + backbeat snare + driving hats),
+  // power-chord bass over an A-minor i–VI–III–VII progression, and an anthemic
+  // A-minor-pentatonic lead hook. ~160 BPM.
   music({ ambience = true } = {}) {
     if (!this.ready || this._music) return;
     if (!ambience && this._ambGain) this._ambGain.gain.value = 0;
-    const ctx = this.ctx, bpm = 124, step16 = 60 / bpm / 4;
-    const prog = [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]]; // C  G  Am  F
+    const ctx = this.ctx, bpm = 160, st = 60 / bpm / 4;
+    const ROOT = [57, 53, 48, 55], FIFTH = [64, 60, 55, 62];        // Am  F  C  G
+    const PENT = [69, 72, 74, 76, 79, 81];                          // A-minor pentatonic (lead 8ve)
+    const RIFF = [4, -1, 3, -1, 2, 3, 2, 0, -1, 2, -1, 3, 4, -1, 5, 4]; // the hook (indices into PENT)
     const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    const bus = ctx.createGain(); bus.gain.value = 0.42; bus.connect(this.master);
+    const bus = ctx.createGain(); bus.gain.value = 0.5; bus.connect(this.master);
     let step = 0, next = ctx.currentTime + 0.06;
-    const kick = (t) => { const o = ctx.createOscillator(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12); const g = ctx.createGain(); g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.17); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.19); };
-    const hat = (t, v) => { const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.05); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500; const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05); s.connect(hp); hp.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.06); };
-    const note = (m, t, dur, type, v) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = mtof(m); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02); };
+    const kick = (t) => { const o = ctx.createOscillator(); o.frequency.setValueAtTime(155, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.11); const g = ctx.createGain(); g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.18); };
+    const snare = (t) => { const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.2); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1500; const g = ctx.createGain(); g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); s.connect(hp); hp.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.2); };
+    const hat = (t, v) => { const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.04); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 8000; const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04); s.connect(hp); hp.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.05); };
+    const tone = (m, t, dur, type, v) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = mtof(m); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02); };
     const tick = () => {
       while (next < ctx.currentTime + 0.13) {
-        const s = step % 16, bar = (step >> 4) % 4, ch = prog[bar];
-        if (s % 4 === 0) kick(next);
-        if (s % 2 === 0) hat(next, s % 4 === 2 ? 0.16 : 0.09);
-        if (s % 8 === 0) note(ch[0] - 12, next, step16 * 3.4, 'sawtooth', 0.17);     // bass
-        note(ch[s % 3] + ((s >> 2) % 2 ? 12 : 0), next, step16 * 0.95, 'triangle', 0.10); // arpeggio
-        if (s === 0 && bar % 2 === 0) note(ch[2] + 12, next, step16 * 6, 'square', 0.05);  // soft lead
-        step++; next += step16;
+        const s = step % 16, bar = (step >> 4) % 4;
+        if (s === 0 || s === 8 || s === 6 || s === 14) kick(next);   // driving rock kick
+        if (s === 4 || s === 12) snare(next);                        // backbeat
+        if (bar === 3 && s >= 12 && s % 2 === 0) snare(next);         // end-of-loop fill
+        hat(next, s % 4 === 0 ? 0.13 : 0.07);
+        if (s % 2 === 0) { tone(ROOT[bar] - 12, next, st * 1.7, 'sawtooth', 0.2); }            // bass 8ths
+        if (s % 4 === 0) { tone(ROOT[bar], next, st * 1.8, 'sawtooth', 0.13); tone(FIFTH[bar], next, st * 1.8, 'sawtooth', 0.11); } // power chord
+        const li = RIFF[s]; if (li >= 0) tone(PENT[li], next, st * 1.5, 'square', 0.14);        // lead hook
+        step++; next += st;
       }
     };
     this._music = setInterval(tick, 25); tick();
   }
   stopMusic() { if (this._music) { clearInterval(this._music); this._music = null; } }
+  close() { this.stopMusic(); try { this.ctx && this.ctx.close(); } catch (e) { } this.ctx = null; this.ready = false; }
   _now() { return this.ctx.currentTime; }
   _noiseBuf(sec) {
     const n = (this.ctx.sampleRate * sec) | 0; const b = this.ctx.createBuffer(1, n, this.ctx.sampleRate);

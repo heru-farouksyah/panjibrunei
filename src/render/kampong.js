@@ -50,6 +50,11 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const PAR_MIN = cfg.par || 2.5;
   const sfx = new KAudio();
   const rand = (a, b) => a + Math.random() * (b - a);
+  // spoken voice via the browser Speech API (no audio files); silently no-ops
+  // where unsupported. Used for the salam exchange.
+  function speak(text, pitch = 1) {
+    try { const ss = window.speechSynthesis; if (!ss) return; const u = new SpeechSynthesisUtterance(text); u.lang = 'ms-MY'; u.pitch = pitch; u.rate = 0.9; ss.speak(u); } catch (e) { /* ignore */ }
+  }
 
   // ---- overlay + renderer ------------------------------------------------
   const overlay = document.createElement('div');
@@ -73,6 +78,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   const wgrp = new THREE.Group(); scene.add(wgrp);
   const solids = []; const addSolid = (x, z, r) => solids.push({ x, z, r });
+  const peds = [], kids = [], cats = [], greetables = [];   // village life + the salam targets
 
   // ---- water -------------------------------------------------------------
   const rippleTex = canvasTex(512, 512, (g, w, h) => {
@@ -209,6 +215,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const v = person(vendorOpts); v.group.position.set(0, DECK_Y, -0.9); v.group.rotation.y = Math.PI; g.add(v.group);
     addSolid(x, z, 1.7);
     vendors.push({ x, z, clue, spoken: false });
+    greetables.push({ x: x + Math.sin(rot) * 1.4, z: z + Math.cos(rot) * 1.4, greeted: false }); // greet from the customer side
   }
   stall(-6, 8, 0.3, 0xd9695a, { baju: 0x8a2f3a, hatColor: 0x141414, head: 'songkok' }, 'Two baskets are tucked up the narrow spurs, by the painted houses. Talk to me and I’ll light the beacons — follow them, adik!');
   stall(-22, 8, 1.2, 0x4f9ad0, { baju: 0x244f8a, head: 'songkok' }, 'Look to the far ends of the wings — a basket waits at each. The lanterns mark the boardwalks.');
@@ -253,11 +260,44 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const rider = person({ baju: 0x2f7d6b, head: 'songkok', sampin: false, scale: 0.92 }); rider.group.position.set(-0.1, 0.5, 0); g.add(rider.group);
     bikes.push({ g, z, dir, speed, x0, x1, x: dir > 0 ? x0 : x1, bellCd: 0 });
   }
-  bicycle(2, 1, 6, -10, 10);      // hub lower lane
-  bicycle(12, -1, 5, -10, 10);    // hub upper lane
-  bicycle(7, 1, 5.5, -28, -12);   // west wing
-  bicycle(6, -1, 5.5, 12, 28);    // east wing
-  bicycle(-14, 1, 4, -2.5, 2.5);  // north pier toward the waterfront
+  bicycle(12, 1, 5, -10, 10);     // one along the hub
+  bicycle(6, -1, 5, 12, 28);      // one along the east wing
+
+  // ---- village life: blocking folk, playing kids, cats -------------------
+  // People who stand in the way at chokepoints; greet them (salam) and they
+  // step aside to give way. Each is a static collider until greeted.
+  function blocker(x, z, ax, az, opts) {
+    const pr = person(opts); pr.group.position.set(x, DECK_Y, z); pr.group.rotation.y = Math.atan2(0 - x, 0 - z); wgrp.add(pr.group);
+    const pd = { group: pr.group, x, z, ax, az, blocking: true, stepping: false, bob: rand(0, 6.28) };
+    peds.push(pd); greetables.push({ x, z, greeted: false, ped: pd });
+  }
+  blocker(0, 14.5, 2.4, 14.5, { baju: 0x3a6f8a, head: 'songkok' });           // gateway from the entry pier
+  blocker(-10.5, 7, -10.5, 11, { baju: 0x7a3f6a, head: 'tudung', hatColor: 0xe6d2dc, female: true }); // west wing mouth
+  blocker(10.5, 6, 10.5, 10.5, { baju: 0x2f6f5a, head: 'songkok' });          // east wing mouth
+  blocker(0, -4.5, 2.4, -4.5, { baju: 0x8a6a2f, head: 'songkok' });           // north pier toward the waterfront
+
+  // Kids playing — they run little circuits within a home patch (no collision)
+  function playingKid(hx, hz) {
+    const pr = person({ baju: [0xd9695a, 0x4f9ad0, 0x6cae6a, 0xe0b24a][(Math.random() * 4) | 0], head: Math.random() < 0.5 ? 'songkok' : 'hair', sampin: false, scale: 0.66 });
+    pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group);
+    kids.push({ group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(1.8, 2.6), t: 0, ph: rand(0, 6.28) });
+  }
+  playingKid(7, 2); playingKid(-7, 1); playingKid(4, -1); playingKid(-22, 6);
+  // a ball for them to chase
+  const ball = toon(new THREE.SphereGeometry(0.28, 12, 10), 0xf2efe2, { thickness: 0.03 }); place(ball, 5, DECK_Y + 0.28, 0.5); wgrp.add(ball);
+
+  // Cats — wander slowly, sometimes sit, occasional meow
+  function buildCat(color) {
+    const g = new THREE.Group();
+    const body = toon(new THREE.CapsuleGeometry(0.17, 0.4, 4, 8), color, { thickness: 0.02 }); body.rotation.z = Math.PI / 2; place(body, 0, 0.26, 0); g.add(body);
+    const head = toon(new THREE.SphereGeometry(0.16, 10, 9), color, { thickness: 0.02 }); place(head, 0.33, 0.38, 0); g.add(head);
+    for (const sx of [-1, 1]) { const ear = toon(new THREE.ConeGeometry(0.07, 0.13, 4), color, { thickness: 0.012 }); place(ear, 0.34, 0.54, sx * 0.08); g.add(ear); }
+    const tail = toon(new THREE.CylinderGeometry(0.03, 0.05, 0.5, 6), color, { thickness: 0.012 }); place(tail, -0.36, 0.4, 0); tail.rotation.z = 0.8; g.add(tail);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const leg = toon(new THREE.CylinderGeometry(0.045, 0.045, 0.26, 6), color, { thickness: 0.012 }); place(leg, 0.05 + sx * 0.16, 0.13, sz * 0.1); g.add(leg); }
+    return g;
+  }
+  function spawnCat(hx, hz, color) { const g = buildCat(color); g.position.set(hx, DECK_Y, hz); wgrp.add(g); cats.push({ group: g, hx, hz, tx: hx, tz: hz, t: rand(1, 4), spd: rand(0.8, 1.3), meowCd: rand(4, 10) }); }
+  spawnCat(6, 12, 0xd98b46); spawnCat(-20, 8, 0x8a8a8a);
 
   // ---- player (traditional dress) ----------------------------------------
   const kidP = person({ baju: 0x1f6f5a, seluar: 0x16554a, head: 'songkok', hatColor: 0x14140f, sampin: true });
@@ -314,14 +354,19 @@ export function showKampong(audio, { mission, onResult } = {}) {
   q('.kq-quit').onclick = () => { sfx.unlock(); endMission(false, true); };
   q('.kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; };
   talkBtn.onclick = tryTalk;
-  let nearVendor = null, dialogOpen = false, firstTalk = true;
+  let nearVendor = null, dialogOpen = false, salamBusy = false;
   function showBanner(txt, ms = 2200) { banner.textContent = txt; banner.classList.add('show'); clearTimeout(showBanner._t); showBanner._t = setTimeout(() => banner.classList.remove('show'), ms); }
+  // the salam exchange — spoken aloud, no tap needed (fires on proximity)
+  function saySalam() {
+    if (salamBusy) return; salamBusy = true; sfx.unlock(); sfx.clue();
+    speak('Assalamualaikum', 0.85); showBanner('🙋 Assalamualaikum!', 1500);
+    setTimeout(() => { speak('Waalaikumsalam', 1.5); showBanner('🙂 Waalaikumsalam!', 1600); }, 1150);
+    setTimeout(() => { salamBusy = false; }, 2700);
+  }
   function tryTalk() {
     if (!nearVendor || dialogOpen || won) return;
     sfx.unlock(); sfx.talk();
-    // open the very first conversation with the customary greeting
-    const greet = firstTalk ? 'Assalamualaikum, adik! ' : ''; firstTalk = false;
-    q('.kq-text').textContent = greet + nearVendor.clue; dialog.hidden = false; dialogOpen = true;
+    q('.kq-text').textContent = nearVendor.clue; dialog.hidden = false; dialogOpen = true;
     if (!nearVendor.spoken) { nearVendor.spoken = true; let n = 0; for (const it of items) if (!it.taken && it.hidden && !it.beam.visible) { it.beam.visible = true; n++; } if (n) { sfx.clue(); showBanner('A clue! Hidden baskets revealed ✨'); } }
   }
 
@@ -329,7 +374,10 @@ export function showKampong(audio, { mission, onResult } = {}) {
   let collected = 0, elapsed = 0, won = false, ended = false, stun = 0, bikeHits = 0, running = true, raf = 0;
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   function collect(it) { it.taken = true; it.g.visible = false; collected++; elNum.textContent = collected; sfx.pickup(); showBanner(collected >= TOTAL ? 'All baskets! Head to the waterfront ⛵' : `Basket ${collected}/${TOTAL}!`); }
-  function collide(p) { for (const s of solids) { const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), min = s.r + PLAYER_R; if (d < min && d > 1e-4) { p.x = s.x + dx / d * min; p.z = s.z + dz / d * min; } } }
+  function collide(p) {
+    for (const s of solids) { const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), min = s.r + PLAYER_R; if (d < min && d > 1e-4) { p.x = s.x + dx / d * min; p.z = s.z + dz / d * min; } }
+    for (const pd of peds) if (pd.blocking) { const dx = p.x - pd.x, dz = p.z - pd.z, d = Math.hypot(dx, dz), min = 0.85 + PLAYER_R; if (d < min && d > 1e-4) { p.x = pd.x + dx / d * min; p.z = pd.z + dz / d * min; } }
+  }
   function clampWalk(p) { if (WALK.some((r) => p.x >= r.x0 && p.x <= r.x1 && p.z >= r.z0 && p.z <= r.z1)) return; let best = null, bd = Infinity; for (const r of WALK) { const cx = clamp(p.x, r.x0, r.x1), cz = clamp(p.z, r.z0, r.z1); const d = (cx - p.x) ** 2 + (cz - p.z) ** 2; if (d < bd) { bd = d; best = { x: cx, z: cz }; } } p.x = best.x; p.z = best.z; }
 
   function finishWin() { if (won) return; won = true; sfx.win(); showBanner('SAMPAI! ⛵ All baskets delivered!', 1600); setTimeout(() => endMission(true), 1500); }
@@ -389,6 +437,41 @@ export function showKampong(audio, { mission, onResult } = {}) {
       if (d < 1.1 && stun <= 0) { const a = Math.atan2(kid.position.z - bk.z, kid.position.x - bk.x); kid.position.x += Math.cos(a) * 1.6; kid.position.z += Math.sin(a) * 1.6; collide(kid.position); clampWalk(kid.position); stun = 0.5; bikeHits++; sfx.bump(); showBanner('Awas! A bicycle! 🚲', 1200); }
     }
 
+    // proximity salam — greet whoever you come near (no tap); blockers step aside
+    if (!salamBusy && !dialogOpen && !won) {
+      for (const g of greetables) {
+        if (g.greeted) continue;
+        if (Math.hypot(kid.position.x - g.x, kid.position.z - g.z) < 3) {
+          g.greeted = true; saySalam();
+          if (g.ped) { g.ped.blocking = false; g.ped.stepping = true; showBanner('🙏 Silakan lalu — please pass', 1800); }
+          break;
+        }
+      }
+    }
+    // blocking folk: bob, and slide aside once greeted
+    for (const pd of peds) {
+      pd.bob += dt * 3;
+      if (pd.stepping) { pd.group.position.x += (pd.ax - pd.group.position.x) * Math.min(1, dt * 3); pd.group.position.z += (pd.az - pd.group.position.z) * Math.min(1, dt * 3); if (Math.hypot(pd.ax - pd.group.position.x, pd.az - pd.group.position.z) < 0.05) pd.stepping = false; }
+      pd.group.position.y = DECK_Y + Math.sin(pd.bob) * 0.015;
+    }
+    // kids running their little circuits
+    for (const k of kids) {
+      k.t -= dt; if (k.t <= 0) { k.t = rand(1, 3); k.tx = k.hx + rand(-3.5, 3.5); k.tz = k.hz + rand(-3.5, 3.5); }
+      const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false;
+      if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); }
+      clampWalk(k.group.position);
+      const ksw = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ksw * 0.7; k.legs[1].rotation.x = -ksw * 0.7; }
+      k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0);
+    }
+    // cats wandering, the occasional meow
+    for (const c of cats) {
+      c.t -= dt; if (c.t <= 0) { c.t = rand(2, 5); c.tx = c.hx + rand(-3, 3); c.tz = c.hz + rand(-3, 3); }
+      const dx = c.tx - c.group.position.x, dz = c.tz - c.group.position.z, d = Math.hypot(dx, dz);
+      if (d > 0.2) { c.group.position.x += dx / d * c.spd * dt; c.group.position.z += dz / d * c.spd * dt; c.group.rotation.y = Math.atan2(dx, dz); }
+      clampWalk(c.group.position);
+      c.meowCd -= dt; if (c.meowCd <= 0) { c.meowCd = rand(7, 16); if (Math.hypot(kid.position.x - c.group.position.x, kid.position.z - c.group.position.z) < 10) sfx.meow(); }
+    }
+
     if (!won && collected >= TOTAL && kid.position.z < NORTH.z0 + 5) finishWin();
     elTime.textContent = fmt(elapsed);
     updateCamera(false);
@@ -405,6 +488,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },
     talk: () => { nearVendor = vendors.find((v) => !v.spoken) || vendors[0]; tryTalk(); },
     collectAll: () => items.forEach((i) => { if (!i.taken) collect(i); }),
+    npcs: () => ({ bikes: bikes.length, kids: kids.length, cats: cats.length, peds: peds.length, blocking: peds.filter((p) => p.blocking).length, greeted: greetables.filter((g) => g.greeted).length }),
     yaw: (y) => { camYaw = y; }, pitch: (p) => { camPitch = p; }, dist: (d) => { camDist = d; updateCamera(true); },
   };
   return overlay;

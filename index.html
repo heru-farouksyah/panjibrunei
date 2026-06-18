@@ -386,6 +386,26 @@
       box-shadow: 0 4px 16px rgba(20,50,70,0.4);
     }
     .muara-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* Naval level-up: choose one of three upgrades */
+    .muara-cards {
+      position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      background: rgba(15,40,60,0.55); backdrop-filter: blur(2px);
+    }
+    .muara-cards[hidden] { display: none; }
+    .mc-title { color: #fff; font-size: 19px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+    .mc-row { display: flex; gap: 12px; padding: 0 14px; max-width: 560px; width: 100%; box-sizing: border-box; justify-content: center; }
+    .mc-card {
+      flex: 1 1 0; max-width: 160px; min-height: 132px; cursor: pointer;
+      background: var(--panel-bg); border: 1px solid var(--brass-dim); border-radius: 14px;
+      box-shadow: var(--panel-edge); color: var(--ink); padding: 14px 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+      transition: transform 0.08s;
+    }
+    .mc-card:active { transform: scale(0.95); }
+    .mc-ic { font-size: 34px; line-height: 1; }
+    .mc-card b { font-size: 14px; color: var(--brass); }
+    .mc-card small { font-size: 12px; opacity: 0.85; line-height: 1.3; }
     /* Kianggeh Stand — tower defence */
     .screen-overlay.td { padding: 0; gap: 0; overflow: hidden; background: #a7d6b4; touch-action: none; }
     .td-canvas { display: block; width: 100%; height: 100%; touch-action: none; }

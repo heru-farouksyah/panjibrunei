@@ -5,8 +5,10 @@
 export const MISSIONS = [
   {
     id: 'muara', name: 'Landing at Muara', x: 70, y: 250, prev: null,
-    faction: 'semaun', difficulty: 'easy', mode: 'naval', parMin: 3,
-    blurb: 'Awang Semaun sails the Muara channel alone. Steer your war perahu, let it loose on the raider boats swarming in, and break through to the beach.',
+    faction: 'semaun', difficulty: 'easy', mode: 'naval',
+    naval: { goal: 24, gunboatsFrom: 2, spawn: 1.7, par: 2.5,
+      intro: 'Steer with one finger — your cannons fire themselves. Sink 24 raiders!' },
+    blurb: 'Awang Semaun sails the Muara channel alone. Steer your war perahu, let the cannons loose on the raider boats swarming in, and break through to the beach.',
   },
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',

@@ -16,6 +16,7 @@ import { showCampaign, showMissionResult } from './render/campaign.js';
 import { showMuara } from './render/muara.js';
 import { showTowerDefense } from './render/td.js';
 import { showTycoon } from './render/tycoon.js';
+import { showKampong } from './render/kampong.js';
 import { TICK_RATE } from './sim/constants.js';
 import factionsData from './data/factions.json' with { type: 'json' };
 
@@ -309,6 +310,11 @@ function startTycoon(m) {
   showTycoon(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
+// 3rd-person Kampong Ayer collect-a-thon (Landing at Muara).
+function startKampong(m) {
+  showKampong(audio, { mission: m, onResult: (r) => miniResult(m, r) });
+}
+
 // One place that decides WHICH game a node runs, by its `mode` (default = RTS).
 // Used by both the journey map and the ?play=<id> preview shortcut.
 function launchMission(m) {
@@ -316,6 +322,7 @@ function launchMission(m) {
     case 'naval': return startMuara(m);
     case 'td': return startTowerDefense(m);
     case 'tycoon': return startTycoon(m);
+    case 'explore': return startKampong(m);
     default:
       return startMatch(m.faction, m.difficulty, {
         theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m,

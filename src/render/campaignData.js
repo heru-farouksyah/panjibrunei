@@ -12,7 +12,8 @@ export const MISSIONS = [
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',
     faction: 'sakam', difficulty: 'easy', theme: 'water_village', mapSize: 72, seed: 102, parMin: 12,
-    blurb: 'Stilt-houses under threat — hold the water village and drive the raiders back.',
+    reveal: true, // intro RTS mission: whole map clear (no fog), enemies shown in red
+    blurb: 'Stilt-houses under threat — hold the water village and drive the raiders back. The whole village is in view, and enemies show up red.',
   },
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',

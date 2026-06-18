@@ -107,6 +107,10 @@ function startMatch(playerFaction, difficulty, opts = {}) {
   let booted = false;
   // Campaign mission scoring: ★ win · ★ under par time · ★ Istana never below 60%.
   const mission = opts.mission || null;
+  // Missions flagged `reveal` (e.g. Defence of Kampong Ayer) play with the
+  // whole map clear — no dark fog of war. The AI keeps its own fog, so it
+  // still plays fair. revealAll never decrements to 0 within a match.
+  if (opts.reveal && sim.players[0]) sim.players[0].revealAll = 1e9;
   let minIstanaFrac = 1;
 
   // Tutorial → deployment → battle. The match stays paused through both;
@@ -325,7 +329,7 @@ function launchMission(m) {
     case 'explore': return startKampong(m);
     default:
       return startMatch(m.faction, m.difficulty, {
-        theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m,
+        theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m, reveal: !!m.reveal,
         tutorial: m.id === 'ayer' && !profile.stars['ayer'], // teach on the first RTS mission
       });
   }

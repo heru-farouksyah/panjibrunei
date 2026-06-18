@@ -128,7 +128,8 @@ export class Minimap {
       if (e.owner < 0) return;
       if (e.kind !== 'unit' && e.kind !== 'building') return;
       if (!sim.isVisibleToPlayer(0, e)) return;
-      const color = sim.players[e.owner]?.faction?.color ?? '#fff';
+      // clear friend/foe colours: you are green, every enemy is red
+      const color = e.owner === 0 ? '#3ee07a' : '#ff4136';
       ctx.fillStyle = color;
       if (e.kind === 'building') {
         const s = Math.max(3, e.size * S);

@@ -386,6 +386,88 @@
       box-shadow: 0 4px 16px rgba(20,50,70,0.4);
     }
     .muara-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* Kianggeh Stand — tower defence */
+    .screen-overlay.td { padding: 0; gap: 0; overflow: hidden; background: #a7d6b4; touch-action: none; }
+    .td-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .td-quit {
+      position: absolute; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+      width: 38px; height: 38px; border-radius: 50%; border: none; z-index: 3;
+      background: rgba(255,255,255,0.82); color: var(--ink); font-size: 24px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(20,50,70,0.35); display: flex; align-items: center; justify-content: center; padding: 0 4px 2px 0;
+    }
+    .td-quit:active { transform: scale(0.92); }
+    .td-toast {
+      position: absolute; left: 50%; top: 64px; transform: translateX(-50%) translateY(-6px);
+      background: rgba(20,45,65,0.86); color: #fff; padding: 8px 15px; border-radius: 999px;
+      font-size: 13.5px; font-weight: 600; max-width: 92vw; text-align: center;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 3; box-shadow: 0 4px 16px rgba(20,50,70,0.4);
+    }
+    .td-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .td-bar {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+      display: flex; gap: 6px; justify-content: center; padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(223,238,250,0.92) 38%);
+    }
+    .td-card {
+      flex: 1 1 0; max-width: 92px; min-height: 60px; border: 1px solid var(--brass-dim); border-radius: 10px;
+      background: rgba(255,255,255,0.8); color: var(--ink); cursor: pointer; padding: 5px 2px;
+      display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: var(--panel-edge);
+    }
+    .td-card.on { border-color: var(--brass); box-shadow: 0 0 0 2px var(--brass), 0 4px 12px rgba(40,90,120,0.25); transform: translateY(-2px); }
+    .td-card:active { transform: scale(0.96); }
+    .td-ic { font-size: 22px; line-height: 1; }
+    .td-nm { font-size: 10.5px; font-weight: 700; }
+    .td-co { font-size: 10px; color: var(--brass); font-weight: 700; }
+    /* Skirmish at the Tamu — market tycoon */
+    .screen-overlay.tycoon { justify-content: flex-start; padding: 0; gap: 0; overflow: hidden; }
+    .ty-quit {
+      position: absolute; top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+      width: 38px; height: 38px; border-radius: 50%; border: none; z-index: 4;
+      background: rgba(255,255,255,0.85); color: var(--ink); font-size: 24px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(20,50,70,0.3); display: flex; align-items: center; justify-content: center; padding: 0 4px 2px 0;
+    }
+    .ty-hud {
+      width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 12px;
+      padding: calc(12px + env(safe-area-inset-top)) 14px 12px 56px;
+      background: var(--panel-bg); box-shadow: var(--panel-edge);
+    }
+    .ty-purse { font-size: 20px; font-weight: 800; color: var(--brass); white-space: nowrap; }
+    .ty-goal { flex: 1; min-width: 0; }
+    .ty-goal small { display: block; margin-top: 3px; opacity: 0.8; font-size: 11px; }
+    .ty-goal-bar { height: 9px; border-radius: 5px; background: rgba(78,138,175,0.22); overflow: hidden; }
+    .ty-goal-bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3fae6a, #6fd08a); transition: width 0.2s; }
+    .ty-clock { font-size: 22px; font-weight: 800; color: var(--ink); min-width: 54px; text-align: right; }
+    .ty-clock.low { color: #d6584e; animation: tyPulse 1s infinite; }
+    @keyframes tyPulse { 50% { opacity: 0.45; } }
+    .ty-stalls { flex: 1; width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; align-content: center; max-width: 640px; }
+    .ty-stall { position: relative; background: rgba(255,255,255,0.84); border: 1px solid var(--brass-dim); border-left: 5px solid var(--tint); border-radius: 12px; padding: 10px; box-shadow: var(--panel-edge); overflow: hidden; }
+    .ty-stall.empty { background: rgba(255,228,222,0.9); }
+    .ty-top { display: flex; align-items: center; gap: 8px; }
+    .ty-icon { font-size: 28px; }
+    .ty-meta { display: flex; flex-direction: column; line-height: 1.1; flex: 1; }
+    .ty-meta b { font-size: 15px; color: var(--ink); }
+    .ty-meta small { font-size: 11px; color: var(--brass); font-weight: 700; }
+    .ty-rate { font-size: 13px; font-weight: 800; color: #2e8c55; }
+    .ty-rate.idle { color: #c0606a; }
+    .ty-stockbar { position: relative; height: 16px; border-radius: 8px; background: rgba(78,138,175,0.18); margin: 9px 0; overflow: hidden; }
+    .ty-stockfill { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, #6fb6e0, #9fd4ef); transition: width 0.15s; }
+    .ty-stockfill.low { background: linear-gradient(90deg, #e8a23a, #f0c24a); }
+    .ty-stocktxt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-style: normal; font-weight: 700; color: var(--ink); }
+    .ty-btns { display: flex; gap: 7px; }
+    .ty-btns button { flex: 1; min-height: 38px; border-radius: 9px; border: 1px solid var(--brass-dim); background: rgba(255,255,255,0.9); color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .ty-restock { border-color: rgba(63,174,106,0.5); color: #2e8c55; }
+    .ty-upg { border-color: rgba(192,133,26,0.5); color: var(--brass); }
+    .ty-btns button:active { transform: scale(0.95); }
+    .ty-btns button.off { opacity: 0.4; }
+    .ty-pop { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-size: 15px; font-weight: 800; pointer-events: none; animation: tyPop 0.75s ease-out forwards; }
+    @keyframes tyPop { 0% { opacity: 0; transform: translate(-50%, 4px); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -22px); } }
+    .ty-toast {
+      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%) translateY(8px);
+      background: rgba(20,45,65,0.86); color: #fff; padding: 9px 16px; border-radius: 999px;
+      font-size: 13px; font-weight: 600; max-width: 92vw; text-align: center;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 4; box-shadow: 0 4px 16px rgba(20,50,70,0.4);
+    }
+    .ty-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .screen-title { font-size: clamp(30px, 8vw, 46px); letter-spacing: 8px; color: var(--brass); margin: 0; text-shadow: 0 2px 12px rgba(0,0,0,0.7); text-align: center; }
     .screen-sub { opacity: 0.8; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; text-align: center; }
     .faction-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 230px)); gap: 12px; margin: 10px 0; max-width: 96vw; }

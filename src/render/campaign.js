@@ -92,19 +92,28 @@ export function showCampaign(profile, audio, { onMission, onBack, onSettings }) 
     }
   }
 
+  // Per-mode briefing: mode name, control hint, the three star conditions, CTA.
+  const MODES = {
+    naval: { mode: 'Naval arena', ctrl: 'Drag to steer · auto-fire',
+      stars: ['clear the raiders', 'under 3 min', 'hull above 60%'], cta: 'Set sail!' },
+    td: { mode: 'Tower defence', ctrl: 'Tap a tile to plant defenders',
+      stars: ['survive every wave', 'kampong above 60%', 'no breach'], cta: 'Hold the line!' },
+    tycoon: { mode: 'Market tycoon', ctrl: 'Tap stalls to stock & sell',
+      stars: ['beat the gold target', 'beat it early', 'out-earn every rival'], cta: 'Open the tamu!' },
+  };
   function showBrief(m) {
     const stars = profile.stars[m.id] || 0;
-    const naval = m.mode === 'naval';
-    const meta = naval
-      ? `<div class="brief-row"><span>Mode</span><b>Naval arena</b></div>` +
-        `<div class="brief-row"><span>Controls</span><b>Drag to steer · auto-fire</b></div>` +
-        `<div class="brief-stars">★ clear 30 raiders &nbsp; ★ under 3 min &nbsp; ★ hull above 60%</div>`
+    const M = MODES[m.mode];
+    const meta = M
+      ? `<div class="brief-row"><span>Mode</span><b>${M.mode}</b></div>` +
+        `<div class="brief-row"><span>Controls</span><b>${M.ctrl}</b></div>` +
+        `<div class="brief-stars">★ ${M.stars.join(' &nbsp; ★ ')}</div>`
       : `<div class="brief-row"><span>Banner</span><b>${m.faction}</b></div>` +
         `<div class="brief-row"><span>Difficulty</span><b>${m.difficulty}</b></div>` +
         `<div class="brief-stars">★ win &nbsp; ★ under ${m.parMin} min &nbsp; ★ no building lost</div>`;
     modal(`<div class="m-title">${m.name}</div><div class="m-sub">${m.blurb}</div>` + meta +
       `<div class="m-sub small">Stars earned: ${stars}/3</div>`,
-      [{ label: naval ? 'Set sail!' : 'March!', primary: true, fn: () => { overlay.remove(); onMission(m); } }, { label: 'Back' }]);
+      [{ label: M ? M.cta : 'March!', primary: true, fn: () => { overlay.remove(); onMission(m); } }, { label: 'Back' }]);
     audio?.play?.('ui_click');
   }
 

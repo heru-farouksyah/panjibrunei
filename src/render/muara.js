@@ -54,9 +54,18 @@ export function showMuara(audio, { mission, onResult }) {
   window.addEventListener('resize', resize);
 
   // ---- world / state ------------------------------------------------------
-  const GOAL = 30;                 // Sub-Goal: raiders to defeat to land
+  // Per-mission tuning: Muara is the gentle intro; Sungai Damuan reuses this
+  // engine as a tougher "fleet battle" that ends with an enemy flagship boss.
+  const cfg = mission?.naval || {};
+  const GOAL = cfg.goal || 30;     // Sub-Goal: raiders to defeat before landing
+  const HAS_BOSS = !!cfg.boss;     // if set, clearing the sub-goal summons a boss you must sink
+  const HP_SCALE = cfg.hpScale || 1;
+  const SPAWN_BASE = cfg.spawn || 1.5;
+  const PAR_MIN = cfg.par || 3;
+  const INTRO = cfg.intro || `Steer — your perahu fires itself. Clear ${GOAL} raiders!`;
   const rand = (a, b) => a + Math.random() * (b - a);
   const now = () => performance.now();
+  let bossSpawned = false, boss = null;
 
   const ship = {
     x: W / 2, y: H * 0.62, r: 16, hp: 100, maxHp: 100,
@@ -129,9 +138,21 @@ export function showMuara(audio, { mission, onResult }) {
     else if (edge === 1) { x = W + 40; y = rand(0, H); }
     else if (edge === 2) { x = rand(0, W); y = H + 40; }
     else { x = -40; y = rand(0, H); }
-    const hpScale = 1 + phase * 0.18;
+    const hpScale = (1 + phase * 0.18) * HP_SCALE;
     foes.push({ kind, x, y, r: def.r, hp: def.hp * hpScale, maxHp: def.hp * hpScale,
       speed: def.speed, dmg: def.dmg, gold: def.gold, color: def.color, atkCool: 0, hitFlash: 0, bob: rand(0, 6.28) });
+  }
+
+  // The enemy flagship — summoned once the sub-goal is cleared (Sungai variant).
+  // A huge, slow brute; sinking it wins the mission.
+  function spawnBoss() {
+    bossSpawned = true;
+    boss = { kind: 'flagship', boss: true, x: W / 2, y: -70, r: 46,
+      hp: 700 * HP_SCALE, maxHp: 700 * HP_SCALE, speed: 24, dmg: 30, gold: 25,
+      color: '#7a2f8a', atkCool: 0, hitFlash: 0, bob: 0 };
+    foes.push(boss);
+    toast('The enemy flagship approaches — sink it!', 2600);
+    audio?.play?.('attack_warning');
   }
 
   // ---- combat -------------------------------------------------------------
@@ -153,11 +174,16 @@ export function showMuara(audio, { mission, onResult }) {
   function killFoe(f) {
     const i = foes.indexOf(f); if (i < 0) return;
     foes.splice(i, 1);
+    const big = f.boss || f.kind === 'gergasi';
+    burst(f.x, f.y, f.color, f.boss ? 30 : big ? 18 : 9);
+    audio?.play?.(big ? 'boss_slain' : 'unit_death', { rateLimitMs: 50 });
+    gainXp(f.boss ? 10 : big ? 4 : 1);
+    if (f.boss) { boss = null; finish(true); return; }   // flagship down → win
     kills++;
-    burst(f.x, f.y, f.color, f.kind === 'gergasi' ? 18 : 9);
-    audio?.play?.(f.kind === 'gergasi' ? 'boss_slain' : 'unit_death', { rateLimitMs: 50 });
-    gainXp(f.kind === 'gergasi' ? 4 : 1);
-    if (kills >= GOAL) finish(true);
+    if (kills >= GOAL) {
+      if (HAS_BOSS && !bossSpawned) spawnBoss();           // sub-goal cleared → summon flagship
+      else if (!HAS_BOSS) finish(true);                    // plain survival → win at the goal
+    }
   }
   function gainXp(n) {
     ship.xp += n;
@@ -342,16 +368,18 @@ export function showMuara(audio, { mission, onResult }) {
 
   function drawHud() {
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    // sub-goal (top-left, beside the back button)
+    const bossLive = boss && boss.hp > 0;
+    // objective label (top-left, beside the back button)
     ctx.font = 'bold 16px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.shadowColor = 'rgba(20,40,60,0.5)'; ctx.shadowBlur = 4;
-    ctx.fillText(`Sub Goal  ${Math.min(kills, GOAL)}/${GOAL}`, 56, 16);
+    ctx.fillText(bossLive ? 'Sink the flagship!' : `Sub Goal  ${Math.min(kills, GOAL)}/${GOAL}`, 56, 16);
     ctx.shadowBlur = 0;
 
-    // progress bar under it
+    // progress bar under it — sub-goal progress, or the boss's health
     const pw = Math.min(220, W - 72), px = 56, py = 40;
+    const frac = bossLive ? boss.hp / boss.maxHp : Math.min(kills, GOAL) / GOAL;
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; roundRect(px, py, pw, 7, 4); ctx.fill();
-    ctx.fillStyle = PALETTE.brass; roundRect(px, py, pw * (Math.min(kills, GOAL) / GOAL), 7, 4); ctx.fill();
+    ctx.fillStyle = bossLive ? '#d6584e' : PALETTE.brass; roundRect(px, py, pw * frac, 7, 4); ctx.fill();
 
     // timer + phase (top-right)
     ctx.textAlign = 'right'; ctx.font = 'bold 15px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.95)';
@@ -389,7 +417,7 @@ export function showMuara(audio, { mission, onResult }) {
     requestAnimationFrame(frame);
   }
   // a brief intro toast so the player knows what to do
-  toast('Steer — your perahu fires itself. Clear 30 raiders!', 2200);
+  toast(INTRO, 2400);
   requestAnimationFrame(frame);
 
   // ---- finish -------------------------------------------------------------
@@ -400,7 +428,7 @@ export function showMuara(audio, { mission, onResult }) {
     let stars = 0;
     if (win) {
       stars = 1;
-      if (minutes <= (mission?.parMin ? Math.min(mission.parMin, 3) : 3)) stars++;
+      if (minutes <= PAR_MIN) stars++;
       if (minHpFrac >= 0.6) stars++;
     }
     audio?.play?.(win ? 'victory' : 'defeat');
@@ -419,8 +447,11 @@ export function showMuara(audio, { mission, onResult }) {
   // debug/test hook
   window.__muara = {
     ship, foes, shots,
-    state: () => ({ kills, goal: GOAL, hp: ship.hp, ended, level: ship.level, phase, elapsed, foes: foes.length }),
+    state: () => ({ kills, goal: GOAL, hp: ship.hp, ended, level: ship.level, phase, elapsed,
+      foes: foes.length, hasBoss: HAS_BOSS, bossSpawned, bossHp: boss ? boss.hp : null }),
     spawn: spawnFoe,
+    summonBoss: () => { if (HAS_BOSS && !bossSpawned) spawnBoss(); },
+    killBoss: () => { if (boss) killFoe(boss); },
     forceWin: () => finish(true),
   };
 

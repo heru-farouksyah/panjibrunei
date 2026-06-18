@@ -15,18 +15,22 @@ export const MISSIONS = [
   },
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',
-    faction: 'shahbandar', difficulty: 'normal', theme: 'tropical', mapSize: 96, seed: 103, parMin: 14,
-    blurb: 'The market is contested ground. Out-trade and out-fight three rival kampongs.',
+    faction: 'shahbandar', difficulty: 'normal', mode: 'tycoon',
+    tycoon: { secs: 80, target: 650, startGold: 60 },
+    blurb: 'The market is contested ground. Run your stalls, keep them stocked through the rush, and out-trade three rival kampongs before the bell.',
   },
   {
     id: 'sungai', name: 'Sungai Damuan', x: 410, y: 170, prev: 'pasar',
-    faction: 'hassan', difficulty: 'normal', theme: 'tropical', mapSize: 96, seed: 104, parMin: 15,
-    blurb: 'Seize the river channel and its fords before the enemy fleets gather.',
+    faction: 'hassan', difficulty: 'normal', mode: 'naval',
+    naval: { goal: 24, boss: true, hpScale: 1.25, spawn: 1.2, par: 4,
+      intro: 'Seize the channel — clear the raider fleet, then sink the enemy flagship!' },
+    blurb: 'Seize the river channel and its fords. Clear the raider fleet, then sink the enemy flagship before it breaks through to the kampong.',
   },
   {
     id: 'kianggeh', name: 'Kianggeh Stand', x: 520, y: 240, prev: 'sungai',
-    faction: 'saman', difficulty: 'normal', theme: 'desert', mapSize: 96, seed: 105, parMin: 16,
-    blurb: 'A people’s resistance forms at the stream. Survive the early rush and rally.',
+    faction: 'saman', difficulty: 'normal', mode: 'td',
+    td: { waves: 6, kampongHp: 100, startGold: 175 },
+    blurb: 'A people’s resistance forms at the stream. Plant defenders along the banks and hold the kampong through every wave of raiders.',
   },
   {
     id: 'kotabatu', name: 'Siege of Kota Batu', x: 620, y: 150, prev: 'kianggeh',

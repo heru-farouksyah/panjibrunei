@@ -180,6 +180,18 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   if (conn.length) { const plankGeo = new THREE.BoxGeometry(1, 0.2, 0.7); const cm = new THREE.InstancedMesh(plankGeo, tmat(0xb98a4e), conn.length); cm.castShadow = false; cm.receiveShadow = true; conn.forEach((c, i) => { dummy.position.set(c.mx, DECK_Y - 0.12, c.mz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); }); cm.instanceMatrix.needsUpdate = true; wgrp.add(cm); }
 
+  // ---- walkability grid: roads + titian planks + house platforms are all
+  // walkable (O(1) lookup). Far kampong cells (z < -57) unlock with the boat.
+  const GMINX = -150, GMINZ = -195, GCELL = 1.4, GW = Math.ceil(300 / GCELL), GH = Math.ceil(370 / GCELL);
+  const grid = new Uint8Array(GW * GH);
+  const gidx = (x, z) => { const cx = ((x - GMINX) / GCELL) | 0, cz = ((z - GMINZ) / GCELL) | 0; return (cx < 0 || cz < 0 || cx >= GW || cz >= GH) ? -1 : cz * GW + cx; };
+  const walkableAt = (x, z) => { const i = gidx(x, z); return i >= 0 && grid[i] === 1; };
+  const markRect = (r) => { for (let x = r.x0; x <= r.x1; x += GCELL) for (let z = r.z0; z <= r.z1; z += GCELL) { const i = gidx(x, z); if (i >= 0) grid[i] = 1; } };
+  const markDisc = (x, z, rad) => { for (let dx = -rad; dx <= rad; dx += GCELL) for (let dz = -rad; dz <= rad; dz += GCELL) if (dx * dx + dz * dz <= rad * rad) { const i = gidx(x + dx, z + dz); if (i >= 0) grid[i] = 1; } };
+  const markPlank = (mx, mz, ang, len, wid) => { const ca = Math.cos(ang), sa = Math.sin(ang); for (let u = -len / 2; u <= len / 2; u += GCELL) for (let v = -wid / 2; v <= wid / 2; v += GCELL) { const i = gidx(mx + ca * u - sa * v, mz + sa * u + ca * v); if (i >= 0) grid[i] = 1; } };
+  function rasterize(far) { const ok = (z) => far || z >= -57; for (const r of ALLRECTS) if (ok((r.z0 + r.z1) / 2)) markRect(r); for (const c of conn) if (ok(c.mz)) markPlank(c.mx, c.mz, c.ang, c.len, 1.8); for (const h of houseXf) if (ok(h.z)) markDisc(h.x, h.z, 3.8); }
+  rasterize(false);
+
   // ---- hubs + landmark labels --------------------------------------------
   function label(text, x, y, z, sc = 1) { const t = canvasTex(256, 64, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = 'bold 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 7; g.lineJoin = 'round'; g.strokeStyle = 'rgba(12,32,42,0.9)'; g.strokeText(text, w / 2, h / 2); g.fillStyle = '#fff'; g.fillText(text, w / 2, h / 2); }); const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, fog: false })); spr.position.set(x, y, z); spr.scale.set((text.length * 0.5 + 2) * sc, 2.2 * sc, 1); wgrp.add(spr); return spr; }
   (function mosque() { const g = new THREE.Group(); g.position.set(30, 0, 30); wgrp.add(g); const body = toon(new THREE.BoxGeometry(6.4, 3.4, 6.4), 0xeef2f0, { thickness: 0.04 }); body.position.y = 2.9; g.add(body); const dome = toon(new THREE.SphereGeometry(1.8, 18, 12, 0, 6.28, 0, Math.PI / 2), 0x2f8f6a, { thickness: 0.04 }); dome.position.y = 5.0; g.add(dome); const min = toon(new THREE.CylinderGeometry(0.5, 0.6, 8, 12), 0xeef2f0, { thickness: 0.03 }); min.position.set(4.2, 4.5, 4.2); g.add(min); })();
@@ -336,7 +348,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     dialog.hidden = false; dialogOpen = true;
   }
   function clearStash(st) { st.cleared = true; st.group.visible = false; stashesCleared++; tokens += 5; sfx.win(); showBanner(`Stash destroyed (${stashesCleared}/2 in the kampong). +5🎟`, 2400); refreshHud(); setObjective(); }
-  function buildBoat() { if (boatParts >= 3 || tokens < 4) { if (tokens < 4) showBanner('Need 4🎟 for the next boat part.', 1800); return; } tokens -= 4; boatParts++; sfx.pickup(); if (boatParts >= 3) { boatBuilt = true; WALK.push(...FAR); showBanner('The boat is ready! The far kampong is open — sail north. 🛶', 3000); } else showBanner(`Boat part fitted (${boatParts}/3). +parts with tokens.`, 2200); refreshHud(); setObjective(); }
+  function buildBoat() { if (boatParts >= 3 || tokens < 4) { if (tokens < 4) showBanner('Need 4🎟 for the next boat part.', 1800); return; } tokens -= 4; boatParts++; sfx.pickup(); if (boatParts >= 3) { boatBuilt = true; WALK.push(...FAR); rasterize(true); showBanner('The boat is ready! The far kampong is open — sail north. 🛶', 3000); } else showBanner(`Boat part fitted (${boatParts}/3). +parts with tokens.`, 2200); refreshHud(); setObjective(); }
   function confront() { if (mysterySolved) return; mysterySolved = true; sfx.win(); showBanner('Pak Long is exposed. The poison stops here. ⚖', 2800); setObjective(); checkWin(); }
   function checkWin() {
     if (won) return;
@@ -380,7 +392,11 @@ export function showKampong(audio, { mission, onResult } = {}) {
       moving = true; const nx = ix / (mag > 1 ? mag : 1), ny = iy / (mag > 1 ? mag : 1);
       const fwdX = Math.sin(camYaw), fwdZ = Math.cos(camYaw), rightX = Math.cos(camYaw), rightZ = -Math.sin(camYaw);
       const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = 6.2;
-      kid.position.x += mvX * spd * dt; kid.position.z += mvZ * spd * dt; collide(kid.position); clampWalk(kid.position);
+      // move along the walkable grid (titian + roads + house platforms); slide along walls
+      const ox = kid.position.x, oz = kid.position.z, nX = ox + mvX * spd * dt, nZ = oz + mvZ * spd * dt; let px = ox, pz = oz;
+      if (walkableAt(nX, nZ)) { px = nX; pz = nZ; } else if (walkableAt(nX, oz)) px = nX; else if (walkableAt(ox, nZ)) pz = nZ;
+      kid.position.x = px; kid.position.z = pz; collide(kid.position);
+      if (!walkableAt(kid.position.x, kid.position.z)) { kid.position.x = px; kid.position.z = pz; }
       kid.rotation.y = Math.atan2(mvX, mvZ); stepAcc += dt; if (stepAcc > 0.28) { stepAcc = 0; sfx.footstep(); }
     }
     const sw = moving ? Math.sin(tnow * 11) : 0; if (legs[0]) { legs[0].rotation.x = sw * 0.6; legs[1].rotation.x = -sw * 0.6; } if (arms[0]) { arms[0].rotation.x = -sw * 0.5; arms[1].rotation.x = sw * 0.5; }
@@ -419,6 +435,8 @@ export function showKampong(audio, { mission, onResult } = {}) {
     addTokens: (n) => { tokens += n; refreshHud(); },
     buildBoat: () => { while (!boatBuilt) { tokens = Math.max(tokens, 4); buildBoat(); } },
     confront: () => confront(),
+    walkable: (x, z) => walkableAt(x, z),
+    houses: () => houseXf.length,
   };
   return overlay;
 }

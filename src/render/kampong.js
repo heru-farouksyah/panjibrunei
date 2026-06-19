@@ -258,8 +258,18 @@ export function showKampong(audio, { mission, onResult } = {}) {
   function onWheel(e) { camDist = clamp(camDist + Math.sign(e.deltaY) * 0.8, 5, 20); }
   function onKD(e) { const k = e.key.toLowerCase(); if ('wasd'.includes(k) || k.startsWith('arrow')) { keys.add(k); sfx.unlock(); } if (k === 'e' || k === ' ') doAction(); }
   function onKU(e) { keys.delete(e.key.toLowerCase()); }
-  function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); }
-  addEventListener('mousemove', onMM); addEventListener('mouseup', onMU); addEventListener('wheel', onWheel, { passive: true }); addEventListener('keydown', onKD); addEventListener('keyup', onKU); addEventListener('resize', onResize);
+  function onResize() {
+    const asp = innerWidth / innerHeight;
+    camera.aspect = asp;
+    // widen the (vertical) field of view on short/landscape screens so you still
+    // see plenty of the village ahead; keep it tighter in tall/portrait.
+    camera.fov = asp >= 1.5 ? 62 : asp >= 1.0 ? 56 : asp >= 0.7 ? 50 : 46;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  }
+  const onOrient = () => setTimeout(onResize, 200);   // viewport size settles after the rotate event
+  onResize();   // apply the right FOV for the current orientation up front
+  addEventListener('mousemove', onMM); addEventListener('mouseup', onMU); addEventListener('wheel', onWheel, { passive: true }); addEventListener('keydown', onKD); addEventListener('keyup', onKU); addEventListener('resize', onResize); addEventListener('orientationchange', onOrient);
 
   // ---- HUD ---------------------------------------------------------------
   const hud = document.createElement('div'); hud.className = 'kq'; overlay.appendChild(hud);
@@ -322,7 +332,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   function clampWalk(p) { if (WALK.some((r) => p.x >= r.x0 && p.x <= r.x1 && p.z >= r.z0 && p.z <= r.z1)) return; let best = null, bd = Infinity; for (const r of WALK) { const cx = clamp(p.x, r.x0, r.x1), cz = clamp(p.z, r.z0, r.z1); const d = (cx - p.x) ** 2 + (cz - p.z) ** 2; if (d < bd) { bd = d; best = { x: cx, z: cz }; } } p.x = best.x; p.z = best.z; }
   function finishWin() { if (won) return; won = true; sfx.win(); showBanner('SAMPAI! ⛵ The cargo is delivered!', 1800); setTimeout(() => endMission(true), 1700); }
   function endMission(win, quit = false) { if (ended) return; ended = true; let stars = 0; if (win) { stars = 1; if (elapsed / 60 <= PAR_MIN) stars++; if (bikeHits === 0) stars++; } cleanup(); onResult?.({ win: quit ? false : win, stars: quit ? 0 : stars, minutes: elapsed / 60, quit }); }
-  function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('mousemove', onMM); removeEventListener('mouseup', onMU); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('resize', onResize); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
+  function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('mousemove', onMM); removeEventListener('mouseup', onMU); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('resize', onResize); removeEventListener('orientationchange', onOrient); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
 
   // ---- loop --------------------------------------------------------------
   const clock = new THREE.Clock(); let stepAcc = 0;

@@ -60,7 +60,28 @@ function injectStyle() {
   .kampong .kq-win[hidden]{display:none;}
   .kampong .kq-win .card{background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:22px;padding:28px 34px;text-align:center;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;max-width:90vw;}
   .kampong .kq-win h2{margin:0;color:#2f7f78;font-size:28px;letter-spacing:1px;} .kampong .kq-win p{color:#16384c;margin:8px 0 16px;font-size:15px;}
-  .kampong .kq-win button{background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 26px;font-weight:800;font-size:16px;cursor:pointer;}`;
+  .kampong .kq-win button{background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 26px;font-weight:800;font-size:16px;cursor:pointer;}
+  .kampong .kq-win .clue{margin-top:10px;background:#eef6f3;border-left:3px solid #e2a23a;border-radius:8px;padding:9px 12px;font-size:13px;color:#3a5560;text-align:left;}
+  .kampong .kq-hbar{width:84px;height:11px;border-radius:6px;background:rgba(255,255,255,0.25);overflow:hidden;position:relative;}
+  .kampong .kq-hbar::before{content:'🍚';position:absolute;left:-17px;top:-3px;font-size:13px;}
+  .kampong .kq-hbar span{display:block;height:100%;width:100%;background:linear-gradient(90deg,#e2a23a,#ffd27f);transition:width .2s;}
+  .kampong .kq-hbar.low span{background:linear-gradient(90deg,#c0463a,#ef8a7a);}
+  .kampong .kq-tag{position:absolute;transform:translate(-50%,-100%);background:rgba(255,255,255,0.96);color:#16384c;border:2px solid #2f7f78;border-radius:12px;padding:5px 11px;font-size:12px;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(20,50,70,0.35);opacity:0;transition:opacity .15s;z-index:4;max-width:60vw;}
+  .kampong .kq-tag.show{opacity:1;}
+  .kampong .kq-tag .pf{color:#2f7f78;font-weight:800;} .kampong .kq-tag .ln{display:block;font-weight:500;color:#3a5560;font-size:11.5px;margin-top:1px;white-space:normal;}
+  .kampong .kq-tag.grump{border-color:#c0463a;} .kampong .kq-tag.grump .pf{color:#c0463a;}
+  .kampong .kq-tag.help{border-color:#e2a23a;} .kampong .kq-tag.help .pf{color:#c8821a;}
+  .kampong .kq-tag::after{content:'';position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);border:7px solid transparent;border-top-color:rgba(255,255,255,0.96);}
+  .kampong .kq-avatar{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle;border:1px solid rgba(0,0,0,0.2);}
+  .kampong .kq-choice{flex:1 1 46%;min-width:120px;border:none;border-radius:10px;padding:11px 8px;font-weight:700;font-size:13px;cursor:pointer;color:#16384c;background:#dceee9;}
+  .kampong .kq-choice.ok{background:#3fae6a;color:#fff;} .kampong .kq-choice.no{background:#c0463a;color:#fff;}
+  .kampong .kq-intro{position:absolute;inset:0;z-index:24;display:flex;align-items:center;justify-content:center;background:rgba(15,45,55,0.74);padding:16px;}
+  .kampong .kq-intro[hidden]{display:none;}
+  .kampong .kq-intro .card{background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:20px;padding:20px 22px;max-width:440px;width:94vw;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;}
+  .kampong .kq-intro h2{margin:0 0 2px;color:#2f7f78;font-size:22px;} .kampong .kq-intro .sub{color:#5a7580;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+  .kampong .kq-intro p{color:#16384c;font-size:14px;line-height:1.5;margin:0 0 10px;}
+  .kampong .kq-intro ul{margin:0 0 14px;padding-left:18px;color:#234;font-size:13px;line-height:1.65;} .kampong .kq-intro li b{color:#2f7f78;}
+  .kampong .kq-intro button{background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 26px;font-weight:800;font-size:16px;cursor:pointer;width:100%;}`;
   const el = document.createElement('style'); el.id = 'kq-style'; el.textContent = css; document.head.appendChild(el);
 }
 
@@ -265,22 +286,58 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const legs = kidP.legs, arms = kidP.arms; const PLAYER_R = 0.5;
 
   // ---- ambient villagers (kids, strolling adults, cats) ------------------
-  function playingKid(hx, hz) { const pr = person({ ...outfit((Math.random() * OUTFITS.length) | 0), sampin: false, scale: 0.66 }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group); kids.push({ group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(1.8, 2.6), t: 0, ph: rand(0, 6.28), roam: 3.5 }); }
-  playingKid(8, 30); playingKid(-7, 26); playingKid(7, 2); playingKid(-9, -2); playingKid(8, -38); playingKid(-8, -42);
-  function spawnVillager(hx, hz) { const pr = person({ ...outfit((Math.random() * OUTFITS.length) | 0) }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group); kids.push({ group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(0.9, 1.8), t: rand(0, 2), ph: rand(0, 6.28), roam: 2.4 }); }
-  // a busy kampong: scatter villagers along the lorong lanes, all across the map
-  const _vchosen = [];
+  // each sim is unique: random outfit colours, a name, a profession, a mood —
+  // some are friendly (and may ask your help for coins), some don't want bother.
+  const QUIZZES = [
+    { q: 'A boatman drops 3 baskets each trip and makes 4 trips. How many baskets in all?', o: ['7', '12', '34'], a: 1 },
+    { q: 'Which is the traditional Brunei river boat?', o: ['Gondola', 'Perahu / penambang', 'Kayak'], a: 1 },
+    { q: 'You greet an elder in the kampong with…', o: ['Oi!', 'Assalamualaikum', 'Later!'], a: 1 },
+    { q: 'Half of 18 titian planks are rotten. How many to mend?', o: ['9', '18', '6'], a: 0 },
+    { q: 'Belacan, the kampong staple, is made from…', o: ['Rice', 'Tiny shrimp', 'Coconut'], a: 1 },
+    { q: 'The famous stilt water-village of Brunei is called…', o: ['Kampong Ayer', 'Kampong Darat', 'Pulau'], a: 0 },
+  ];
+  const HEADS = ['songkok', 'songkok', 'hair', 'songkok', 'hair'];
+  const BAJUS = [0xf2efe6, 0x244f8a, 0x8a2f3a, 0x2f8f6a, 0x6a4f8a, 0x3a6f8a, 0xd8a23a, 0xc0463a, 0x4f8f9a, 0x7a5f9a, 0xe0b24a, 0x3f7f5a, 0xb56a3a, 0x5a6f8a];
+  const TUDUNGS = [0xcf2f2f, 0xc0392b, 0x8a2f5a, 0x2f6f8a, 0x6a8f3a, 0xb06a2a, 0x4a4f7a];
+  const SARONGS = [0x6a4a2a, 0x4f6f5a, 0x7a4a3a, 0x3a4a6a, 0x5a5a3a];
+  const MALE = ['Awang', 'Pak Mat', 'Pak Su', 'Abang Din', 'Pak Long', 'Awang Tengah', 'Pak Lah', 'Haji Brahim', 'Abang Joll', 'Pak Andak'];
+  const FEMALE = ['Dayang', 'Mak Cik Tom', 'Kak Yah', 'Dayang Nor', 'Mak Andak', 'Kak Long', 'Hjh Esah', 'Dayang Mas'];
+  const PROFS = ['Nelayan', 'Penjual ikan', 'Tukang kayu', 'Penjual kuih', 'Pengayuh perahu', 'Petani', 'Penjahit', 'Tukang jala', 'Surirumah', 'Penjual buah'];
+  const QUIPS = ['Selamat datang ke kampong!', 'Cuaca panas hari ni, ya.', 'Hati-hati di titian, licin.', 'Sudah makan belum?', 'Air pasang nanti petang.', 'Jemput singgah, adik.'];
+  const GRUMPS = ['Jangan kacau, aku sibuk.', 'Pergi tanya orang lain.', 'Aku tak ada masa ni.', 'Hmph. Lalu sajalah.', 'Bukan urusan aku.'];
+  let _nm = 0, _nf = 0, _qz = 0;
+  function makeOutfit() {
+    if (Math.random() < 0.4) return { o: { baju: BAJUS[(Math.random() * BAJUS.length) | 0], hatColor: TUDUNGS[(Math.random() * TUDUNGS.length) | 0], sampinColor: SARONGS[(Math.random() * SARONGS.length) | 0], head: 'tudung', female: true }, female: true };
+    const baju = BAJUS[(Math.random() * BAJUS.length) | 0];
+    return { o: { baju, head: HEADS[(Math.random() * HEADS.length) | 0], sampin: Math.random() < 0.6, sampinColor: SARONGS[(Math.random() * SARONGS.length) | 0] }, female: false, baju };
+  }
+  function makeSim(hx, hz, scale, roam, mood) {
+    const mk = makeOutfit(); const pr = person({ ...mk.o, scale }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group);
+    const name = mk.female ? FEMALE[_nf++ % FEMALE.length] : MALE[_nm++ % MALE.length];
+    const prof = PROFS[(Math.random() * PROFS.length) | 0];
+    const grumpy = mood === 'grump'; const helper = mood === 'help';
+    const e = { group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(0.9, 1.8), t: rand(0, 2), ph: rand(0, 6.28), roam,
+      name, prof, grumpy, helper, done: false, avatar: mk.o.baju || 0xddccaa, line: grumpy ? GRUMPS[(Math.random() * GRUMPS.length) | 0] : QUIPS[(Math.random() * QUIPS.length) | 0] };
+    if (helper) { e.quiz = QUIZZES[_qz++ % QUIZZES.length]; e.reward = 4 + ((Math.random() * 3) | 0); e.line = 'Boleh tolong sat? I have a teaser for you…'; }
+    kids.push(e); return e;
+  }
+  for (const [x, z] of [[8, 30], [-7, 26], [7, 2], [-9, -2], [8, -38], [-8, -42]]) makeSim(x, z, 0.66, 3.5, 'kid'); // children near the start
+  // a busy kampong: scatter unique villagers along the lorong lanes, everywhere
+  const _vchosen = []; let _crowd = 0;
   for (const r of streets) {
     const cz = (r.z0 + r.z1) / 2; if (cz < -57) continue;            // skip the boat-gated far lanes
     const horiz = (r.x1 - r.x0) > (r.z1 - r.z0); const cx = (r.x0 + r.x1) / 2;
     const a0 = (horiz ? r.x0 : r.z0) + 8, a1 = (horiz ? r.x1 : r.z1) - 8;
     for (let a = a0; a <= a1; a += 13) {
       const x = horiz ? a : cx, z = horiz ? cz : a;
-      if (Math.hypot(x, z) < 8 || _vchosen.length >= 26) continue;   // not on the start pier; cap the crowd
+      if (Math.hypot(x, z) < 8 || _crowd >= 26) continue;            // not on the start pier; cap the crowd
       if (_vchosen.some(([px, pz]) => Math.hypot(px - x, pz - z) < 12)) continue; // spread them out
-      _vchosen.push([x, z]); spawnVillager(x, z);
+      _vchosen.push([x, z]); _crowd++;
+      const mood = (_crowd % 6 === 3) ? 'help' : (Math.random() < 0.33 ? 'grump' : 'ok');  // ~4 helpers, ~1/3 grumpy
+      makeSim(x, z, 1, 2.4, mood);
     }
   }
+  const helpers = kids.filter((k) => k.helper);
   function buildCat(c) { const g = new THREE.Group(); const b = toon(new THREE.CapsuleGeometry(0.17, 0.4, 4, 8), c, { thickness: 0.02 }); b.rotation.z = Math.PI / 2; place(b, 0, 0.26, 0); g.add(b); const hd = toon(new THREE.SphereGeometry(0.16, 10, 9), c, { thickness: 0.02 }); place(hd, 0.33, 0.38, 0); g.add(hd); const tl = toon(new THREE.CylinderGeometry(0.03, 0.05, 0.5, 6), c, { thickness: 0.012 }); place(tl, -0.36, 0.4, 0); tl.rotation.z = 0.8; g.add(tl); return g; }
   function spawnCat(hx, hz, c) { const g = buildCat(c); g.position.set(hx, DECK_Y, hz); wgrp.add(g); cats.push({ group: g, hx, hz, tx: hx, tz: hz, t: rand(1, 4), spd: rand(0.8, 1.3), meowCd: rand(4, 10) }); }
   spawnCat(10, 28, 0xd98b46); spawnCat(-12, 2, 0x8a8a8a); spawnCat(11, -38, 0x3a3a3a); spawnCat(60, 34, 0xc9b79a); spawnCat(-60, -20, 0x4a4a4a); spawnCat(34, 60, 0xd98b46);
@@ -309,45 +366,48 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // ---- HUD ---------------------------------------------------------------
   const hud = document.createElement('div'); hud.className = 'kq'; overlay.appendChild(hud);
   hud.innerHTML = `<button class="kq-quit" aria-label="Quit">‹</button><div class="kq-obj"></div>` +
-    `<div class="kq-stats"><div class="kq-chip">👥 <b class="kq-fol">0</b></div><div class="kq-chip">🎟 <b class="kq-tok">0</b></div><div class="kq-chip">🛒 <b class="kq-mkt">0/6</b></div><div class="kq-chip">🛶 <b class="kq-boat">0</b>/3</div><div class="kq-trust"><span class="kq-trustfill"></span></div></div>` +
+    `<div class="kq-stats"><div class="kq-chip">👥 <b class="kq-fol">0</b>/<span class="kq-folt">6</span></div><div class="kq-chip">🎟 <b class="kq-tok">0</b></div><div class="kq-chip">💰 <b class="kq-coin">0</b></div><div class="kq-chip">🛒 <b class="kq-mkt">0/6</b></div><div class="kq-chip">🛶 <b class="kq-boat">0</b>/3</div><div class="kq-hbar"><span></span></div></div>` +
+    `<div class="kq-tag"></div>` +
     `<div class="kq-joy"></div><button class="kq-act" hidden></button>` +
     `<div class="kq-dialog" hidden><div class="kq-who">Villager</div><div class="kq-text"></div><div class="kq-judge"></div><button class="kq-ok">Close</button></div>` +
     `<div class="kq-banner"></div>` +
-    `<div class="kq-win" hidden><div class="card"><h2></h2><p></p><button>Continue</button></div></div>`;
+    `<div class="kq-intro" hidden><div class="card"></div></div>` +
+    `<div class="kq-win" hidden><div class="card"><h2></h2><p></p><div class="clue"></div><button>Continue</button></div></div>`;
   const q = (s) => hud.querySelector(s);
-  const elFol = q('.kq-fol'), elTok = q('.kq-tok'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), elTrust = q('.kq-trustfill'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge');
+  const elFol = q('.kq-fol'), elFolt = q('.kq-folt'), elTok = q('.kq-tok'), elCoin = q('.kq-coin'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), elHbar = q('.kq-hbar'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge'), tagEl = q('.kq-tag'), introEl = q('.kq-intro');
   q('.kq-quit').onclick = () => { sfx.unlock(); endMission(false, true); };
-  q('.kq-dialog .kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; };
+  q('.kq-dialog .kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; clearInterval(dlgTimer); };
   actBtn.onclick = doAction;
   q('.kq-win button').onclick = () => endMission(true);
-  let dialogOpen = false, salamBusy = false, actTarget = null;
+  let dialogOpen = false, salamBusy = false, actTarget = null, introOpen = false, dlgTimer = 0;
   function showBanner(t, ms = 2400) { banner.textContent = t; banner.classList.add('show'); clearTimeout(showBanner._t); showBanner._t = setTimeout(() => banner.classList.remove('show'), ms); }
   function saySalam() { if (salamBusy) return; salamBusy = true; sfx.unlock(); sfx.clue(); speak('Assalamualaikum', 0.85); setTimeout(() => speak('Waalaikumsalam', 1.5), 1100); setTimeout(() => { salamBusy = false; }, 2600); }
 
   // ---- TITIAN state ------------------------------------------------------
   let tokens = 0, followers = 0, boatParts = 0, boatBuilt = false, won = false, ended = false, elapsed = 0, stun = 0, running = true, raf = 0;
+  let coins = 10, hunger = 100, hungryWarned = false;   // 💰 money (earn by helping/puzzles, spend on food) · 🍚 fullness (drains as you walk)
   const stashes = []; // {x,z, group, beacon, revealed, cleared, claimId}
   let stashesCleared = 0, totalStashes = 0, culpritReady = false, mysterySolved = false, marketsVisited = 0;
 
   // informants: each gives a CLAIM you must judge. truth: rumour|crime|sacred.
   // crime claims expose a drug stash (their stashId).
   const informants = [];
-  function informer(name, x, z, opts, claim, truth, stashId) {
+  function informer(name, prof, x, z, opts, claim, truth, stashId) {
     const pr = person(opts); pr.group.position.set(x, DECK_Y, z); pr.group.rotation.y = Math.atan2(0 - x, 0 - z); wgrp.add(pr.group);
     addSolid(x, z, 1.0);
-    const inf = { name, x: x + Math.sin(pr.group.rotation.y) * 1.4, z: z + Math.cos(pr.group.rotation.y) * 1.4, claim, truth, stashId, judged: false, follower: false };
-    informants.push(inf); greetables.push({ x, z, greeted: false });
+    const inf = { name, prof, gx: x, gz: z, x: x + Math.sin(pr.group.rotation.y) * 1.4, z: z + Math.cos(pr.group.rotation.y) * 1.4, claim, truth, stashId, judged: false, follower: false };
+    informants.push(inf); greetables.push({ x, z, greeted: false, name, prof });
     return inf;
   }
   // informants spread to every corner of the kampong — you must explore to find them
-  informer('Mak Limah', 86, 58, outfit(5), 'They whisper that Pak Hassan stole the surau fund… but nobody has seen a single ringgit move.', 'rumour');       // NE district
-  informer('Awang', -86, 58, outfit(7), 'Don’t go near the old blue house after Maghrib — a pontianak wails there. Stay away, ya.', 'crime', 's1');          // NW district
-  informer('Hjh Noraini', -98, 8, outfit(9), 'On still nights a pale light drifts over Jong Batu, and a cold wind follows it. Some things we leave to Allah.', 'sacred'); // far W
-  informer('Pak Mat', 98, 8, outfit(1), 'Strange boats slip up the channel after Isyak and leave again empty before dawn. I’ve counted three.', 'crime', 's2');     // far E
-  informer('Cikgu Rahim', 58, -46, outfit(2), 'The fund vanished the very week Pak Long sailed home rich and changed. Too neat to be chance.', 'rumour');          // SE / school
-  informer('Sarjan (Police)', -58, -46, outfit(2), 'No proof, no arrest. Bring me what’s true — separate the gossip from the crime — and I’ll act.', 'sacred');   // SW / police
+  informer('Mak Limah', 'Penjual ikan', 86, 58, outfit(5), 'They whisper that Pak Hassan stole the surau fund… but nobody has seen a single ringgit move.', 'rumour');       // NE
+  informer('Awang', 'Nelayan', -86, 58, outfit(7), 'Don’t go near the old blue house after Maghrib — a pontianak wails there. Stay away, ya.', 'crime', 's1');               // NW
+  informer('Hjh Noraini', 'Bidan kampong', -98, 8, outfit(9), 'On still nights a pale light drifts over Jong Batu, and a cold wind follows it. Some things we leave to Allah.', 'sacred'); // far W
+  informer('Pak Mat', 'Pengayuh perahu', 98, 8, outfit(1), 'Strange boats slip up the channel after Isyak and leave again empty before dawn. I’ve counted three.', 'crime', 's2');     // far E
+  informer('Cikgu Rahim', 'Cikgu sekolah', 58, -46, outfit(2), 'The fund vanished the very week Pak Long sailed home rich and changed. Too neat to be chance.', 'rumour');          // SE
+  informer('Sarjan', 'Polis kampong', -58, -46, outfit(2), 'No proof, no arrest. Bring me what’s true — separate the gossip from the crime — and I’ll act.', 'sacred');   // SW
   // far kampong informant (after the boat) — names the culprit
-  const farInf = informer('Bilal Tua', 0, -104, outfit(3), 'Pak Long keeps a locked store on Batu Masap. That cursed rock hides no ghost — it hides his poison.', 'crime', 's3');
+  const farInf = informer('Bilal Tua', 'Bilal masjid', 0, -104, outfit(3), 'Pak Long keeps a locked store on Batu Masap. That cursed rock hides no ghost — it hides his poison.', 'crime', 's3');
   farInf._far = true;
 
   // stashes (hidden, revealed when their crime claim is judged correctly)
@@ -362,34 +422,40 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   // ---- vendor stalls (gerai) — spread to the corners; visiting each rewards
   // tokens + a clue, so the mission rewards exploring the whole kampong. ------
-  function vendorStall(x, z, name, clue) {
+  function vendorStall(x, z, name, prof, clue, food) {
     const rot = Math.atan2(-x, -z);                                   // face the kampong centre
     const g = new THREE.Group(); g.position.set(x, DECK_Y, z); g.rotation.y = rot; wgrp.add(g);
-    const skirt = toon(new THREE.BoxGeometry(2.0, 0.9, 1.0), 0xb23a3a, { thickness: 0.03 }); place(skirt, 0, 0.55, 0); g.add(skirt);
+    const skirt = toon(new THREE.BoxGeometry(2.0, 0.9, 1.0), food ? 0x2f8f6a : 0xb23a3a, { thickness: 0.03 }); place(skirt, 0, 0.55, 0); g.add(skirt);
     const top = toon(new THREE.BoxGeometry(2.1, 0.16, 1.1), 0x8a6234, { thickness: 0.03 }); place(top, 0, 1.05, 0); g.add(top);
     for (const sx of [-1, 1]) { const post = toon(new THREE.CylinderGeometry(0.06, 0.06, 2.3, 6), 0x6e4f30, { thickness: 0.02 }); place(post, sx * 0.95, 1.15, -0.45); g.add(post); }
-    const canopy = toon(new THREE.BoxGeometry(2.5, 0.12, 1.5), 0xf0c419, { thickness: 0.03 }); place(canopy, 0, 2.35, -0.15); canopy.rotation.x = -0.14; g.add(canopy);
-    const goods = [0xd9695a, 0x6cae6a, 0xe0b24a, 0x4f9ad0];
+    const canopy = toon(new THREE.BoxGeometry(2.5, 0.12, 1.5), food ? 0xe2a23a : 0xf0c419, { thickness: 0.03 }); place(canopy, 0, 2.35, -0.15); canopy.rotation.x = -0.14; g.add(canopy);
+    const goods = food ? [0xd98b46, 0xe0b24a, 0xc0463a, 0x8a6234] : [0x6cae6a, 0x4f9ad0, 0xb9d0d8, 0xd9695a];
     for (let i = 0; i < 4; i++) { const gd = toon(new THREE.BoxGeometry(0.3, 0.3, 0.3), goods[i], { thickness: 0.02 }); place(gd, -0.6 + i * 0.4, 1.28, 0.16); g.add(gd); }
+    if (food) { const sign = toon(new THREE.BoxGeometry(0.5, 0.5, 0.06), 0xfff3df, { thickness: 0.02 }); place(sign, 0, 1.75, 0.55); g.add(sign); }   // a little "makan" sign
     const vp = person({ ...outfit((Math.random() * OUTFITS.length) | 0) }); vp.group.position.set(x - Math.sin(rot) * 0.95, DECK_Y, z - Math.cos(rot) * 0.95); vp.group.rotation.y = rot; wgrp.add(vp.group);
     addSolid(x, z, 1.0);
-    markets.push({ x: x + Math.sin(rot) * 1.8, z: z + Math.cos(rot) * 1.8, name, clue, visited: false }); // visit point in front
+    markets.push({ x: x + Math.sin(rot) * 1.8, z: z + Math.cos(rot) * 1.8, name, prof, clue, food: !!food, visited: false }); // visit point in front
   }
-  vendorStall(86, 92, 'Gerai Mak Som', 'fresh ikan and tapai — and plenty of gossip');
-  vendorStall(-86, 92, 'Gerai Pak Atan', 'kuih and strong kopi for tired feet');
-  vendorStall(98, -20, 'Gerai Awang Itam', 'nets, rope and lampu for the night boats');
-  vendorStall(-98, 34, 'Gerai Hjh Mona', 'songket and sampin brought from upriver');
-  vendorStall(86, -50, 'Gerai Kak Ani', 'sayur and buah by the school jetty');
-  vendorStall(-86, -50, 'Gerai Pak Usop', 'belacan and budu — you can smell it from afar!');
+  vendorStall(86, 92, 'Gerai Mak Som', 'Penjual ikan', 'fresh ikan and tapai — and plenty of gossip', true);
+  vendorStall(-86, 92, 'Warung Pak Atan', 'Tukang kuih', 'kuih and strong kopi for tired feet', true);
+  vendorStall(98, -20, 'Gerai Awang Itam', 'Tukang jala', 'nets, rope and lampu for the night boats', false);
+  vendorStall(-98, 34, 'Gerai Hjh Mona', 'Penjual kain', 'songket and sampin brought from upriver', false);
+  vendorStall(86, -50, 'Warung Kak Ani', 'Penjual sayur', 'nasi katok, sayur and buah by the school jetty', true);
+  vendorStall(-86, -50, 'Gerai Pak Usop', 'Penjual belacan', 'belacan and budu — you can smell it from afar!', true);
 
   // ---- UI helpers --------------------------------------------------------
   const marketsNeeded = () => Math.max(1, markets.length - 1);   // visit all but one
-  function refreshHud() { elFol.textContent = followers; elTok.textContent = tokens; elBoat.textContent = boatParts; elMkt.textContent = marketsVisited + '/' + markets.length; elTrust.style.width = Math.round((followers / informants.length) * 100) + '%'; }
+  const centralInf = () => informants.filter((i) => !i._far).length;
+  function refreshHud() {
+    elFol.textContent = followers; elFolt.textContent = centralInf(); elTok.textContent = tokens; elCoin.textContent = coins;
+    elBoat.textContent = boatParts; elMkt.textContent = marketsVisited + '/' + markets.length;
+    const hp = Math.max(0, Math.min(100, hunger)); elHbar.firstElementChild.style.width = hp + '%'; elHbar.classList.toggle('low', hp < 30);
+  }
   function setObjective() {
     let t;
     const judged = informants.filter((i) => i.judged && !i._far).length;
-    if (judged < 6) t = 'Walk the whole kampong — the villagers are spread to every corner. <b>Talk to each and judge their claim</b>.';
-    else if (marketsVisited < marketsNeeded()) t = `Explore further — <b>visit the gerai (market stalls)</b> in every corner (${marketsVisited}/${markets.length}).`;
+    if (judged < centralInf()) t = 'Walk the whole kampong — the villagers are spread to every corner. <b>Talk to each and judge their claim</b>.';
+    else if (marketsVisited < marketsNeeded()) t = `Explore further — <b>visit the gerai</b> in every corner (${marketsVisited}/${markets.length}). Eat at the green food stalls; earn 💰 by helping folk.`;
     else if (stashesCleared < 2) t = 'Crime hides behind ghost stories. <b>Clear the drug stashes</b> you’ve uncovered.';
     else if (!boatBuilt) t = `Earn tokens, then <b>build the boat</b> at the waterfront (${boatParts}/3) to reach the far kampong.`;
     else if (!mysterySolved) t = 'Cross to the far kampong and <b>confront Pak Long</b> on Batu Masap.';
@@ -398,30 +464,61 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   refreshHud(); setObjective();
 
+  // a generic talking-bubble dialog: typewriter text + tappable choice buttons
+  function say(who, sub, text, choices) {
+    if (won) return; dialogOpen = true; sfx.unlock(); sfx.talk();
+    q('.kq-who').textContent = sub ? `${who} · ${sub}` : who;
+    const tx = q('.kq-text'); clearInterval(dlgTimer); tx.textContent = '';
+    let i = 0; dlgTimer = setInterval(() => { i += 2; tx.textContent = text.slice(0, i); if (i >= text.length) { tx.textContent = text; clearInterval(dlgTimer); } }, 16);
+    judgeRow.innerHTML = '';
+    for (const ch of (choices || [])) { const btn = document.createElement('button'); btn.className = 'kq-choice' + (ch.cls ? ' ' + ch.cls : ''); btn.textContent = ch.label; btn.onclick = () => ch.fn(btn); judgeRow.appendChild(btn); }
+    dialog.hidden = false;
+  }
+  const setDlgText = (t) => { clearInterval(dlgTimer); q('.kq-text').textContent = t; };
+
   function judge(inf, verdict) {
     const correct = inf.truth === verdict;
     judgeRow.innerHTML = '';
     if (correct) {
       inf.judged = true; if (!inf.follower) { inf.follower = true; followers++; }
-      tokens += 2; sfx.pickup();
-      if (inf.truth === 'crime' && inf.stashId) { const st = stashes.find((s) => s.id === inf.stashId); if (st && !st.revealed) { st.revealed = true; st.group.visible = true; showBanner('A stash uncovered — the “ghost” was a cover! 🔥', 2600); } else showBanner('Trust earned. +2🎟', 1800); }
-      else if (inf.truth === 'sacred') showBanner('You left it be, out of respect. Trust earned.', 2200);
-      else showBanner('You saw through the gossip. Trust earned. +2🎟', 2200);
+      tokens += 2; coins += 2; sfx.pickup();
+      if (inf.truth === 'crime' && inf.stashId) { const st = stashes.find((s) => s.id === inf.stashId); if (st && !st.revealed) { st.revealed = true; st.group.visible = true; showBanner('A stash uncovered — the “ghost” was a cover! 🔥 (+2🎟 +2💰)', 2600); } else showBanner('Trust earned. +2🎟 +2💰', 1800); }
+      else if (inf.truth === 'sacred') showBanner('You left it be, out of respect. +2🎟 +2💰', 2200);
+      else showBanner('You saw through the gossip. +2🎟 +2💰', 2200);
       if (inf._far) culpritReady = true;
-      q('.kq-text').textContent = 'Terima kasih, adik. You see clearly. I stand with you.';
+      setDlgText('Terima kasih, adik. You see clearly. I stand with you.');
     } else {
-      q('.kq-text').textContent = 'Hmm… not quite. Cross-check with the others before you decide.';
+      setDlgText('Hmm… not quite. Cross-check with the others before you decide.');
     }
     refreshHud(); setObjective(); checkWin();
   }
   function tryTalk(inf) {
-    if (dialogOpen || won) return; sfx.unlock(); sfx.talk();
-    q('.kq-dialog .kq-who').textContent = inf.name; q('.kq-text').textContent = inf.claim;
-    judgeRow.innerHTML = inf.judged ? '' : `<button class="kq-jr">🗣 Rumour</button><button class="kq-jc">🔪 Crime</button><button class="kq-js">👻 Leave it</button>`;
-    if (!inf.judged) { judgeRow.querySelector('.kq-jr').onclick = () => judge(inf, 'rumour'); judgeRow.querySelector('.kq-jc').onclick = () => judge(inf, 'crime'); judgeRow.querySelector('.kq-js').onclick = () => judge(inf, 'sacred'); }
-    dialog.hidden = false; dialogOpen = true;
+    if (dialogOpen || won) return;
+    const choices = inf.judged ? [] : [
+      { label: '🗣 Rumour — just gossip', cls: '', fn: () => judge(inf, 'rumour') },
+      { label: '🔪 Crime — act on it', cls: '', fn: () => judge(inf, 'crime') },
+      { label: '👻 Sacred — leave it be', cls: '', fn: () => judge(inf, 'sacred') },
+    ];
+    say(inf.name, inf.prof, inf.claim + (inf.judged ? '' : '\n\n💡 Idle gossip, a real crime to act on, or something sacred to respect?'), choices);
   }
-  function clearStash(st) { st.cleared = true; st.group.visible = false; stashesCleared++; tokens += 5; sfx.win(); showBanner(`Stash destroyed (${stashesCleared}/2 in the kampong). +5🎟`, 2400); refreshHud(); setObjective(); checkWin(); }
+  // ---- helping folk: a quick quiz/puzzle for coins (and some folk won't help)
+  function openQuiz(h) {
+    if (dialogOpen || won) return;
+    const Z = h.quiz;
+    say(h.name, h.prof + ' · needs a hand', '“' + Z.q + '”', Z.o.map((opt, i) => ({
+      label: opt, fn: (btn) => {
+        if (i === Z.a) { btn.classList.add('ok'); h.done = true; coins += h.reward; sfx.win(); showBanner(`Betul! ${h.name} thanks you. +${h.reward}💰`, 2400); refreshHud(); judgeRow.querySelectorAll('button').forEach((b) => b.disabled = true); setDlgText('Terima kasih! Here, take this for your trouble.'); }
+        else { btn.classList.add('no'); sfx.bump?.(); setDlgText('Alaa, not quite — cuba lagi (try again).'); }
+      },
+    })));
+  }
+  function buyFood(m) {
+    if (won) return;
+    if (hunger >= 99) { showBanner('You’re full — jalan dulu, walk it off first.', 1600); return; }
+    if (coins < 2) { showBanner('Not enough 💰 — earn coins by helping folk or solving their puzzles.', 2400); return; }
+    coins -= 2; hunger = Math.min(100, hunger + 45); sfx.pickup(); showBanner(`Makan at ${m.name}! +45🍚  (−2💰)`, 2000); refreshHud();
+  }
+  function clearStash(st) { st.cleared = true; st.group.visible = false; stashesCleared++; tokens += 5; coins += 3; sfx.win(); showBanner(`Stash destroyed (${stashesCleared}/2). +5🎟 +3💰`, 2400); refreshHud(); setObjective(); checkWin(); }
   function buildBoat() { if (boatParts >= 3 || tokens < 4) { if (tokens < 4) showBanner('Need 4🎟 for the next boat part.', 1800); return; } tokens -= 4; boatParts++; sfx.pickup(); if (boatParts >= 3) { boatBuilt = true; WALK.push(...FAR); rasterize(true); showBanner('The boat is ready! The far kampong is open — sail north. 🛶', 3000); } else showBanner(`Boat part fitted (${boatParts}/3). +parts with tokens.`, 2200); refreshHud(); setObjective(); }
   function confront() { if (mysterySolved) return; mysterySolved = true; sfx.win(); showBanner('Pak Long is exposed. The poison stops here. ⚖', 2800); setObjective(); checkWin(); }
   function checkWin() {
@@ -430,13 +527,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
       won = true; sfx.win();
       q('.kq-win h2').textContent = 'THE KAMPONG STANDS TOGETHER';
       q('.kq-win p').textContent = `You walked every lorong and won every corner — ${followers} households behind you, the drugs gone, the truth told.`;
+      q('.kq-win .clue').innerHTML = '🔮 <b>A runner pants up the titian:</b> “Awang! A warlord twice our size masses across the water — Kampong Ayer is next.” Your next stand: <b>Defence of Kampong Ayer</b>.';
       q('.kq-win').hidden = false;
     }
   }
 
   function doAction() {
-    if (won || dialogOpen || !actTarget) return;
+    if (won || dialogOpen || introOpen || !actTarget) return;
     if (actTarget.kind === 'talk') tryTalk(actTarget.inf);
+    else if (actTarget.kind === 'help') openQuiz(actTarget.helper);
+    else if (actTarget.kind === 'food') buyFood(actTarget.m);
     else if (actTarget.kind === 'stash') clearStash(actTarget.st);
     else if (actTarget.kind === 'boat') buildBoat();
     else if (actTarget.kind === 'confront') confront();
@@ -449,7 +549,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   function collide(p) { for (const s of solids) { const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), min = s.r + PLAYER_R; if (d < min && d > 1e-4) { p.x = s.x + dx / d * min; p.z = s.z + dz / d * min; } } for (const pd of peds) if (pd.blocking) { const dx = p.x - pd.x, dz = p.z - pd.z, d = Math.hypot(dx, dz), min = 0.85 + PLAYER_R; if (d < min && d > 1e-4) { p.x = pd.x + dx / d * min; p.z = pd.z + dz / d * min; } } }
   function clampWalk(p) { if (WALK.some((r) => p.x >= r.x0 && p.x <= r.x1 && p.z >= r.z0 && p.z <= r.z1)) return; let best = null, bd = Infinity; for (const r of WALK) { const cx = clamp(p.x, r.x0, r.x1), cz = clamp(p.z, r.z0, r.z1); const d = (cx - p.x) ** 2 + (cz - p.z) ** 2; if (d < bd) { bd = d; best = { x: cx, z: cz }; } } p.x = best.x; p.z = best.z; }
   function endMission(win, quit = false) { if (ended) return; ended = true; let stars = 0; if (win) { stars = 1; if (followers >= informants.length) stars++; if (stashesCleared >= totalStashes) stars++; } cleanup(); onResult?.({ win: quit ? false : win, stars: quit ? 0 : stars, minutes: elapsed / 60, quit }); }
-  function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('mousemove', onMM); removeEventListener('mouseup', onMU); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('resize', onResize); removeEventListener('orientationchange', onOrient); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
+  function cleanup() { running = false; cancelAnimationFrame(raf); clearInterval(dlgTimer); clearTimeout(showBanner._t); removeEventListener('mousemove', onMM); removeEventListener('mouseup', onMU); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('resize', onResize); removeEventListener('orientationchange', onOrient); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
 
   // ---- loop --------------------------------------------------------------
   const clock = new THREE.Clock(); let stepAcc = 0;
@@ -462,19 +562,23 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1; if (keys.has('d') || keys.has('arrowright')) ix += 1;
     if (keys.has('w') || keys.has('arrowup')) iy -= 1; if (keys.has('s') || keys.has('arrowdown')) iy += 1;
     const mag = Math.hypot(ix, iy); let moving = false; if (stun > 0) stun -= dt;
-    if (mag > 0.05 && !dialogOpen && !won) {
+    if (mag > 0.05 && !dialogOpen && !won && !introOpen) {
       moving = true; const nx = ix / (mag > 1 ? mag : 1), ny = iy / (mag > 1 ? mag : 1);
       const fwdX = Math.sin(camYaw), fwdZ = Math.cos(camYaw), rightX = Math.cos(camYaw), rightZ = -Math.sin(camYaw);
-      const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = 6.2;
+      const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = hunger < 25 ? 3.7 : 6.2;   // hungry = tired = slower
       // move along the walkable grid (titian + roads + house platforms); slide along walls
       const ox = kid.position.x, oz = kid.position.z, nX = ox + mvX * spd * dt, nZ = oz + mvZ * spd * dt; let px = ox, pz = oz;
       if (walkableAt(nX, nZ)) { px = nX; pz = nZ; } else if (walkableAt(nX, oz)) px = nX; else if (walkableAt(ox, nZ)) pz = nZ;
       kid.position.x = px; kid.position.z = pz; collide(kid.position);
       if (!walkableAt(kid.position.x, kid.position.z)) { kid.position.x = px; kid.position.z = pz; }
       kid.rotation.y = Math.atan2(mvX, mvZ); stepAcc += dt; if (stepAcc > 0.28) { stepAcc = 0; sfx.footstep(); }
+      hunger = Math.max(0, hunger - dt * 1.7);   // all this walking is hungry work
     }
     const sw = moving ? Math.sin(tnow * 11) : 0; if (legs[0]) { legs[0].rotation.x = sw * 0.6; legs[1].rotation.x = -sw * 0.6; } if (arms[0]) { arms[0].rotation.x = -sw * 0.5; arms[1].rotation.x = sw * 0.5; }
     kid.position.y = DECK_Y + (moving ? Math.abs(Math.sin(tnow * 11)) * 0.04 : 0);
+    // keep the hunger bar live; warn once when you get peckish
+    { const hp = Math.max(0, hunger); elHbar.firstElementChild.style.width = hp + '%'; elHbar.classList.toggle('low', hp < 30);
+      if (hp < 30 && !hungryWarned && !won) { hungryWarned = true; showBanner('Lapar! You’re getting hungry — buy food (🍢) at a green stall.', 2600); } else if (hp > 55) hungryWarned = false; }
 
     // salam on proximity
     if (!salamBusy && !dialogOpen && !won) { for (const gg of greetables) { if (gg.greeted) continue; if (Math.hypot(kid.position.x - gg.x, kid.position.z - gg.z) < 3) { gg.greeted = true; saySalam(); break; } } }
@@ -482,6 +586,17 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (!won && !dialogOpen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; marketsVisited++; tokens += 2; sfx.pickup(); showBanner(`${m.name}: ${m.clue}. +2🎟 (markets ${marketsVisited}/${markets.length})`, 2800); refreshHud(); setObjective(); checkWin(); break; } }
     for (const k of kids) { k.t -= dt; if (k.t <= 0) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx + rand(-rm, rm); k.tz = k.hz + rand(-rm, rm); } const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false; if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); } const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0); }
     for (const c of cats) { c.t -= dt; if (c.t <= 0) { c.t = rand(2, 5); c.tx = c.hx + rand(-3, 3); c.tz = c.hz + rand(-3, 3); } const dx = c.tx - c.group.position.x, dz = c.tz - c.group.position.z, d = Math.hypot(dx, dz); if (d > 0.2) { c.group.position.x += dx / d * c.spd * dt; c.group.position.z += dz / d * c.spd * dt; c.group.rotation.y = Math.atan2(dx, dz); } c.meowCd -= dt; if (c.meowCd <= 0) { c.meowCd = rand(7, 16); if (Math.hypot(kid.position.x - c.group.position.x, kid.position.z - c.group.position.z) < 10) sfx.meow(); } }
+
+    // floating speech bubble over the nearest sim — shows who they are + a line
+    if (!introOpen && !won) {
+      let best = null, bd = 49;   // within ~7m
+      for (const k of kids) { if (!k.name) continue; const dd = (k.group.position.x - kid.position.x) ** 2 + (k.group.position.z - kid.position.z) ** 2; if (dd < bd) { bd = dd; best = { wx: k.group.position.x, wz: k.group.position.z, name: k.name, prof: k.prof, grump: k.grumpy, help: k.helper && !k.done, avatar: k.avatar, line: k.helper ? (k.done ? 'Terima kasih, adik!' : k.line) : k.line }; } }
+      for (const inf of informants) { if (inf._far && !boatBuilt) continue; const dd = (inf.gx - kid.position.x) ** 2 + (inf.gz - kid.position.z) ** 2; if (dd < bd) { bd = dd; best = { wx: inf.gx, wz: inf.gz, name: inf.name, prof: inf.prof, grump: false, help: false, avatar: 0x2f7f78, line: inf.judged ? 'Saya dengan kamu, adik.' : 'Come, I have something to tell you…' }; } }
+      if (best) { tmpV.set(best.wx, DECK_Y + 2.55, best.wz).project(camera);
+        if (tmpV.z < 1) { tagEl.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + 'px'; tagEl.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + 'px'; tagEl.className = 'kq-tag show' + (best.grump ? ' grump' : best.help ? ' help' : ''); tagEl.innerHTML = `<span class="kq-avatar" style="background:#${(best.avatar | 0).toString(16).padStart(6, '0')}"></span><span class="pf">${best.name} · ${best.prof}</span><span class="ln">${best.line}</span>`; }
+        else tagEl.classList.remove('show');
+      } else tagEl.classList.remove('show');
+    } else tagEl.classList.remove('show');
     for (const st of stashes) if (st.revealed && !st.cleared) { st.beam.material.opacity = 0.25 + Math.sin(tnow * 4) * 0.12; st.group.rotation.y += dt * 0.5; }
 
     // pick the nearest contextual action
@@ -489,9 +604,14 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const consider = (kind, x, z, range, extra) => { const d = Math.hypot(kid.position.x - x, kid.position.z - z); if (d < range && d < bd) { bd = d; actTarget = { kind, ...extra }; } };
     for (const st of stashes) if (st.revealed && !st.cleared) consider('stash', st.x, st.z, 2.4, { st });
     for (const inf of informants) { if (inf._far && !boatBuilt) continue; consider('talk', inf.x, inf.z, 2.8, { inf }); }
+    for (const h of helpers) if (!h.done) consider('help', h.group.position.x, h.group.position.z, 2.6, { helper: h });
+    for (const m of markets) if (m.food) consider('food', m.x, m.z, 3.0, { m });
     if (!boatBuilt) consider('boat', BOAT_PT.x, BOAT_PT.z, 3.2, {});
     if (boatBuilt && culpritReady && !mysterySolved) consider('confront', CONFRONT_PT.x, CONFRONT_PT.z, 4, {});
-    if (actTarget && !dialogOpen && !won) { actBtn.hidden = false; actBtn.textContent = actTarget.kind === 'talk' ? '💬 Talk' : actTarget.kind === 'stash' ? '🔥 Clear stash' : actTarget.kind === 'boat' ? `🛶 Build boat (4🎟)` : '⚖ Confront'; } else actBtn.hidden = true;
+    if (actTarget && !dialogOpen && !won && !introOpen) {
+      actBtn.hidden = false;
+      actBtn.textContent = actTarget.kind === 'talk' ? '💬 Talk' : actTarget.kind === 'help' ? '❓ Help (earn 💰)' : actTarget.kind === 'food' ? '🍢 Eat (2💰 → +45🍚)' : actTarget.kind === 'stash' ? '🔥 Clear stash' : actTarget.kind === 'boat' ? '🛶 Build boat (4🎟)' : '⚖ Confront';
+    } else actBtn.hidden = true;
 
     updateCamera(false);
     if (stick.id === null) joy.style.opacity = '0'; else { joy.style.opacity = '1'; joy.style.left = stick.ox + 'px'; joy.style.top = stick.oy + 'px'; joy.style.setProperty('--kx', stick.dx * MAXR + 'px'); joy.style.setProperty('--ky', stick.dy * MAXR + 'px'); }
@@ -499,11 +619,31 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   function loop() { if (!running) return; try { tick(); } catch (e) { console.error(e); } raf = requestAnimationFrame(loop); }
   loop();
-  showBanner('Selamat pulang. The kampong is fraying — listen, and earn their trust.', 3600);
+
+  // ---- intro mission card (the "first card") -----------------------------
+  introEl.querySelector('.card').innerHTML =
+    `<div class="sub">Mission 1 of 7 · The River Campaign</div>` +
+    `<h2>Landing at Muara</h2>` +
+    `<p>Awang Semaun comes ashore at <b>Kampong Ayer</b> — a water-village fraying with whispered rumour, real crime, and things best left sacred. Walk every lorong, win the people back.</p>` +
+    `<ul>` +
+    `<li>🗣 <b>Talk</b> to villagers in every corner; <b>judge each claim</b> — rumour, crime, or sacred.</li>` +
+    `<li>🛒 <b>Visit the gerai</b> (market stalls) spread to the corners; clear the drug <b>stashes</b> you uncover.</li>` +
+    `<li>🍢 Walking makes you <b>hungry</b> — buy food at the <b>green stalls</b> with 💰; earn 💰 by <b>helping folk & solving their puzzles</b>.</li>` +
+    `<li>🛶 <b>Build the boat</b> with trust 🎟, cross over, and <b>confront Pak Long</b> on Batu Masap.</li>` +
+    `</ul>` +
+    `<button>Come ashore →</button>`;
+  introEl.hidden = false; introOpen = true;
+  introEl.querySelector('button').onclick = () => { introEl.hidden = true; introOpen = false; sfx.unlock(); showBanner('Selamat datang. Listen, help, and earn their trust.', 3200); };
 
   // ---- debug hook --------------------------------------------------------
   window.__kampong = {
-    state: () => ({ x: +kid.position.x.toFixed(1), z: +kid.position.z.toFixed(1), tokens, followers, boatParts, boatBuilt, stashesCleared, totalStashes, mysterySolved, culpritReady, won, ended, walkRects: WALK.length, judged: informants.filter((i) => i.judged).length, marketsVisited, markets: markets.length, villagers: kids.length }),
+    state: () => ({ x: +kid.position.x.toFixed(1), z: +kid.position.z.toFixed(1), tokens, coins, hunger: Math.round(hunger), followers, boatParts, boatBuilt, stashesCleared, totalStashes, mysterySolved, culpritReady, won, ended, walkRects: WALK.length, judged: informants.filter((i) => i.judged).length, marketsVisited, markets: markets.length, villagers: kids.length, helpers: helpers.length, helpersDone: helpers.filter((h) => h.done).length, introOpen }),
+    helperPts: () => helpers.map((h) => [+h.group.position.x.toFixed(1), +h.group.position.z.toFixed(1)]),
+    foodPts: () => markets.filter((m) => m.food).map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
+    setHunger: (v) => { hunger = v; refreshHud(); },
+    eatTest: () => buyFood(markets.find((m) => m.food)),
+    solveHelpers: () => { helpers.forEach((h) => { if (!h.done) { h.done = true; coins += h.reward; } }); refreshHud(); },
+    closeIntro: () => { introEl.hidden = true; introOpen = false; },
     marketPts: () => markets.map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
     infPts: () => informants.map((i) => [i.name, +i.x.toFixed(1), +i.z.toFixed(1)]),
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },

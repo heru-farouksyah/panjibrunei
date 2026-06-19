@@ -688,6 +688,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     clues: () => clueLog.length,
     openJournal: () => { openJournal(); return clueLog.length; },
     simPts: () => kids.filter((k) => k.name).map((k) => [Math.round(k.group.position.x), Math.round(k.group.position.z)]),
+    mapShot: (h = 360, cz = -10) => { running = false; cancelAnimationFrame(raf); hud.style.display = 'none'; rotateEl.classList.remove('show'); scene.fog = null; camera.far = 4000; camera.fov = 55; camera.up.set(0, 0, -1); camera.position.set(0, h, cz); camera.lookAt(0, 0.5, cz); camera.updateProjectionMatrix(); renderer.render(scene, camera); },
     marketPts: () => markets.map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
     infPts: () => informants.map((i) => [i.name, +i.x.toFixed(1), +i.z.toFixed(1)]),
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },

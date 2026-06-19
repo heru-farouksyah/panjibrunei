@@ -43,7 +43,13 @@ function injectStyle() {
   .kampong .kq-text{font-size:15px;line-height:1.45;margin-bottom:11px;}
   .kampong .kq-ok{float:right;background:#2f7f78;color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;}
   .kampong .kq-banner{position:absolute;left:50%;top:21%;transform:translateX(-50%) translateY(-8px);background:rgba(20,55,65,0.82);color:#fff;padding:11px 22px;border-radius:999px;font-size:16px;font-weight:700;white-space:nowrap;max-width:92vw;text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;box-shadow:0 6px 20px rgba(20,50,70,0.45);}
-  .kampong .kq-banner.show{opacity:1;transform:translateX(-50%) translateY(0);}`;
+  .kampong .kq-banner.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .kampong .kq-rotate{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#12333f;color:#fff;text-align:center;padding:24px;}
+  .kampong .kq-rotate.show{display:flex;}
+  .kampong .kq-rotate .ph{font-size:64px;line-height:1;transform-origin:50% 50%;animation:kqrot 1.8s ease-in-out infinite;}
+  @keyframes kqrot{0%,35%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+  .kampong .kq-rotate b{font-size:19px;letter-spacing:0.5px;}
+  .kampong .kq-rotate small{opacity:0.82;font-size:13px;max-width:280px;}`;
   const el = document.createElement('style'); el.id = 'kq-style'; el.textContent = css; document.head.appendChild(el);
 }
 
@@ -61,12 +67,18 @@ export function showKampong(audio, { mission, onResult } = {}) {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   overlay.appendChild(renderer.domElement);
-  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 48, 120);
-  const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 500);
+  // force-landscape gate: a "rotate your device" screen shown while in portrait
+  let blocked = false;
+  const rotateEl = document.createElement('div'); rotateEl.className = 'kq-rotate';
+  rotateEl.innerHTML = '<div class="ph">📱</div><b>Rotate to landscape</b><small>Kampong Ayer is best explored in landscape — turn your device sideways.</small>';
+  overlay.appendChild(rotateEl);
+  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 70, 230);  // far fog → see the sprawl fade out
+  const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 700);
   const sun = new THREE.DirectionalLight(0xfff3df, 2.1); sun.position.set(-16, 26, 14); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 1; sun.shadow.camera.far = 130;
-  const scam = sun.shadow.camera; scam.left = -60; scam.right = 60; scam.top = 60; scam.bottom = -60; sun.shadow.bias = -0.0004;
-  scene.add(sun, new THREE.HemisphereLight(0xd6f3fb, 0x4a6f74, 0.9), new THREE.AmbientLight(0xbfe6e2, 0.25), skyDome());
+  sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 1; sun.shadow.camera.far = 150;
+  const scam = sun.shadow.camera; scam.left = -70; scam.right = 70; scam.top = 70; scam.bottom = -70; sun.shadow.bias = -0.0004;
+  const sky = skyDome(); sky.scale.setScalar(1.8);
+  scene.add(sun, new THREE.HemisphereLight(0xd6f3fb, 0x4a6f74, 0.9), new THREE.AmbientLight(0xbfe6e2, 0.25), sky);
 
   const wgrp = new THREE.Group(); scene.add(wgrp);
   const solids = []; const addSolid = (x, z, r) => solids.push({ x, z, r });
@@ -74,7 +86,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   // ---- water -------------------------------------------------------------
   const rippleTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#2f9fc7'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 3; for (let i = 0; i < 60; i++) { const y = Math.random() * h, x = Math.random() * w, len = 20 + Math.random() * 60; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + len / 2, y - 6, x + len, y); g.stroke(); } }, { repeat: [16, 16] });
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(420, 420), new THREE.MeshToonMaterial({ color: 0x39a6cc, gradientMap: RAMP, map: rippleTex, transparent: true, opacity: 0.95 }));
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshToonMaterial({ color: 0x39a6cc, gradientMap: RAMP, map: rippleTex, transparent: true, opacity: 0.95 }));
   water.rotation.x = -Math.PI / 2; water.position.y = -0.2; water.receiveShadow = true; scene.add(water);
 
   // ---- boardwalk: three villages + two bridges ---------------------------
@@ -131,6 +143,51 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // village C houses
   house(-16, -42, 0.2, HC[4], 5, 4.5, 3, false); house(16, -42, -0.2, HC[0], 5, 4.5, 3, false); house(-9, -46, 0.1, HC[2], 4.5, 4, 2.8, false); house(9, -46, -0.1, HC[1], 4.5, 4, 2.8, false);
   house(-11, -30, 0.1, HC[3], 3.6, 3.6, 2.4); house(11, -32, -0.1, HC[5], 3.6, 3.6, 2.4);
+
+  // ---- the sprawl: a dense sea of decorative stilt houses (cheap, no collision)
+  // packed across the water around the playable spine — the real Kampong Ayer look.
+  const matCache = new Map();
+  const tmat = (c) => { let m = matCache.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMP }); matCache.set(c, m); } return m; };
+  const ROOFS = [0xb5483b, 0xc85a3a, 0x4f6f8a, 0x8a8f93, 0xd9695a, 0x9a5a3a, 0x5f7f6a];
+  const WALLS = [0xe3ddcf, 0xd8cdb6, 0xc9b79a, 0xb9d0d8, 0xe0c8a8, 0xcfd6cf];
+  const nearWalk = (x, z, pad = 4) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
+  function decoHouse(x, z, rot, sc) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; g.scale.setScalar(sc); wgrp.add(g);
+    const w = 3.4, h = 2.3, d = 3.4;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 1.6, d + 0.5), tmat(0x6e4f30)); base.position.y = 0.0; g.add(base); // dark stilt block on the water
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), tmat(WALLS[(Math.random() * WALLS.length) | 0])); walls.position.y = 1.0 + h / 2; g.add(walls);
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, w * 0.8, 1.3, 4), tmat(ROOFS[(Math.random() * ROOFS.length) | 0])); roof.rotation.y = Math.PI / 4; roof.position.y = 1.0 + h + 0.55; roof.scale.z = d / w; g.add(roof);
+    return g;
+  }
+  // scatter a packed cluster of deco houses over a region, skipping the walkways
+  function cluster(cx, cz, halfW, halfD, spacing) {
+    for (let x = cx - halfW; x <= cx + halfW; x += spacing) for (let z = cz - halfD; z <= cz + halfD; z += spacing) {
+      const px = x + rand(-spacing * 0.3, spacing * 0.3), pz = z + rand(-spacing * 0.3, spacing * 0.3);
+      if (nearWalk(px, pz, 5)) continue;
+      if (Math.hypot(px, pz) > 150) continue;
+      decoHouse(px, pz, rand(0, 6.28), rand(0.8, 1.15));
+    }
+  }
+  // clusters filling the water all around the spine (like the satellite kampong)
+  cluster(-46, 30, 18, 16, 6.5); cluster(46, 30, 18, 16, 6.5);     // flanking village A
+  cluster(0, 56, 26, 12, 6.5);                                      // north of the start
+  cluster(-50, -2, 16, 18, 6.5); cluster(50, -2, 16, 18, 6.5);      // flanking village B
+  cluster(-30, 28, 12, 12, 7); cluster(30, 28, 12, 12, 7);
+  cluster(-44, -36, 18, 16, 6.5); cluster(44, -36, 18, 16, 6.5);    // flanking village C
+  cluster(0, -72, 26, 12, 6.5);                                     // far north waterfront sprawl
+  cluster(-70, -20, 14, 30, 8); cluster(70, -20, 14, 30, 8);        // distant banks
+
+  // a Masjid (mosque) landmark with a green dome + minaret — like the real village
+  (function mosque() {
+    const g = new THREE.Group(); g.position.set(28, 0, 30); wgrp.add(g);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.4, 0.4), tmat(0x5e4127)); p.position.set(sx * 2.6, -0.6, sz * 2.6); g.add(p); }
+    const body = toon(new THREE.BoxGeometry(6.4, 3.4, 6.4), 0xeef2f0, { thickness: 0.04 }); body.position.y = 2.9; g.add(body);
+    const drum = toon(new THREE.CylinderGeometry(1.7, 1.9, 0.8, 16), 0xeef2f0, { thickness: 0.03 }); drum.position.y = 5.0; g.add(drum);
+    const dome = toon(new THREE.SphereGeometry(1.8, 18, 12, 0, 6.28, 0, Math.PI / 2), 0x2f8f6a, { thickness: 0.04 }); dome.position.y = 5.4; g.add(dome);
+    const finial = toon(new THREE.SphereGeometry(0.22, 8, 8), 0xe7c54a, { thickness: 0.02 }); finial.position.y = 7.3; g.add(finial);
+    const min = toon(new THREE.CylinderGeometry(0.5, 0.6, 8, 12), 0xeef2f0, { thickness: 0.03 }); min.position.set(4.2, 4.5, 4.2); g.add(min);
+    const mcap = toon(new THREE.SphereGeometry(0.6, 12, 8, 0, 6.28, 0, Math.PI / 2), 0x2f8f6a, { thickness: 0.03 }); mcap.position.set(4.2, 8.6, 4.2); g.add(mcap);
+  })();
 
   // ---- traditional dress -------------------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#3a1f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(217,178,74,0.7)'; g.lineWidth = 2; for (let i = -w; i < w; i += 18) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); } g.fillStyle = '#e8c75a'; for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) { g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.closePath(); g.fill(); } });
@@ -266,6 +323,8 @@ export function showKampong(audio, { mission, onResult } = {}) {
     camera.fov = asp >= 1.5 ? 62 : asp >= 1.0 ? 56 : asp >= 0.7 ? 50 : 46;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    const portrait = innerWidth < innerHeight;   // force landscape
+    blocked = portrait; rotateEl.classList.toggle('show', portrait);
   }
   const onOrient = () => setTimeout(onResize, 200);   // viewport size settles after the rotate event
   onResize();   // apply the right FOV for the current orientation up front
@@ -337,7 +396,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // ---- loop --------------------------------------------------------------
   const clock = new THREE.Clock(); let stepAcc = 0;
   function tick() {
-    const dt = Math.min(0.05, clock.getDelta()); if (!won) elapsed += dt; const tnow = clock.elapsedTime;
+    const dt = Math.min(0.05, clock.getDelta());
+    if (blocked) { renderer.render(scene, camera); return; }   // paused while in portrait
+    if (!won) elapsed += dt; const tnow = clock.elapsedTime;
     if (sfx.ready) sfx.music();   // upbeat bed once audio is unlocked
 
     let ix = stick.dx, iy = stick.dy;

@@ -114,7 +114,7 @@ export class AudioManager {
   _startWorld() {
     if (!this.ctx || this.ctx.state !== 'running') return;
     if (!this._ambient) this.startAmbient();
-    if (!this._music) this.startMusic();
+    // gamelan score removed by request — keep only the ambient environment bed.
   }
 
   // ---- SFX one-shots -------------------------------------------------------

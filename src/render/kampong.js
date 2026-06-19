@@ -81,7 +81,20 @@ function injectStyle() {
   .kampong .kq-intro h2{margin:0 0 2px;color:#2f7f78;font-size:22px;} .kampong .kq-intro .sub{color:#5a7580;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
   .kampong .kq-intro p{color:#16384c;font-size:14px;line-height:1.5;margin:0 0 10px;}
   .kampong .kq-intro ul{margin:0 0 14px;padding-left:18px;color:#234;font-size:13px;line-height:1.65;} .kampong .kq-intro li b{color:#2f7f78;}
-  .kampong .kq-intro button{background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 26px;font-weight:800;font-size:16px;cursor:pointer;width:100%;}`;
+  .kampong .kq-intro button{background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 26px;font-weight:800;font-size:16px;cursor:pointer;width:100%;}
+  .kampong .kq-jbtn{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(52px + env(safe-area-inset-left));width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(20,50,70,0.35);}
+  .kampong .kq-jbtn.glow{animation:kqglow 1.2s ease-out infinite;}
+  @keyframes kqglow{0%{box-shadow:0 0 0 0 rgba(226,162,58,0.7);}100%{box-shadow:0 0 0 12px rgba(226,162,58,0);}}
+  .kampong .kq-journal{position:absolute;inset:0;z-index:23;display:flex;align-items:center;justify-content:center;background:rgba(15,45,55,0.72);padding:16px;}
+  .kampong .kq-journal[hidden]{display:none;}
+  .kampong .kq-journal .card{position:relative;background:linear-gradient(180deg,#fff,#eef6f3);border-radius:18px;padding:20px 22px 18px;max-width:430px;width:94vw;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;}
+  .kampong .kq-journal h2{margin:0 0 8px;color:#2f7f78;font-size:20px;}
+  .kampong .kq-jx{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;border:none;background:#dceee9;color:#2f7f78;font-size:15px;font-weight:800;cursor:pointer;}
+  .kampong .kq-journal .jsec{margin:12px 0 5px;font-size:11px;letter-spacing:1px;color:#5a7580;font-weight:800;border-bottom:1px solid #cfe3dd;padding-bottom:3px;}
+  .kampong .kq-journal .jrow{display:flex;justify-content:space-between;font-size:13.5px;color:#234;padding:3px 0;}
+  .kampong .kq-journal .jrow b{color:#2f7f78;}
+  .kampong .kq-journal .jclues{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:#2a4450;}
+  .kampong .kq-journal .jclues li{margin-bottom:6px;} .kampong .kq-journal .jclues li b{color:#c8821a;} .kampong .kq-journal .jclues .dim{color:#8aa;list-style:none;margin-left:-12px;}`;
   const el = document.createElement('style'); el.id = 'kq-style'; el.textContent = css; document.head.appendChild(el);
 }
 
@@ -365,21 +378,26 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   // ---- HUD ---------------------------------------------------------------
   const hud = document.createElement('div'); hud.className = 'kq'; overlay.appendChild(hud);
-  hud.innerHTML = `<button class="kq-quit" aria-label="Quit">‹</button><div class="kq-obj"></div>` +
+  hud.innerHTML = `<button class="kq-quit" aria-label="Quit">‹</button><button class="kq-jbtn" aria-label="Journal">📖</button><div class="kq-obj"></div>` +
     `<div class="kq-stats"><div class="kq-chip">👥 <b class="kq-fol">0</b>/<span class="kq-folt">6</span></div><div class="kq-chip">🎟 <b class="kq-tok">0</b></div><div class="kq-chip">💰 <b class="kq-coin">0</b></div><div class="kq-chip">🛒 <b class="kq-mkt">0/6</b></div><div class="kq-chip">🛶 <b class="kq-boat">0</b>/3</div><div class="kq-hbar"><span></span></div></div>` +
     `<div class="kq-tag"></div>` +
     `<div class="kq-joy"></div><button class="kq-act" hidden></button>` +
     `<div class="kq-dialog" hidden><div class="kq-who">Villager</div><div class="kq-text"></div><div class="kq-judge"></div><button class="kq-ok">Close</button></div>` +
     `<div class="kq-banner"></div>` +
     `<div class="kq-intro" hidden><div class="card"></div></div>` +
+    `<div class="kq-journal" hidden><div class="card"><button class="kq-jx" aria-label="Close">✕</button><div class="jbody"></div></div></div>` +
     `<div class="kq-win" hidden><div class="card"><h2></h2><p></p><div class="clue"></div><button>Continue</button></div></div>`;
   const q = (s) => hud.querySelector(s);
-  const elFol = q('.kq-fol'), elFolt = q('.kq-folt'), elTok = q('.kq-tok'), elCoin = q('.kq-coin'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), elHbar = q('.kq-hbar'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge'), tagEl = q('.kq-tag'), introEl = q('.kq-intro');
+  const elFol = q('.kq-fol'), elFolt = q('.kq-folt'), elTok = q('.kq-tok'), elCoin = q('.kq-coin'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), elHbar = q('.kq-hbar'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge'), tagEl = q('.kq-tag'), introEl = q('.kq-intro'), journalEl = q('.kq-journal');
   q('.kq-quit').onclick = () => { sfx.unlock(); endMission(false, true); };
+  q('.kq-jbtn').onclick = () => openJournal();
+  q('.kq-jx').onclick = () => { journalEl.hidden = true; journalOpen = false; };
   q('.kq-dialog .kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; clearInterval(dlgTimer); };
   actBtn.onclick = doAction;
   q('.kq-win button').onclick = () => endMission(true);
-  let dialogOpen = false, salamBusy = false, actTarget = null, introOpen = false, dlgTimer = 0;
+  let dialogOpen = false, salamBusy = false, actTarget = null, introOpen = false, journalOpen = false, dlgTimer = 0;
+  const clueLog = [];   // your pocket-book of gathered clues
+  function addClue(who, text) { if (!clueLog.some((c) => c.who === who && c.text === text)) { clueLog.push({ who, text }); q('.kq-jbtn').classList.add('glow'); } }
   function showBanner(t, ms = 2400) { banner.textContent = t; banner.classList.add('show'); clearTimeout(showBanner._t); showBanner._t = setTimeout(() => banner.classList.remove('show'), ms); }
   function saySalam() { if (salamBusy) return; salamBusy = true; sfx.unlock(); sfx.clue(); speak('Assalamualaikum', 0.85); setTimeout(() => speak('Waalaikumsalam', 1.5), 1100); setTimeout(() => { salamBusy = false; }, 2600); }
 
@@ -464,6 +482,27 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   refreshHud(); setObjective();
 
+  // the "pocket-book": tap 📖 to see your money/items, progress, and every clue
+  function openJournal() {
+    sfx.unlock(); journalOpen = true; dialog.hidden = true; dialogOpen = false;
+    const judged = informants.filter((i) => i.judged && !i._far).length;
+    const row = (k, v) => `<div class="jrow"><span>${k}</span><b>${v}</b></div>`;
+    const tk = (b) => (b ? '✅' : '◻️');
+    const clues = clueLog.length ? clueLog.map((c) => `<li><b>${c.who}:</b> ${c.text}</li>`).join('') : '<li class="dim">No clues yet — greet villagers and visit the gerai.</li>';
+    q('.kq-journal .jbody').innerHTML =
+      `<h2>📖 Pocket &amp; Journal</h2>` +
+      `<div class="jsec">POCKET</div>` + row('💰 Money (coins)', coins) + row('🎟 Trust tokens', tokens) + row('🛶 Boat parts', boatParts + '/3') + row('🍚 Fullness', Math.round(hunger) + '%') +
+      `<div class="jsec">PROGRESS — to win, finish all of these</div>` +
+      row(tk(judged >= centralInf()) + ' Villagers judged', judged + '/' + centralInf()) +
+      row(tk(followers >= 5) + ' Households on your side', followers + ' (need 5)') +
+      row(tk(marketsVisited >= marketsNeeded()) + ' Gerai visited', marketsVisited + '/' + markets.length) +
+      row(tk(stashesCleared >= 2) + ' Stashes cleared', stashesCleared + '/2') +
+      row(tk(boatBuilt) + ' Boat built', boatBuilt ? 'done' : 'no') +
+      row(tk(mysterySolved) + ' Pak Long confronted', mysterySolved ? 'done' : 'no') +
+      `<div class="jsec">CLUES GATHERED (${clueLog.length})</div><ul class="jclues">${clues}</ul>`;
+    journalEl.hidden = false; q('.kq-jbtn').classList.remove('glow');
+  }
+
   // a generic talking-bubble dialog: typewriter text + tappable choice buttons
   function say(who, sub, text, choices) {
     if (won) return; dialogOpen = true; sfx.unlock(); sfx.talk();
@@ -482,7 +521,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (correct) {
       inf.judged = true; if (!inf.follower) { inf.follower = true; followers++; }
       tokens += 2; coins += 2; sfx.pickup();
-      if (inf.truth === 'crime' && inf.stashId) { const st = stashes.find((s) => s.id === inf.stashId); if (st && !st.revealed) { st.revealed = true; st.group.visible = true; showBanner('A stash uncovered — the “ghost” was a cover! 🔥 (+2🎟 +2💰)', 2600); } else showBanner('Trust earned. +2🎟 +2💰', 1800); }
+      if (inf.truth === 'crime' && inf.stashId) { const st = stashes.find((s) => s.id === inf.stashId); if (st && !st.revealed) { st.revealed = true; st.group.visible = true; addClue('Penemuan (lead)', `${inf.name}'s "ghost story" hid a real stash — a red beacon now marks it. Go clear it.`); showBanner('A stash uncovered — the “ghost” was a cover! 🔥 (+2🎟 +2💰)', 2600); } else showBanner('Trust earned. +2🎟 +2💰', 1800); }
       else if (inf.truth === 'sacred') showBanner('You left it be, out of respect. +2🎟 +2💰', 2200);
       else showBanner('You saw through the gossip. +2🎟 +2💰', 2200);
       if (inf._far) culpritReady = true;
@@ -494,6 +533,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   function tryTalk(inf) {
     if (dialogOpen || won) return;
+    addClue(`${inf.name} · ${inf.prof}`, inf.claim);
     const choices = inf.judged ? [] : [
       { label: '🗣 Rumour — just gossip', cls: '', fn: () => judge(inf, 'rumour') },
       { label: '🔪 Crime — act on it', cls: '', fn: () => judge(inf, 'crime') },
@@ -520,7 +560,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   function clearStash(st) { st.cleared = true; st.group.visible = false; stashesCleared++; tokens += 5; coins += 3; sfx.win(); showBanner(`Stash destroyed (${stashesCleared}/2). +5🎟 +3💰`, 2400); refreshHud(); setObjective(); checkWin(); }
   function buildBoat() { if (boatParts >= 3 || tokens < 4) { if (tokens < 4) showBanner('Need 4🎟 for the next boat part.', 1800); return; } tokens -= 4; boatParts++; sfx.pickup(); if (boatParts >= 3) { boatBuilt = true; WALK.push(...FAR); rasterize(true); showBanner('The boat is ready! The far kampong is open — sail north. 🛶', 3000); } else showBanner(`Boat part fitted (${boatParts}/3). +parts with tokens.`, 2200); refreshHud(); setObjective(); }
-  function confront() { if (mysterySolved) return; mysterySolved = true; sfx.win(); showBanner('Pak Long is exposed. The poison stops here. ⚖', 2800); setObjective(); checkWin(); }
+  function confront() { if (mysterySolved) return; mysterySolved = true; sfx.win(); addClue('Solved', 'Pak Long kept the poison on Batu Masap — he is the culprit. The kampong knows the truth now.'); showBanner('Pak Long is exposed. The poison stops here. ⚖', 2800); setObjective(); checkWin(); }
   function checkWin() {
     if (won) return;
     if (stashesCleared >= 2 && mysterySolved && followers >= 5 && marketsVisited >= marketsNeeded()) {
@@ -533,7 +573,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
 
   function doAction() {
-    if (won || dialogOpen || introOpen || !actTarget) return;
+    if (won || dialogOpen || introOpen || journalOpen || !actTarget) return;
     if (actTarget.kind === 'talk') tryTalk(actTarget.inf);
     else if (actTarget.kind === 'help') openQuiz(actTarget.helper);
     else if (actTarget.kind === 'food') buyFood(actTarget.m);
@@ -562,7 +602,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1; if (keys.has('d') || keys.has('arrowright')) ix += 1;
     if (keys.has('w') || keys.has('arrowup')) iy -= 1; if (keys.has('s') || keys.has('arrowdown')) iy += 1;
     const mag = Math.hypot(ix, iy); let moving = false; if (stun > 0) stun -= dt;
-    if (mag > 0.05 && !dialogOpen && !won && !introOpen) {
+    if (mag > 0.05 && !dialogOpen && !won && !introOpen && !journalOpen) {
       moving = true; const nx = ix / (mag > 1 ? mag : 1), ny = iy / (mag > 1 ? mag : 1);
       const fwdX = Math.sin(camYaw), fwdZ = Math.cos(camYaw), rightX = Math.cos(camYaw), rightZ = -Math.sin(camYaw);
       const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = hunger < 25 ? 3.7 : 6.2;   // hungry = tired = slower
@@ -583,7 +623,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     // salam on proximity
     if (!salamBusy && !dialogOpen && !won) { for (const gg of greetables) { if (gg.greeted) continue; if (Math.hypot(kid.position.x - gg.x, kid.position.z - gg.z) < 3) { gg.greeted = true; saySalam(); break; } } }
     // visit a market stall on proximity → reward + clue (rewards exploring)
-    if (!won && !dialogOpen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; marketsVisited++; tokens += 2; sfx.pickup(); showBanner(`${m.name}: ${m.clue}. +2🎟 (markets ${marketsVisited}/${markets.length})`, 2800); refreshHud(); setObjective(); checkWin(); break; } }
+    if (!won && !dialogOpen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; marketsVisited++; tokens += 2; sfx.pickup(); addClue(`${m.name} · ${m.prof}`, m.clue + (m.food ? ' (a food stall — eat here)' : '')); showBanner(`${m.name}: ${m.clue}. +2🎟 (markets ${marketsVisited}/${markets.length})`, 2800); refreshHud(); setObjective(); checkWin(); break; } }
     for (const k of kids) { k.t -= dt; if (k.t <= 0) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx + rand(-rm, rm); k.tz = k.hz + rand(-rm, rm); } const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false; if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); } const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0); }
     for (const c of cats) { c.t -= dt; if (c.t <= 0) { c.t = rand(2, 5); c.tx = c.hx + rand(-3, 3); c.tz = c.hz + rand(-3, 3); } const dx = c.tx - c.group.position.x, dz = c.tz - c.group.position.z, d = Math.hypot(dx, dz); if (d > 0.2) { c.group.position.x += dx / d * c.spd * dt; c.group.position.z += dz / d * c.spd * dt; c.group.rotation.y = Math.atan2(dx, dz); } c.meowCd -= dt; if (c.meowCd <= 0) { c.meowCd = rand(7, 16); if (Math.hypot(kid.position.x - c.group.position.x, kid.position.z - c.group.position.z) < 10) sfx.meow(); } }
 
@@ -608,7 +648,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     for (const m of markets) if (m.food) consider('food', m.x, m.z, 3.0, { m });
     if (!boatBuilt) consider('boat', BOAT_PT.x, BOAT_PT.z, 3.2, {});
     if (boatBuilt && culpritReady && !mysterySolved) consider('confront', CONFRONT_PT.x, CONFRONT_PT.z, 4, {});
-    if (actTarget && !dialogOpen && !won && !introOpen) {
+    if (actTarget && !dialogOpen && !won && !introOpen && !journalOpen) {
       actBtn.hidden = false;
       actBtn.textContent = actTarget.kind === 'talk' ? '💬 Talk' : actTarget.kind === 'help' ? '❓ Help (earn 💰)' : actTarget.kind === 'food' ? '🍢 Eat (2💰 → +45🍚)' : actTarget.kind === 'stash' ? '🔥 Clear stash' : actTarget.kind === 'boat' ? '🛶 Build boat (4🎟)' : '⚖ Confront';
     } else actBtn.hidden = true;
@@ -644,6 +684,8 @@ export function showKampong(audio, { mission, onResult } = {}) {
     eatTest: () => buyFood(markets.find((m) => m.food)),
     solveHelpers: () => { helpers.forEach((h) => { if (!h.done) { h.done = true; coins += h.reward; } }); refreshHud(); },
     closeIntro: () => { introEl.hidden = true; introOpen = false; },
+    clues: () => clueLog.length,
+    openJournal: () => { openJournal(); return clueLog.length; },
     marketPts: () => markets.map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
     infPts: () => informants.map((i) => [i.name, +i.x.toFixed(1), +i.z.toFixed(1)]),
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },

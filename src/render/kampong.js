@@ -106,8 +106,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const B_HUB = { x0: -18, x1: 18, z0: -12, z1: 8 }, B_WEST = { x0: -40, x1: -16, z0: -6, z1: 4 }, B_EAST = { x0: 16, x1: 40, z0: -6, z1: 4 };
   const BR_BC = { x0: -3, x1: 3, z0: -26, z1: -12 };
   const C_HUB = { x0: -16, x1: 16, z0: -46, z1: -24 }, C_PIER = { x0: -4, x1: 4, z0: -58, z1: -46 };
-  const FAR_PIER = { x0: -3, x1: 3, z0: -92, z1: -58 }, FAR_HUB = { x0: -20, x1: 20, z0: -116, z1: -92 }; // boat-gated
-  const CENTRAL = [A_HUB, A_PIER, A_EAST, A_WEST, BR_AB, B_HUB, B_WEST, B_EAST, BR_BC, C_HUB, C_PIER];
+  const FAR_PIER = { x0: -3, x1: 3, z0: -92, z1: -58 }, FAR_HUB = { x0: -20, x1: 20, z0: -118, z1: -92 }; // boat-gated
+  // roads (lorong/titian) + district plazas reaching out across the village —
+  // all connected and walkable, so the game spreads across the whole map.
+  const E_LINK = { x0: 34, x1: 46, z0: -6, z1: 38 }, W_LINK = { x0: -46, x1: -34, z0: -6, z1: 38 };
+  const NE_PLAZA = { x0: 44, x1: 66, z0: 22, z1: 40 }, NW_PLAZA = { x0: -66, x1: -44, z0: 22, z1: 40 };
+  const E_PLAZA = { x0: 38, x1: 66, z0: -12, z1: 6 }, W_PLAZA = { x0: -66, x1: -38, z0: -12, z1: 6 };
+  const C_EAST = { x0: 14, x1: 46, z0: -44, z1: -28 }, C_WEST = { x0: -46, x1: -14, z0: -44, z1: -28 };
+  const SE_LINK = { x0: 34, x1: 46, z0: -44, z1: -6 }, SW_LINK = { x0: -46, x1: -34, z0: -44, z1: -6 };
+  const ROADS = [E_LINK, W_LINK, NE_PLAZA, NW_PLAZA, E_PLAZA, W_PLAZA, C_EAST, C_WEST, SE_LINK, SW_LINK];
+  const CENTRAL = [A_HUB, A_PIER, A_EAST, A_WEST, BR_AB, B_HUB, B_WEST, B_EAST, BR_BC, C_HUB, C_PIER, ...ROADS];
   const FAR = [FAR_PIER, FAR_HUB];
   const ALLRECTS = [...CENTRAL, ...FAR];
   const WALK = [...CENTRAL];   // far kampong added when the boat is built
@@ -138,7 +146,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   house(-16, 38, 0.2, HC[0], 5, 4.5, 3, false); house(16, 38, -0.2, HC[2], 5, 4.5, 3, false); house(-10, 42, 0.1, HC[1], 4.5, 4, 2.8, false); house(10, 42, -0.1, HC[3], 4.5, 4, 2.8, false);
   house(-18, 6, 0.3, HC[3], 5, 4.5, 3, false); house(18, 6, -0.3, HC[1], 5, 4.5, 3, false);
   house(-16, -42, 0.2, HC[4], 5, 4.5, 3, false); house(16, -42, -0.2, HC[0], 5, 4.5, 3, false);
-  const HAUNTED_X = -16, HAUNTED_Z = 12; house(HAUNTED_X, HAUNTED_Z, 0.1, 0x3a4a6a, 4.2, 4.2, 2.8, false); // the "haunted" blue house (stash 1)
+  const HAUNTED_X = -58, HAUNTED_Z = 26; house(HAUNTED_X, HAUNTED_Z, 0.1, 0x3a4a6a, 4.2, 4.2, 2.8, false); // the "haunted" blue house in the NW district (stash 1)
 
   // ---- the sprawl (instanced, ~5× area) ----------------------------------
   const matCache = new Map(); const tmat = (c) => { let m = matCache.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMP }); matCache.set(c, m); } return m; };
@@ -258,12 +266,12 @@ export function showKampong(audio, { mission, onResult } = {}) {
     return inf;
   }
   // central kampong informants
-  informer('Mak Limah', 8, 34, outfit(5), 'They whisper that Pak Hassan stole the surau fund… but nobody has seen a single ringgit move.', 'rumour');
-  informer('Awang', -9, 30, outfit(7), 'Don’t go near the old blue house after Maghrib — a pontianak wails there. Stay away, ya.', 'crime', 's1');
-  informer('Hjh Noraini', -22, 2, outfit(9), 'On still nights a pale light drifts over Jong Batu, and a cold wind follows it. Some things we leave to Allah.', 'sacred');
-  informer('Pak Mat', 16, -2, outfit(1), 'Strange boats slip up the channel after Isyak and leave again empty before dawn. I’ve counted three.', 'crime', 's2');
-  informer('Cikgu Rahim', 30, -20, outfit(2), 'The fund vanished the very week Pak Long sailed home rich and changed. Too neat to be chance.', 'rumour');
-  informer('Sarjan (Police)', -34, -20, outfit(2), 'No proof, no arrest. Bring me what’s true — separate the gossip from the crime — and I’ll act.', 'sacred');
+  informer('Mak Limah', 55, 31, outfit(5), 'They whisper that Pak Hassan stole the surau fund… but nobody has seen a single ringgit move.', 'rumour');       // NE district
+  informer('Awang', -55, 31, outfit(7), 'Don’t go near the old blue house after Maghrib — a pontianak wails there. Stay away, ya.', 'crime', 's1');         // NW district
+  informer('Hjh Noraini', -55, -3, outfit(9), 'On still nights a pale light drifts over Jong Batu, and a cold wind follows it. Some things we leave to Allah.', 'sacred'); // W district
+  informer('Pak Mat', 55, -3, outfit(1), 'Strange boats slip up the channel after Isyak and leave again empty before dawn. I’ve counted three.', 'crime', 's2');   // E district
+  informer('Cikgu Rahim', 30, -34, outfit(2), 'The fund vanished the very week Pak Long sailed home rich and changed. Too neat to be chance.', 'rumour');          // SE / school
+  informer('Sarjan (Police)', -30, -34, outfit(2), 'No proof, no arrest. Bring me what’s true — separate the gossip from the crime — and I’ll act.', 'sacred');   // SW / police
   // far kampong informant (after the boat) — names the culprit
   const farInf = informer('Bilal Tua', 0, -104, outfit(3), 'Pak Long keeps a locked store on Batu Masap. That cursed rock hides no ghost — it hides his poison.', 'crime', 's3');
   farInf._far = true;
@@ -276,7 +284,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const st = { id, x, z, group: g, beam, revealed: false, cleared: false };
     stashes.push(st); totalStashes++; return st;
   }
-  makeStash('s1', HAUNTED_X, HAUNTED_Z - 3); makeStash('s2', 30, -8); makeStash('s3', 0, -150);
+  makeStash('s1', HAUNTED_X, HAUNTED_Z - 3); makeStash('s2', 58, -8); makeStash('s3', 0, -108);
 
   // ---- UI helpers --------------------------------------------------------
   function refreshHud() { elFol.textContent = followers; elTok.textContent = tokens; elBoat.textContent = boatParts; elTrust.style.width = Math.round((followers / informants.length) * 100) + '%'; }
@@ -337,7 +345,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
 
   // boat-building point at the waterfront jetty; confront point on Batu Masap
-  const BOAT_PT = { x: 0, z: -56 }, CONFRONT_PT = { x: 0, z: -150 };
+  const BOAT_PT = { x: 0, z: -56 }, CONFRONT_PT = { x: 0, z: -112 };
 
   // ---- mission plumbing --------------------------------------------------
   function collide(p) { for (const s of solids) { const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), min = s.r + PLAYER_R; if (d < min && d > 1e-4) { p.x = s.x + dx / d * min; p.z = s.z + dz / d * min; } } for (const pd of peds) if (pd.blocking) { const dx = p.x - pd.x, dz = p.z - pd.z, d = Math.hypot(dx, dz), min = 0.85 + PLAYER_R; if (d < min && d > 1e-4) { p.x = pd.x + dx / d * min; p.z = pd.z + dz / d * min; } } }

@@ -226,7 +226,13 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const plaid = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#5a4632'; g.fillRect(0, 0, w, h); const band = (c, a, st, ww, v) => { g.globalAlpha = a; g.fillStyle = c; for (let p = 0; p < (v ? w : h); p += st) { if (v) g.fillRect(p, 0, ww, h); else g.fillRect(0, p, w, ww); } }; for (const v of [true, false]) { band('#3a2c1e', 0.55, 34, 12, v); band('#8a6f4e', 0.5, 34, 6, v); band('#d8c39a', 0.45, 17, 3, v); } g.globalAlpha = 1; });
   function person({ skin = 0xe9b58a, baju = 0x1f6f5a, seluar = null, head = 'songkok', hatColor = 0x16181c, sampin = true, sampinTex = 'songket', sampinColor = 0xb08820, tee = false, female = false, scale = 1 } = {}) {
     seluar = seluar ?? baju; const g = new THREE.Group(); g.scale.setScalar(scale); const legs = [], arms = [];
-    if (female) { const sk = toon(new THREE.CylinderGeometry(0.3, 0.52, 1.35, 14), baju, { thickness: 0.03 }); place(sk, 0, 0.7, 0); g.add(sk); }
+    if (female) {
+      // baju kurung kampong style: a long sarong (kain) to the ankles + the
+      // baju's flared hem falling over it (long sleeves come from the arm loop).
+      const kain = toon(new THREE.CylinderGeometry(0.33, 0.5, 1.52, 16), sampinColor, { thickness: 0.03, map: songket }); place(kain, 0, 0.78, 0); g.add(kain);
+      const hem = toon(new THREE.CylinderGeometry(0.49, 0.52, 0.1, 16), sampinColor, { thickness: 0.02, map: songket }); place(hem, 0, 0.06, 0); g.add(hem);
+      const tunic = toon(new THREE.CylinderGeometry(0.32, 0.47, 0.82, 16), baju, { thickness: 0.03 }); place(tunic, 0, 1.0, 0); g.add(tunic);
+    }
     else for (const s of [-1, 1]) { const leg = toon(new THREE.CapsuleGeometry(0.14, 0.55, 4, 8), seluar, { thickness: 0.03 }); place(leg, s * 0.16, 0.55, 0); g.add(leg); legs.push(leg); const shoe = toon(new THREE.BoxGeometry(0.22, 0.13, 0.32), 0x2c2c2c, { thickness: 0.02 }); leg.add(shoe); shoe.position.set(0, -0.42, 0.05); }
     const torso = toon(new THREE.CapsuleGeometry(0.3, 0.62, 6, 12), baju, { thickness: 0.035 }); place(torso, 0, 1.3, 0); g.add(torso);
     for (const s of [-1, 1]) { if (tee) { const sl = toon(new THREE.CylinderGeometry(0.13, 0.12, 0.22, 8), baju, { thickness: 0.025 }); place(sl, s * 0.34, 1.5, 0); g.add(sl); const arm = toon(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), skin, { thickness: 0.025 }); place(arm, s * 0.38, 1.18, 0); arm.rotation.z = s * 0.15; g.add(arm); arms.push(arm); } else { const arm = toon(new THREE.CapsuleGeometry(0.1, 0.6, 4, 8), baju, { thickness: 0.03 }); place(arm, s * 0.38, 1.28, 0); arm.rotation.z = s * 0.15; g.add(arm); arms.push(arm); } const hand = toon(new THREE.SphereGeometry(0.1, 8, 7), skin, { thickness: 0.02 }); place(hand, s * 0.44, 0.96, 0); g.add(hand); }
@@ -235,16 +241,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (sampin && !female) { const tex = sampinTex === 'plaid' ? plaid : songket; const sam = toon(new THREE.CylinderGeometry(0.34, 0.39, 0.5, 16), sampinColor, { thickness: 0.025, map: tex }); place(sam, 0, 0.96, 0); g.add(sam); }
     const headM = toon(new THREE.SphereGeometry(0.27, 16, 14), skin, { thickness: 0.03 }); place(headM, 0, 1.96, 0); g.add(headM);
     if (head === 'songkok') { const cap = toon(new THREE.CylinderGeometry(0.27, 0.29, 0.3, 16), hatColor, { thickness: 0.025 }); place(cap, 0, 2.15, 0); g.add(cap); }
-    else if (head === 'tudung') { const tud = toon(new THREE.SphereGeometry(0.33, 16, 14), hatColor, { thickness: 0.03 }); tud.scale.set(1, 1.05, 1); place(tud, 0, 1.99, 0); g.add(tud); const dr = toon(new THREE.CylinderGeometry(0.37, 0.26, 0.7, 16, 1, true), hatColor, { outline: false }); place(dr, 0, 1.55, 0); g.add(dr); }
+    else if (head === 'tudung') { const tud = toon(new THREE.SphereGeometry(0.34, 16, 14), hatColor, { thickness: 0.03 }); tud.scale.set(1.05, 1.08, 1.05); place(tud, 0, 2.0, 0); g.add(tud); const dr = toon(new THREE.CylinderGeometry(0.36, 0.45, 1.0, 16, 1, true), hatColor, { outline: false }); place(dr, 0, 1.5, 0); g.add(dr); } // jilbab: covers hair + drapes over the shoulders
     else if (head === 'headscarf') { const wr = toon(new THREE.SphereGeometry(0.3, 16, 12), 0x7a5f42, { thickness: 0.03, map: plaid }); wr.scale.set(1.06, 0.72, 1.06); place(wr, 0, 2.12, 0); g.add(wr); const kn = toon(new THREE.BoxGeometry(0.18, 0.16, 0.16), 0x5a4632, { thickness: 0.02, map: plaid }); place(kn, 0, 2.22, -0.26); g.add(kn); }
     else { const hair = toon(new THREE.SphereGeometry(0.29, 16, 12), 0x35251c, { thickness: 0.03 }); hair.scale.set(1, 0.85, 1); place(hair, 0, 2.0, -0.02); g.add(hair); }
     return { group: g, legs, arms };
   }
-  const OUTFITS = [{ baju: 0xf2efe6, head: 'hair', sampin: true }, { baju: 0xf2efe6, head: 'songkok', sampin: true }, { baju: 0x244f8a, head: 'songkok' }, { baju: 0x8a2f3a, head: 'songkok', sampin: true }, { baju: 0x2f8f6a, head: 'songkok', sampin: true }, { baju: 0xe7b2c2, hatColor: 0xe7b2c2, head: 'tudung', female: true }, { baju: 0x3a6f8a, hatColor: 0x213a5a, head: 'songkok' }, { baju: 0xd8cdb6, seluar: 0x2c2c2c, tee: true, head: 'hair' }, { baju: 0x6a4f8a, head: 'songkok', sampin: true }, { baju: 0xf0e6d0, hatColor: 0xf0e6d0, head: 'tudung', female: true }];
+  const OUTFITS = [{ baju: 0xf2efe6, head: 'hair', sampin: true }, { baju: 0xf2efe6, head: 'songkok', sampin: true }, { baju: 0x244f8a, head: 'songkok' }, { baju: 0x8a2f3a, head: 'songkok', sampin: true }, { baju: 0x2f8f6a, head: 'songkok', sampin: true }, { baju: 0xe7b2c2, hatColor: 0xd9d2e6, sampinColor: 0x8a5a2a, head: 'tudung', female: true }, { baju: 0x3a6f8a, hatColor: 0x213a5a, head: 'songkok' }, { baju: 0xd8cdb6, seluar: 0x2c2c2c, tee: true, head: 'hair' }, { baju: 0x6a4f8a, head: 'songkok', sampin: true }, { baju: 0xf0e6d0, hatColor: 0xe8e0ee, sampinColor: 0x4f6f5a, head: 'tudung', female: true }];
   const outfit = (i) => ({ ...OUTFITS[((i % OUTFITS.length) + OUTFITS.length) % OUTFITS.length] });
 
   // ---- player ------------------------------------------------------------
-  const kidP = person({ baju: 0xeee7d8, seluar: 0x1c1c1c, tee: true, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x6a533a });
+  const kidP = person({ baju: 0xeee7d8, seluar: 0x1c1c1c, tee: false, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x6a533a }); // long-sleeve shirt
   const kid = kidP.group; wgrp.add(kid); kid.position.set(0, DECK_Y, 46); kid.rotation.y = Math.PI;
   const legs = kidP.legs, arms = kidP.arms; const PLAYER_R = 0.5;
 

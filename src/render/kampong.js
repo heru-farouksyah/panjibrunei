@@ -119,17 +119,21 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const FAR = [FAR_PIER, FAR_HUB];
   const ALLRECTS = [...CENTRAL, ...FAR];
   const WALK = [...CENTRAL];   // far kampong added when the boat is built
+  const streets = [];          // lorong lanes (filled in the sprawl section below)
 
   const plankTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#c79a5e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(90,60,30,0.5)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, { repeat: [8, 8] });
-  function deck(r) {
+  function deck(r, pstep = 5) {
     const w = r.x1 - r.x0, d = r.z1 - r.z0; const tex = plankTex.clone(); tex.needsUpdate = true; tex.repeat.set(w / 4, d / 4);
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, d), new THREE.MeshToonMaterial({ color: 0xcf9f63, gradientMap: RAMP, map: tex }));
     m.position.set((r.x0 + r.x1) / 2, DECK_Y - 0.2, (r.z0 + r.z1) / 2); m.receiveShadow = m.castShadow = true; m.add(new THREE.Mesh(m.geometry, outlineMaterial(0.05))); wgrp.add(m);
-    for (let x = r.x0 + 1.5; x < r.x1; x += 5) for (let z = r.z0 + 1.5; z < r.z1; z += 5) { const pole = toon(new THREE.CylinderGeometry(0.22, 0.26, 4, 7), 0x6e4f30, { thickness: 0.03 }); place(pole, x, -1.4, z); wgrp.add(pole); }
+    for (let x = r.x0 + 1.5; x < r.x1; x += pstep) for (let z = r.z0 + 1.5; z < r.z1; z += pstep) { const pole = toon(new THREE.CylinderGeometry(0.22, 0.26, 4, 7), 0x6e4f30, { thickness: 0.03 }); place(pole, x, -1.4, z); wgrp.add(pole); }
   }
-  ALLRECTS.forEach(deck);
+  ALLRECTS.forEach((r) => deck(r));   // NB: wrap so forEach's index arg never lands on pstep
   function railing(x0, z0, x1, z1) { const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), ang = Math.atan2(dz, dx); if (len < 0.8) return; const rail = toon(new THREE.BoxGeometry(len, 0.12, 0.12), 0xb98a4e, { thickness: 0.02 }); rail.position.set((x0 + x1) / 2, DECK_Y + 0.85, (z0 + z1) / 2); rail.rotation.y = -ang; wgrp.add(rail); const n = Math.max(1, Math.floor(len / 2)); for (let i = 0; i <= n; i++) { const t = i / n; const post = toon(new THREE.BoxGeometry(0.14, 0.95, 0.14), 0xa97c43, { thickness: 0.02 }); place(post, x0 + dx * t, DECK_Y + 0.45, z0 + dz * t); wgrp.add(post); } }
-  const coveredPt = (px, pz) => ALLRECTS.some((r) => px >= r.x0 - 0.05 && px <= r.x1 + 0.05 && pz >= r.z0 - 0.05 && pz <= r.z1 + 0.05);
+  const inRect = (r, px, pz) => px >= r.x0 - 0.05 && px <= r.x1 + 0.05 && pz >= r.z0 - 0.05 && pz <= r.z1 + 0.05;
+  // a point is "covered" if a road OR a lorong lane sits there — so the spine
+  // railings open up wherever a street/house row joins (no fenced-off houses).
+  const coveredPt = (px, pz) => ALLRECTS.some((r) => inRect(r, px, pz)) || streets.some((r) => inRect(r, px, pz));
   // railings are built AFTER the titian bridges (below), so we can leave an
   // opening in the deck rail wherever a bridge joins — no fenced-off houses.
   function buildRailings(gaps) {
@@ -153,54 +157,48 @@ export function showKampong(audio, { mission, onResult } = {}) {
   house(-16, -42, 0.2, HC[4], 5, 4.5, 3, false); house(16, -42, -0.2, HC[0], 5, 4.5, 3, false);
   const HAUNTED_X = -58, HAUNTED_Z = 26; house(HAUNTED_X, HAUNTED_Z, 0.1, 0x3a4a6a, 4.2, 4.2, 2.8, false); // the "haunted" blue house in the NW district (stash 1)
 
-  // ---- the sprawl (instanced, ~5× area) ----------------------------------
+  // ---- the sprawl: orderly ROWS of houses lining a grid of titian "streets"
+  // (lorong), like the real Kampong Ayer satellite. Every lane is a walkable
+  // boardwalk; houses front onto it in neat rows; the lanes intersect one
+  // another and cross the central spine, so the whole village is one network.
   const matCache = new Map(); const tmat = (c) => { let m = matCache.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMP }); matCache.set(c, m); } return m; };
   const ROOFS = [0xb5483b, 0xc85a3a, 0x4f6f8a, 0x8a8f93, 0xd9695a, 0x9a5a3a, 0x5f7f6a], WALLS = [0xe3ddcf, 0xd8cdb6, 0xc9b79a, 0xb9d0d8, 0xe0c8a8, 0xcfd6cf];
-  const nearWalk = (x, z, pad = 6) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
   const HW = 3.4, HH = 2.3, houseXf = [];
-  function clusterPlan(cx, cz, hw, hd, sp) { for (let x = cx - hw; x <= cx + hw; x += sp) for (let z = cz - hd; z <= cz + hd; z += sp) { const px = x + rand(-sp * 0.32, sp * 0.32), pz = z + rand(-sp * 0.32, sp * 0.32); if (nearWalk(px, pz, 6) || Math.hypot(px, pz) > 250) continue; houseXf.push({ x: px, z: pz, rot: rand(0, 6.28), sc: rand(0.8, 1.2), wi: (Math.random() * WALLS.length) | 0, ri: (Math.random() * ROOFS.length) | 0 }); } }
-  clusterPlan(-52, 30, 22, 18, 7); clusterPlan(52, 30, 22, 18, 7); clusterPlan(0, 70, 46, 14, 7);
-  clusterPlan(-64, -2, 24, 28, 7); clusterPlan(64, -2, 24, 28, 7);
-  clusterPlan(-56, -42, 24, 20, 7); clusterPlan(56, -42, 24, 20, 7);
-  clusterPlan(-130, 12, 30, 80, 9); clusterPlan(130, 12, 30, 80, 9);
-  clusterPlan(-110, 92, 50, 20, 9); clusterPlan(110, 92, 50, 20, 9);
-  clusterPlan(-110, -96, 50, 20, 9); clusterPlan(110, -96, 50, 20, 9);
-  clusterPlan(0, 140, 95, 18, 9); clusterPlan(0, -170, 95, 18, 9);
+  const onRect = (x, z, pad) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
+  function placeHouse(x, z, rot) {
+    if (Math.hypot(x, z) > 232) return;                 // stay within the village footprint
+    if (onRect(x, z, 2.5)) return;                      // keep the gameplay plazas/spine clear
+    for (const h of houseXf) if (Math.abs(h.x - x) < 4.4 && Math.abs(h.z - z) < 4.4) return; // no overlaps
+    houseXf.push({ x, z, rot, sc: rand(0.86, 1.12), wi: (Math.random() * WALLS.length) | 0, ri: (Math.random() * ROOFS.length) | 0 });
+  }
+  const LANE = 1.9;  // lane half-width
+  // a lorong: a straight walkable boardwalk with a neat row of houses fronting
+  // each side (decked, added to `streets`, rasterized + rail-opened later).
+  function street(x0, z0, x1, z1) {
+    const horiz = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+    const r = { x0: Math.min(x0, x1) - LANE, x1: Math.max(x0, x1) + LANE, z0: Math.min(z0, z1) - LANE, z1: Math.max(z0, z1) + LANE };
+    streets.push(r); deck(r, 9);
+    const len = horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0); const n = Math.max(1, Math.round(len / 5.4)), off = LANE + 2.1;
+    for (let i = 0; i <= n; i++) { const t = i / n, lx = x0 + (x1 - x0) * t, lz = z0 + (z1 - z0) * t; for (const s of [-1, 1]) placeHouse(horiz ? lx : lx + s * off, horiz ? lz + s * off : lz, horiz ? (s > 0 ? 0 : Math.PI) : s * Math.PI / 2); }
+  }
+  // the central lorong grid: verticals + horizontals that intersect one another
+  // and overlap the spine (B_HUB / BR_AB / hubs) → fully connected, walkable.
+  for (const x of [-86, -58, -30, 30, 58, 86]) street(x, -52, x, 94);
+  for (const z of [-46, -20, 8, 34, 60, 86]) street(-100, z, 100, z);
+  street(0, 50, 0, 94);   // tie the north rows down to the spine's start pier
+  // far-bank rows beyond the boat gate (rasterized only once the boat is built)
+  for (const x of [-16, 16]) street(x, -150, x, -96);
+  for (const z of [-128, -104]) street(-46, z, 46, z);
+
   const dummy = new THREE.Object3D();
   function buildInst(geo, mat, list) { const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = m.receiveShadow = false; list.forEach((h, i) => { dummy.position.set(h.x, 0, h.z); dummy.rotation.set(0, h.rot, 0); dummy.scale.setScalar(h.sc); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); }); m.instanceMatrix.needsUpdate = true; wgrp.add(m); }
   const baseGeo = new THREE.BoxGeometry(HW + 0.5, 1.6, HW + 0.5);
   const wallGeo = new THREE.BoxGeometry(HW, HH, HW); wallGeo.translate(0, 1.0 + HH / 2, 0);
   const roofGeo = new THREE.CylinderGeometry(0.01, HW * 0.8, 1.3, 4); roofGeo.rotateY(Math.PI / 4); roofGeo.translate(0, 1.0 + HH + 0.55, 0);
   if (houseXf.length) { buildInst(baseGeo, tmat(0x6e4f30), houseXf); for (let w = 0; w < WALLS.length; w++) { const s = houseXf.filter((h) => h.wi === w); if (s.length) buildInst(wallGeo, tmat(WALLS[w]), s); } for (let r = 0; r < ROOFS.length; r++) { const s = houseXf.filter((h) => h.ri === r); if (s.length) buildInst(roofGeo, tmat(ROOFS[r]), s); } }
-  // titian: a plank walkway from every house to the nearest road — or, if deep
-  // in a cluster, to its nearest neighbour — so the whole village is connected.
-  const conn = [], attach = [];
-  function nearestRoad(hx, hz) { let best = 1e9, bx = hx, bz = hz; for (const r of ALLRECTS) { const cx = clamp(hx, r.x0, r.x1), cz = clamp(hz, r.z0, r.z1); const d = Math.hypot(cx - hx, cz - hz); if (d < best) { best = d; bx = cx; bz = cz; } } return { d: best, x: bx, z: bz }; }
-  // distance-to-road for every house, then link each house toward the road —
-  // directly if close, else via the nearest house that is CLOSER to a road.
-  // This forms bridge-chains that always reach the network → no orphans.
-  for (const h of houseXf) { const r = nearestRoad(h.x, h.z); h.dr = r.d; h.rx = r.x; h.rz = r.z; }
-  for (const h of houseXf) {
-    let tx, tz, td, toRoad = false;
-    if (h.dr <= 22) { tx = h.rx; tz = h.rz; td = h.dr; toRoad = true; }
-    else { let bn = 1e9, bo = null; for (const o of houseXf) { if (o === h || o.dr >= h.dr - 0.5) continue; const d = Math.hypot(o.x - h.x, o.z - h.z); if (d < bn) { bn = d; bo = o; } } if (bo && bn <= 30) { tx = bo.x; tz = bo.z; td = bn; } else { tx = h.rx; tz = h.rz; td = h.dr; toRoad = true; } }
-    if (td < 1.4) continue;
-    conn.push({ mx: (h.x + tx) / 2, mz: (h.z + tz) / 2, ang: Math.atan2(tz - h.z, tx - h.x), len: td });
-    if (toRoad) attach.push({ x: tx, z: tz });   // bridge mouth on a road → leave a rail opening here
-  }
-  // bridges: deck-level, road-width planks with little side rails (so they read
-  // as proper connecting boardwalks, like the main roads)
-  if (conn.length) {
-    const plankGeo = new THREE.BoxGeometry(1, 0.3, 1.4); const cm = new THREE.InstancedMesh(plankGeo, tmat(0xc79a5e), conn.length); cm.castShadow = false; cm.receiveShadow = true;
-    const railGeo = new THREE.BoxGeometry(1, 0.12, 0.1); const cmR = new THREE.InstancedMesh(railGeo, tmat(0xa97c43), conn.length * 2); cmR.castShadow = false;
-    conn.forEach((c, i) => {
-      dummy.position.set(c.mx, DECK_Y - 0.04, c.mz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix);
-      for (const side of [-1, 1]) { const ox = -Math.sin(c.ang) * 0.7 * side, oz = Math.cos(c.ang) * 0.7 * side; dummy.position.set(c.mx + ox, DECK_Y + 0.4, c.mz + oz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cmR.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix); }
-    });
-    cm.instanceMatrix.needsUpdate = true; cmR.instanceMatrix.needsUpdate = true; wgrp.add(cm); wgrp.add(cmR);
-  }
-  // now lay the deck-edge railings, leaving an OPENING wherever a bridge joins
-  buildRailings(attach);
+  // spine railings: coveredPt now counts the lorong lanes too, so the rail opens
+  // wherever a street or house row adjoins — no fenced-off houses, every row walk-on.
+  buildRailings([]);
 
   // ---- walkability grid: roads + titian planks + house platforms are all
   // walkable (O(1) lookup). Far kampong cells (z < -57) unlock with the boat.
@@ -211,7 +209,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const markRect = (r) => { for (let x = r.x0; x <= r.x1; x += GCELL) for (let z = r.z0; z <= r.z1; z += GCELL) { const i = gidx(x, z); if (i >= 0) grid[i] = 1; } };
   const markDisc = (x, z, rad) => { for (let dx = -rad; dx <= rad; dx += GCELL) for (let dz = -rad; dz <= rad; dz += GCELL) if (dx * dx + dz * dz <= rad * rad) { const i = gidx(x + dx, z + dz); if (i >= 0) grid[i] = 1; } };
   const markPlank = (mx, mz, ang, len, wid) => { const ca = Math.cos(ang), sa = Math.sin(ang); for (let u = -len / 2; u <= len / 2; u += GCELL) for (let v = -wid / 2; v <= wid / 2; v += GCELL) { const i = gidx(mx + ca * u - sa * v, mz + sa * u + ca * v); if (i >= 0) grid[i] = 1; } };
-  function rasterize(far) { const ok = (z) => far || z >= -57; for (const r of ALLRECTS) if (ok((r.z0 + r.z1) / 2)) markRect(r); for (const c of conn) if (ok(c.mz)) markPlank(c.mx, c.mz, c.ang, c.len, 1.8); for (const h of houseXf) if (ok(h.z)) markDisc(h.x, h.z, 3.8); }
+  function rasterize(far) { const ok = (z) => far || z >= -57; for (const r of ALLRECTS) if (ok((r.z0 + r.z1) / 2)) markRect(r); for (const r of streets) if (ok((r.z0 + r.z1) / 2)) markRect(r); for (const h of houseXf) if (ok(h.z)) markDisc(h.x, h.z, 3.8); }
   rasterize(false);
 
   // ---- hubs + landmark labels --------------------------------------------
@@ -459,7 +457,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     confront: () => confront(),
     walkable: (x, z) => walkableAt(x, z),
     houses: () => houseXf.length,
-    nearestHouseTo: (x, z) => { let bn = 1e9, bh = null; for (const h of houseXf) { const d = Math.hypot(h.x - x, h.z - z); if (d < bn) { bn = d; bh = h; } } return bh ? { x: +bh.x.toFixed(1), z: +bh.z.toFixed(1), dr: +bh.dr.toFixed(1) } : null; },
+    nearestHouseTo: (x, z) => { let bn = 1e9, bh = null; for (const h of houseXf) { const d = Math.hypot(h.x - x, h.z - z); if (d < bn) { bn = d; bh = h; } } return bh ? { x: +bh.x.toFixed(1), z: +bh.z.toFixed(1), d: +bn.toFixed(1) } : null; },
     reach: (tx, tz) => { const si = gidx(0, 46), ti = gidx(tx, tz); if (si < 0 || ti < 0 || grid[si] !== 1 || grid[ti] !== 1) return false; const seen = new Uint8Array(grid.length); const stack = [si]; seen[si] = 1; while (stack.length) { const c = stack.pop(); if (c === ti) return true; const cx = c % GW; const cand = [[c + 1, cx + 1 < GW], [c - 1, cx > 0], [c + GW, true], [c - GW, true]]; for (const [ni, okk] of cand) { if (okk && ni >= 0 && ni < grid.length && !seen[ni] && grid[ni] === 1) { seen[ni] = 1; stack.push(ni); } } } return false; },
   };
   return overlay;

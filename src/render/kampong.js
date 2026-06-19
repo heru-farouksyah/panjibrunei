@@ -334,23 +334,10 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (helper) { e.quiz = QUIZZES[_qz++ % QUIZZES.length]; e.reward = 4 + ((Math.random() * 3) | 0); e.line = 'Boleh tolong sat? I have a teaser for you…'; }
     kids.push(e); return e;
   }
-  for (const [x, z] of [[8, 30], [-7, 26], [7, 2], [-9, -2], [8, -38], [-8, -42]]) makeSim(x, z, 0.66, 3.5, 'kid'); // children near the start
-  // a busy kampong: scatter unique villagers along the lorong lanes, everywhere
-  const _vchosen = []; let _crowd = 0;
-  for (const r of streets) {
-    const cz = (r.z0 + r.z1) / 2; if (cz < -57) continue;            // skip the boat-gated far lanes
-    const horiz = (r.x1 - r.x0) > (r.z1 - r.z0); const cx = (r.x0 + r.x1) / 2;
-    const a0 = (horiz ? r.x0 : r.z0) + 8, a1 = (horiz ? r.x1 : r.z1) - 8;
-    for (let a = a0; a <= a1; a += 13) {
-      const x = horiz ? a : cx, z = horiz ? cz : a;
-      if (Math.hypot(x, z) < 8 || _crowd >= 26) continue;            // not on the start pier; cap the crowd
-      if (_vchosen.some(([px, pz]) => Math.hypot(px - x, pz - z) < 12)) continue; // spread them out
-      _vchosen.push([x, z]); _crowd++;
-      const mood = (_crowd % 6 === 3) ? 'help' : (Math.random() < 0.33 ? 'grump' : 'ok');  // ~4 helpers, ~1/3 grumpy
-      makeSim(x, z, 1, 2.4, mood);
-    }
-  }
-  const helpers = kids.filter((k) => k.helper);
+  // children playing — flanking the start area (off the central spine)
+  for (const [x, z] of [[16, 32], [-16, 28], [20, 4], [-20, 0], [16, -36], [-18, -40]]) makeSim(x, z, 0.66, 3.0, 'kid');
+  // NOTE: the strolling adult crowd is spawned AFTER the informants & vendors
+  // exist (so it can avoid them) — see "spread the crowd" below.
   function buildCat(c) { const g = new THREE.Group(); const b = toon(new THREE.CapsuleGeometry(0.17, 0.4, 4, 8), c, { thickness: 0.02 }); b.rotation.z = Math.PI / 2; place(b, 0, 0.26, 0); g.add(b); const hd = toon(new THREE.SphereGeometry(0.16, 10, 9), c, { thickness: 0.02 }); place(hd, 0.33, 0.38, 0); g.add(hd); const tl = toon(new THREE.CylinderGeometry(0.03, 0.05, 0.5, 6), c, { thickness: 0.012 }); place(tl, -0.36, 0.4, 0); tl.rotation.z = 0.8; g.add(tl); return g; }
   function spawnCat(hx, hz, c) { const g = buildCat(c); g.position.set(hx, DECK_Y, hz); wgrp.add(g); cats.push({ group: g, hx, hz, tx: hx, tz: hz, t: rand(1, 4), spd: rand(0.8, 1.3), meowCd: rand(4, 10) }); }
   spawnCat(10, 28, 0xd98b46); spawnCat(-12, 2, 0x8a8a8a); spawnCat(11, -38, 0x3a3a3a); spawnCat(60, 34, 0xc9b79a); spawnCat(-60, -20, 0x4a4a4a); spawnCat(34, 60, 0xd98b46);
@@ -460,6 +447,20 @@ export function showKampong(audio, { mission, onResult } = {}) {
   vendorStall(-98, 34, 'Gerai Hjh Mona', 'Penjual kain', 'songket and sampin brought from upriver', false);
   vendorStall(86, -50, 'Warung Kak Ani', 'Penjual sayur', 'nasi katok, sayur and buah by the school jetty', true);
   vendorStall(-86, -50, 'Gerai Pak Usop', 'Penjual belacan', 'belacan and budu — you can smell it from afar!', true);
+
+  // ---- spread the strolling crowd EVENLY across the district lane-grid -----
+  // one villager per lane-intersection (no central-spine pile-up), skipping the
+  // start area and any cell already taken by an informant or a vendor.
+  const occupied = (x, z, r) => informants.some((i) => Math.hypot(i.gx - x, i.gz - z) < r) || markets.some((m) => Math.hypot(m.x - x, m.z - z) < r);
+  let _crowd = 0;
+  // 6 columns × 6 rows (3 rows south of centre, 3 north) → even coverage of every district
+  for (const z of [-50, -30, -10, 12, 36, 64]) for (const x of [-86, -58, -30, 30, 58, 86]) {
+    if (_crowd >= 30) break;
+    if (Math.hypot(x, z) < 16 || occupied(x, z, 9)) continue;        // keep the start + NPC spots clear
+    const mood = (_crowd % 6 === 2) ? 'help' : (_crowd % 3 === 0 ? 'grump' : 'ok');  // ~5 helpers, ~1/3 grumpy
+    makeSim(x + rand(-2.5, 2.5), z + rand(-2.5, 2.5), 1, 2.4, mood); _crowd++;
+  }
+  const helpers = kids.filter((k) => k.helper);
 
   // ---- UI helpers --------------------------------------------------------
   const marketsNeeded = () => Math.max(1, markets.length - 1);   // visit all but one
@@ -686,6 +687,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     closeIntro: () => { introEl.hidden = true; introOpen = false; },
     clues: () => clueLog.length,
     openJournal: () => { openJournal(); return clueLog.length; },
+    simPts: () => kids.filter((k) => k.name).map((k) => [Math.round(k.group.position.x), Math.round(k.group.position.z)]),
     marketPts: () => markets.map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
     infPts: () => informants.map((i) => [i.name, +i.x.toFixed(1), +i.z.toFixed(1)]),
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },

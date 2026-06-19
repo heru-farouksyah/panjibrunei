@@ -163,23 +163,26 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // another and cross the central spine, so the whole village is one network.
   const matCache = new Map(); const tmat = (c) => { let m = matCache.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMP }); matCache.set(c, m); } return m; };
   const ROOFS = [0xb5483b, 0xc85a3a, 0x4f6f8a, 0x8a8f93, 0xd9695a, 0x9a5a3a, 0x5f7f6a], WALLS = [0xe3ddcf, 0xd8cdb6, 0xc9b79a, 0xb9d0d8, 0xe0c8a8, 0xcfd6cf];
-  const HW = 3.4, HH = 2.3, houseXf = [];
+  const HW = 3.4, HH = 2.3, houseXf = [], houseCands = [];
   const onRect = (x, z, pad) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
+  const onStreet = (x, z, pad = 1.85) => streets.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
   function placeHouse(x, z, rot) {
     if (Math.hypot(x, z) > 232) return;                 // stay within the village footprint
     if (onRect(x, z, 2.5)) return;                      // keep the gameplay plazas/spine clear
+    if (onStreet(x, z)) return;                         // never drop a house onto a lane — it would block the road
     for (const h of houseXf) if (Math.abs(h.x - x) < 4.4 && Math.abs(h.z - z) < 4.4) return; // no overlaps
     houseXf.push({ x, z, rot, sc: rand(0.86, 1.12), wi: (Math.random() * WALLS.length) | 0, ri: (Math.random() * ROOFS.length) | 0 });
   }
   const LANE = 1.9;  // lane half-width
-  // a lorong: a straight walkable boardwalk with a neat row of houses fronting
-  // each side (decked, added to `streets`, rasterized + rail-opened later).
+  // a lorong: a straight walkable boardwalk with a row of houses fronting each
+  // side. Positions are COLLECTED here and placed in a 2nd pass (below), once
+  // every lane exists — so a row never lands on a crossing lane (= blocked road).
   function street(x0, z0, x1, z1) {
     const horiz = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
     const r = { x0: Math.min(x0, x1) - LANE, x1: Math.max(x0, x1) + LANE, z0: Math.min(z0, z1) - LANE, z1: Math.max(z0, z1) + LANE };
     streets.push(r); deck(r, 9);
     const len = horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0); const n = Math.max(1, Math.round(len / 5.4)), off = LANE + 2.1;
-    for (let i = 0; i <= n; i++) { const t = i / n, lx = x0 + (x1 - x0) * t, lz = z0 + (z1 - z0) * t; for (const s of [-1, 1]) placeHouse(horiz ? lx : lx + s * off, horiz ? lz + s * off : lz, horiz ? (s > 0 ? 0 : Math.PI) : s * Math.PI / 2); }
+    for (let i = 0; i <= n; i++) { const t = i / n, lx = x0 + (x1 - x0) * t, lz = z0 + (z1 - z0) * t; for (const s of [-1, 1]) houseCands.push({ x: horiz ? lx : lx + s * off, z: horiz ? lz + s * off : lz, rot: horiz ? (s > 0 ? 0 : Math.PI) : s * Math.PI / 2 }); }
   }
   // the central lorong grid: verticals + horizontals that intersect one another
   // and overlap the spine (B_HUB / BR_AB / hubs) → fully connected, walkable.
@@ -189,6 +192,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // far-bank rows beyond the boat gate (rasterized only once the boat is built)
   for (const x of [-16, 16]) street(x, -150, x, -96);
   for (const z of [-128, -104]) street(-46, z, 46, z);
+  // 2nd pass: place the house rows now that every lane exists, dropping any that
+  // would sit on a lane (e.g. at crossings) so no house blocks the road.
+  for (const cd of houseCands) placeHouse(cd.x, cd.z, cd.rot);
 
   const dummy = new THREE.Object3D();
   function buildInst(geo, mat, list) { const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = m.receiveShadow = false; list.forEach((h, i) => { dummy.position.set(h.x, 0, h.z); dummy.rotation.set(0, h.rot, 0); dummy.scale.setScalar(h.sc); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); }); m.instanceMatrix.needsUpdate = true; wgrp.add(m); }
@@ -241,12 +247,16 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (sampin && !female) { const tex = sampinTex === 'plaid' ? plaid : songket; const sam = toon(new THREE.CylinderGeometry(0.34, 0.39, 0.5, 16), sampinColor, { thickness: 0.025, map: tex }); place(sam, 0, 0.96, 0); g.add(sam); }
     const headM = toon(new THREE.SphereGeometry(0.27, 16, 14), skin, { thickness: 0.03 }); place(headM, 0, 1.96, 0); g.add(headM);
     if (head === 'songkok') { const cap = toon(new THREE.CylinderGeometry(0.27, 0.29, 0.3, 16), hatColor, { thickness: 0.025 }); place(cap, 0, 2.15, 0); g.add(cap); }
-    else if (head === 'tudung') { const tud = toon(new THREE.SphereGeometry(0.34, 16, 14), hatColor, { thickness: 0.03 }); tud.scale.set(1.05, 1.08, 1.05); place(tud, 0, 2.0, 0); g.add(tud); const dr = toon(new THREE.CylinderGeometry(0.36, 0.45, 1.0, 16, 1, true), hatColor, { outline: false }); place(dr, 0, 1.5, 0); g.add(dr); } // jilbab: covers hair + drapes over the shoulders
+    else if (head === 'tudung') { // hijab: frames the face, drapes over the chest, with a lace-trimmed hem
+      const crown = toon(new THREE.SphereGeometry(0.36, 18, 16), hatColor, { thickness: 0.03 }); crown.scale.set(1.1, 1.14, 1.1); place(crown, 0, 2.0, -0.16); g.add(crown);
+      const drape = toon(new THREE.CylinderGeometry(0.33, 0.52, 1.12, 20, 1, true), hatColor, { outline: false }); place(drape, 0, 1.45, 0); g.add(drape);
+      const trim = toon(new THREE.TorusGeometry(0.5, 0.055, 8, 26), 0xf3e9e2, { outline: false }); trim.rotation.x = Math.PI / 2; place(trim, 0, 0.92, 0.02); g.add(trim);
+    }
     else if (head === 'headscarf') { const wr = toon(new THREE.SphereGeometry(0.3, 16, 12), 0x7a5f42, { thickness: 0.03, map: plaid }); wr.scale.set(1.06, 0.72, 1.06); place(wr, 0, 2.12, 0); g.add(wr); const kn = toon(new THREE.BoxGeometry(0.18, 0.16, 0.16), 0x5a4632, { thickness: 0.02, map: plaid }); place(kn, 0, 2.22, -0.26); g.add(kn); }
     else { const hair = toon(new THREE.SphereGeometry(0.29, 16, 12), 0x35251c, { thickness: 0.03 }); hair.scale.set(1, 0.85, 1); place(hair, 0, 2.0, -0.02); g.add(hair); }
     return { group: g, legs, arms };
   }
-  const OUTFITS = [{ baju: 0xf2efe6, head: 'hair', sampin: true }, { baju: 0xf2efe6, head: 'songkok', sampin: true }, { baju: 0x244f8a, head: 'songkok' }, { baju: 0x8a2f3a, head: 'songkok', sampin: true }, { baju: 0x2f8f6a, head: 'songkok', sampin: true }, { baju: 0xe7b2c2, hatColor: 0xd9d2e6, sampinColor: 0x8a5a2a, head: 'tudung', female: true }, { baju: 0x3a6f8a, hatColor: 0x213a5a, head: 'songkok' }, { baju: 0xd8cdb6, seluar: 0x2c2c2c, tee: true, head: 'hair' }, { baju: 0x6a4f8a, head: 'songkok', sampin: true }, { baju: 0xf0e6d0, hatColor: 0xe8e0ee, sampinColor: 0x4f6f5a, head: 'tudung', female: true }];
+  const OUTFITS = [{ baju: 0xf2efe6, head: 'hair', sampin: true }, { baju: 0xf2efe6, head: 'songkok', sampin: true }, { baju: 0x244f8a, head: 'songkok' }, { baju: 0x8a2f3a, head: 'songkok', sampin: true }, { baju: 0x2f8f6a, head: 'songkok', sampin: true }, { baju: 0xf0c419, hatColor: 0xcf2f2f, sampinColor: 0x6a4a2a, head: 'tudung', female: true }, { baju: 0x3a6f8a, hatColor: 0x213a5a, head: 'songkok' }, { baju: 0xd8cdb6, seluar: 0x2c2c2c, tee: true, head: 'hair' }, { baju: 0x6a4f8a, head: 'songkok', sampin: true }, { baju: 0x4f8f9a, hatColor: 0xc0392b, sampinColor: 0x4f6f5a, head: 'tudung', female: true }];
   const outfit = (i) => ({ ...OUTFITS[((i % OUTFITS.length) + OUTFITS.length) % OUTFITS.length] });
 
   // ---- player ------------------------------------------------------------

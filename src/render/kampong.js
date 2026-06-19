@@ -130,7 +130,12 @@ export function showKampong(audio, { mission, onResult } = {}) {
   ALLRECTS.forEach(deck);
   function railing(x0, z0, x1, z1) { const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), ang = Math.atan2(dz, dx); if (len < 0.8) return; const rail = toon(new THREE.BoxGeometry(len, 0.12, 0.12), 0xb98a4e, { thickness: 0.02 }); rail.position.set((x0 + x1) / 2, DECK_Y + 0.85, (z0 + z1) / 2); rail.rotation.y = -ang; wgrp.add(rail); const n = Math.max(1, Math.floor(len / 2)); for (let i = 0; i <= n; i++) { const t = i / n; const post = toon(new THREE.BoxGeometry(0.14, 0.95, 0.14), 0xa97c43, { thickness: 0.02 }); place(post, x0 + dx * t, DECK_Y + 0.45, z0 + dz * t); wgrp.add(post); } }
   const coveredPt = (px, pz) => ALLRECTS.some((r) => px >= r.x0 - 0.05 && px <= r.x1 + 0.05 && pz >= r.z0 - 0.05 && pz <= r.z1 + 0.05);
-  for (const r of ALLRECTS) { const sides = [{ h: 1, f: r.z0, lo: r.x0, hi: r.x1, ox: 0, oz: -0.6 }, { h: 1, f: r.z1, lo: r.x0, hi: r.x1, ox: 0, oz: 0.6 }, { h: 0, f: r.x0, lo: r.z0, hi: r.z1, ox: -0.6, oz: 0 }, { h: 0, f: r.x1, lo: r.z0, hi: r.z1, ox: 0.6, oz: 0 }]; for (const sd of sides) { const len = sd.hi - sd.lo, n = Math.max(1, Math.round(len)); let run = null; for (let i = 0; i < n; i++) { const tm = sd.lo + len * ((i + 0.5) / n); const mx = sd.h ? tm : sd.f, mz = sd.h ? sd.f : tm; const open = !coveredPt(mx + sd.ox, mz + sd.oz); if (open && run === null) run = sd.lo + len * (i / n); if (!open && run !== null) { sd.h ? railing(run, sd.f, sd.lo + len * (i / n), sd.f) : railing(sd.f, run, sd.f, sd.lo + len * (i / n)); run = null; } } if (run !== null) { sd.h ? railing(run, sd.f, sd.hi, sd.f) : railing(sd.f, run, sd.f, sd.hi); } } }
+  // railings are built AFTER the titian bridges (below), so we can leave an
+  // opening in the deck rail wherever a bridge joins — no fenced-off houses.
+  function buildRailings(gaps) {
+    const nearGap = (x, z) => gaps.some((g) => Math.abs(g.x - x) < 2.6 && Math.abs(g.z - z) < 2.6);
+    for (const r of ALLRECTS) { const sides = [{ h: 1, f: r.z0, lo: r.x0, hi: r.x1, ox: 0, oz: -0.6 }, { h: 1, f: r.z1, lo: r.x0, hi: r.x1, ox: 0, oz: 0.6 }, { h: 0, f: r.x0, lo: r.z0, hi: r.z1, ox: -0.6, oz: 0 }, { h: 0, f: r.x1, lo: r.z0, hi: r.z1, ox: 0.6, oz: 0 }]; for (const sd of sides) { const len = sd.hi - sd.lo, n = Math.max(1, Math.round(len)); let run = null; for (let i = 0; i < n; i++) { const tm = sd.lo + len * ((i + 0.5) / n); const mx = sd.h ? tm : sd.f, mz = sd.h ? sd.f : tm; const open = !coveredPt(mx + sd.ox, mz + sd.oz) && !nearGap(mx, mz); if (open && run === null) run = sd.lo + len * (i / n); if (!open && run !== null) { sd.h ? railing(run, sd.f, sd.lo + len * (i / n), sd.f) : railing(sd.f, run, sd.f, sd.lo + len * (i / n)); run = null; } } if (run !== null) { sd.h ? railing(run, sd.f, sd.hi, sd.f) : railing(sd.f, run, sd.f, sd.hi); } } }
+  }
 
   // ---- houses ------------------------------------------------------------
   const HC = [0x4f9ad0, 0xe0b24a, 0xd9695a, 0x6cae6a, 0xc88fbf, 0xd98b46];
@@ -169,16 +174,33 @@ export function showKampong(audio, { mission, onResult } = {}) {
   if (houseXf.length) { buildInst(baseGeo, tmat(0x6e4f30), houseXf); for (let w = 0; w < WALLS.length; w++) { const s = houseXf.filter((h) => h.wi === w); if (s.length) buildInst(wallGeo, tmat(WALLS[w]), s); } for (let r = 0; r < ROOFS.length; r++) { const s = houseXf.filter((h) => h.ri === r); if (s.length) buildInst(roofGeo, tmat(ROOFS[r]), s); } }
   // titian: a plank walkway from every house to the nearest road — or, if deep
   // in a cluster, to its nearest neighbour — so the whole village is connected.
-  const conn = [];
+  const conn = [], attach = [];
   function nearestRoad(hx, hz) { let best = 1e9, bx = hx, bz = hz; for (const r of ALLRECTS) { const cx = clamp(hx, r.x0, r.x1), cz = clamp(hz, r.z0, r.z1); const d = Math.hypot(cx - hx, cz - hz); if (d < best) { best = d; bx = cx; bz = cz; } } return { d: best, x: bx, z: bz }; }
+  // distance-to-road for every house, then link each house toward the road —
+  // directly if close, else via the nearest house that is CLOSER to a road.
+  // This forms bridge-chains that always reach the network → no orphans.
+  for (const h of houseXf) { const r = nearestRoad(h.x, h.z); h.dr = r.d; h.rx = r.x; h.rz = r.z; }
   for (const h of houseXf) {
-    const road = nearestRoad(h.x, h.z); let tx, tz, td;
-    if (road.d <= 30) { tx = road.x; tz = road.z; td = road.d; }
-    else { let bn = 1e9, nx = h.x, nz = h.z; for (const o of houseXf) { if (o === h) continue; const d = Math.hypot(o.x - h.x, o.z - h.z); if (d < bn) { bn = d; nx = o.x; nz = o.z; } } if (bn > 16) continue; tx = nx; tz = nz; td = bn; }
+    let tx, tz, td, toRoad = false;
+    if (h.dr <= 22) { tx = h.rx; tz = h.rz; td = h.dr; toRoad = true; }
+    else { let bn = 1e9, bo = null; for (const o of houseXf) { if (o === h || o.dr >= h.dr - 0.5) continue; const d = Math.hypot(o.x - h.x, o.z - h.z); if (d < bn) { bn = d; bo = o; } } if (bo && bn <= 30) { tx = bo.x; tz = bo.z; td = bn; } else { tx = h.rx; tz = h.rz; td = h.dr; toRoad = true; } }
     if (td < 1.4) continue;
     conn.push({ mx: (h.x + tx) / 2, mz: (h.z + tz) / 2, ang: Math.atan2(tz - h.z, tx - h.x), len: td });
+    if (toRoad) attach.push({ x: tx, z: tz });   // bridge mouth on a road → leave a rail opening here
   }
-  if (conn.length) { const plankGeo = new THREE.BoxGeometry(1, 0.2, 0.7); const cm = new THREE.InstancedMesh(plankGeo, tmat(0xb98a4e), conn.length); cm.castShadow = false; cm.receiveShadow = true; conn.forEach((c, i) => { dummy.position.set(c.mx, DECK_Y - 0.12, c.mz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); }); cm.instanceMatrix.needsUpdate = true; wgrp.add(cm); }
+  // bridges: deck-level, road-width planks with little side rails (so they read
+  // as proper connecting boardwalks, like the main roads)
+  if (conn.length) {
+    const plankGeo = new THREE.BoxGeometry(1, 0.3, 1.4); const cm = new THREE.InstancedMesh(plankGeo, tmat(0xc79a5e), conn.length); cm.castShadow = false; cm.receiveShadow = true;
+    const railGeo = new THREE.BoxGeometry(1, 0.12, 0.1); const cmR = new THREE.InstancedMesh(railGeo, tmat(0xa97c43), conn.length * 2); cmR.castShadow = false;
+    conn.forEach((c, i) => {
+      dummy.position.set(c.mx, DECK_Y - 0.04, c.mz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix);
+      for (const side of [-1, 1]) { const ox = -Math.sin(c.ang) * 0.7 * side, oz = Math.cos(c.ang) * 0.7 * side; dummy.position.set(c.mx + ox, DECK_Y + 0.4, c.mz + oz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cmR.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix); }
+    });
+    cm.instanceMatrix.needsUpdate = true; cmR.instanceMatrix.needsUpdate = true; wgrp.add(cm); wgrp.add(cmR);
+  }
+  // now lay the deck-edge railings, leaving an OPENING wherever a bridge joins
+  buildRailings(attach);
 
   // ---- walkability grid: roads + titian planks + house platforms are all
   // walkable (O(1) lookup). Far kampong cells (z < -57) unlock with the boat.
@@ -437,6 +459,8 @@ export function showKampong(audio, { mission, onResult } = {}) {
     confront: () => confront(),
     walkable: (x, z) => walkableAt(x, z),
     houses: () => houseXf.length,
+    nearestHouseTo: (x, z) => { let bn = 1e9, bh = null; for (const h of houseXf) { const d = Math.hypot(h.x - x, h.z - z); if (d < bn) { bn = d; bh = h; } } return bh ? { x: +bh.x.toFixed(1), z: +bh.z.toFixed(1), dr: +bh.dr.toFixed(1) } : null; },
+    reach: (tx, tz) => { const si = gidx(0, 46), ti = gidx(tx, tz); if (si < 0 || ti < 0 || grid[si] !== 1 || grid[ti] !== 1) return false; const seen = new Uint8Array(grid.length); const stack = [si]; seen[si] = 1; while (stack.length) { const c = stack.pop(); if (c === ti) return true; const cx = c % GW; const cand = [[c + 1, cx + 1 < GW], [c - 1, cx > 0], [c + GW, true], [c - GW, true]]; for (const [ni, okk] of cand) { if (okk && ni >= 0 && ni < grid.length && !seen[ni] && grid[ni] === 1) { seen[ni] = 1; stack.push(ni); } } } return false; },
   };
   return overlay;
 }

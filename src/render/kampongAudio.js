@@ -17,34 +17,35 @@ export class Audio {
     this.ready = true;
     this._ambience();
   }
-  // An ORIGINAL anime-opening-style theme (shounen J-rock energy — not a copy of
-  // any real song): fast rock drums (kick + backbeat snare + driving hats),
-  // power-chord bass over an A-minor i–VI–III–VII progression, and an anthemic
-  // A-minor-pentatonic lead hook. ~160 BPM.
+  // A warm, TRADITIONAL acoustic loop: hand-drum BONGOS (high/low membrane hits
+  // + skin transient) and a fingerpicked GUITAR (plucked strings) over a gentle
+  // C–G–Am–F progression. ~104 BPM. (No drum kit / no synth lead.)
   music({ ambience = true } = {}) {
     if (!this.ready || this._music) return;
     if (!ambience && this._ambGain) this._ambGain.gain.value = 0;
-    const ctx = this.ctx, bpm = 160, st = 60 / bpm / 4;
-    const ROOT = [57, 53, 48, 55], FIFTH = [64, 60, 55, 62];        // Am  F  C  G
-    const PENT = [69, 72, 74, 76, 79, 81];                          // A-minor pentatonic (lead 8ve)
-    const RIFF = [4, -1, 3, -1, 2, 3, 2, 0, -1, 2, -1, 3, 4, -1, 5, 4]; // the hook (indices into PENT)
+    const ctx = this.ctx, bpm = 104, st = 60 / bpm / 4;
+    const PROG = [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]]; // C  G  Am  F triads
     const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
     const bus = ctx.createGain(); bus.gain.value = 0.5; bus.connect(this.master);
     let step = 0, next = ctx.currentTime + 0.06;
-    const kick = (t) => { const o = ctx.createOscillator(); o.frequency.setValueAtTime(155, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.11); const g = ctx.createGain(); g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.18); };
-    const snare = (t) => { const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.2); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1500; const g = ctx.createGain(); g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); s.connect(hp); hp.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.2); };
-    const hat = (t, v) => { const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.04); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 8000; const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04); s.connect(hp); hp.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.05); };
-    const tone = (m, t, dur, type, v) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = mtof(m); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02); };
+    // bongo: pitched membrane (sine with a fast pitch drop) + a short skin transient
+    const bongo = (t, hi) => {
+      const f0 = hi ? 360 : 205; const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(f0 * 1.7, t); o.frequency.exponentialRampToValueAtTime(f0, t + 0.045);
+      const g = ctx.createGain(); g.gain.setValueAtTime(hi ? 0.42 : 0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.2);
+      const s = ctx.createBufferSource(); s.buffer = this._noiseBuf(0.03); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = hi ? 950 : 600; bp.Q.value = 1.2; const ng = ctx.createGain(); ng.gain.setValueAtTime(0.12, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.04); s.connect(bp); bp.connect(ng); ng.connect(bus); s.start(t); s.stop(t + 0.05);
+    };
+    // plucked nylon-guitar string: detuned triangle pair + a soft 2nd harmonic, quick attack, long decay
+    const pluck = (m, t, dur, vol) => { const f = mtof(m); for (const [mult, v, det] of [[1, vol, -5], [1, vol, 6], [2, vol * 0.28, 0]]) { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f * mult; o.detune.value = det; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02); } };
+    const HI = [2, 3, 6, 10, 14, 15], LO = [0, 4, 8, 12], TRE = [2, 4, 6, 10, 12, 14];
     const tick = () => {
       while (next < ctx.currentTime + 0.13) {
-        const s = step % 16, bar = (step >> 4) % 4;
-        if (s === 0 || s === 8 || s === 6 || s === 14) kick(next);   // driving rock kick
-        if (s === 4 || s === 12) snare(next);                        // backbeat
-        if (bar === 3 && s >= 12 && s % 2 === 0) snare(next);         // end-of-loop fill
-        hat(next, s % 4 === 0 ? 0.13 : 0.07);
-        if (s % 2 === 0) { tone(ROOT[bar] - 12, next, st * 1.7, 'sawtooth', 0.2); }            // bass 8ths
-        if (s % 4 === 0) { tone(ROOT[bar], next, st * 1.8, 'sawtooth', 0.13); tone(FIFTH[bar], next, st * 1.8, 'sawtooth', 0.11); } // power chord
-        const li = RIFF[s]; if (li >= 0) tone(PENT[li], next, st * 1.5, 'square', 0.14);        // lead hook
+        const s = step % 16, bar = (step >> 4) % 4, ch = PROG[bar];
+        if (LO.includes(s)) bongo(next, false);
+        if (HI.includes(s)) bongo(next, true);
+        if (s === 0) pluck(ch[0] - 12, next, 0.7, 0.2);              // thumb bass — root
+        else if (s === 8) pluck(ch[1] - 12, next, 0.7, 0.17);        // thumb bass — fifth
+        if (TRE.includes(s)) pluck(ch[TRE.indexOf(s) % 3], next, 0.5, 0.12); // fingerpicked treble
+        if (s === 0 && bar % 2 === 1) pluck(ch[2] + 12, next, 0.9, 0.09);    // gentle high note
         step++; next += st;
       }
     };

@@ -72,12 +72,12 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const rotateEl = document.createElement('div'); rotateEl.className = 'kq-rotate';
   rotateEl.innerHTML = '<div class="ph">📱</div><b>Rotate to landscape</b><small>Kampong Ayer is best explored in landscape — turn your device sideways.</small>';
   overlay.appendChild(rotateEl);
-  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 70, 230);  // far fog → see the sprawl fade out
-  const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 700);
+  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 95, 300);  // far fog → the vast sprawl fades out
+  const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1300);
   const sun = new THREE.DirectionalLight(0xfff3df, 2.1); sun.position.set(-16, 26, 14); sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 1; sun.shadow.camera.far = 150;
   const scam = sun.shadow.camera; scam.left = -70; scam.right = 70; scam.top = 70; scam.bottom = -70; sun.shadow.bias = -0.0004;
-  const sky = skyDome(); sky.scale.setScalar(1.8);
+  const sky = skyDome(); sky.scale.setScalar(2.8);
   scene.add(sun, new THREE.HemisphereLight(0xd6f3fb, 0x4a6f74, 0.9), new THREE.AmbientLight(0xbfe6e2, 0.25), sky);
 
   const wgrp = new THREE.Group(); scene.add(wgrp);
@@ -86,7 +86,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   // ---- water -------------------------------------------------------------
   const rippleTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#2f9fc7'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 3; for (let i = 0; i < 60; i++) { const y = Math.random() * h, x = Math.random() * w, len = 20 + Math.random() * 60; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + len / 2, y - 6, x + len, y); g.stroke(); } }, { repeat: [16, 16] });
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshToonMaterial({ color: 0x39a6cc, gradientMap: RAMP, map: rippleTex, transparent: true, opacity: 0.95 }));
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshToonMaterial({ color: 0x39a6cc, gradientMap: RAMP, map: rippleTex, transparent: true, opacity: 0.95 }));
   water.rotation.x = -Math.PI / 2; water.position.y = -0.2; water.receiveShadow = true; scene.add(water);
 
   // ---- boardwalk: three villages + two bridges ---------------------------
@@ -100,8 +100,13 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const BR_BC = { x0: -3, x1: 3, z0: -26, z1: -12 };     // gated bridge B→C
   const C_HUB = { x0: -14, x1: 14, z0: -44, z1: -24 };
   const C_PIER = { x0: -4, x1: 4, z0: -58, z1: -44 };    // waterfront finish
-  const ALLRECTS = [A_HUB, A_PIER, BR_AB, B_HUB, B_WEST, B_EAST, BR_BC, C_HUB, C_PIER];
-  const WALK = [A_HUB, A_PIER];                          // grows as bridges unlock
+  // open districts off the start (ungated) — room for the bigger map / future game
+  const A_EAST = { x0: 12, x1: 46, z0: 24, z1: 38 };
+  const A_WEST = { x0: -46, x1: -12, z0: 24, z1: 38 };
+  const A_EFAR = { x0: 38, x1: 52, z0: 10, z1: 38 };
+  const A_WFAR = { x0: -52, x1: -38, z0: 10, z1: 38 };
+  const ALLRECTS = [A_HUB, A_PIER, A_EAST, A_WEST, A_EFAR, A_WFAR, BR_AB, B_HUB, B_WEST, B_EAST, BR_BC, C_HUB, C_PIER];
+  const WALK = [A_HUB, A_PIER, A_EAST, A_WEST, A_EFAR, A_WFAR];   // grows as bridges unlock
 
   const plankTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#c79a5e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(90,60,30,0.5)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } g.strokeStyle = 'rgba(120,85,45,0.25)'; for (let i = 0; i < 40; i++) { const y = Math.random() * h; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + (Math.random() - 0.5) * 4); g.stroke(); } }, { repeat: [8, 8] });
   function deck(r) {
@@ -144,38 +149,42 @@ export function showKampong(audio, { mission, onResult } = {}) {
   house(-16, -42, 0.2, HC[4], 5, 4.5, 3, false); house(16, -42, -0.2, HC[0], 5, 4.5, 3, false); house(-9, -46, 0.1, HC[2], 4.5, 4, 2.8, false); house(9, -46, -0.1, HC[1], 4.5, 4, 2.8, false);
   house(-11, -30, 0.1, HC[3], 3.6, 3.6, 2.4); house(11, -32, -0.1, HC[5], 3.6, 3.6, 2.4);
 
-  // ---- the sprawl: a dense sea of decorative stilt houses (cheap, no collision)
-  // packed across the water around the playable spine — the real Kampong Ayer look.
+  // ---- the sprawl: a vast sea of decorative stilt houses, INSTANCED so the
+  // 4×-bigger map stays fast (a handful of draw calls for thousands of houses).
   const matCache = new Map();
   const tmat = (c) => { let m = matCache.get(c); if (!m) { m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMP }); matCache.set(c, m); } return m; };
   const ROOFS = [0xb5483b, 0xc85a3a, 0x4f6f8a, 0x8a8f93, 0xd9695a, 0x9a5a3a, 0x5f7f6a];
   const WALLS = [0xe3ddcf, 0xd8cdb6, 0xc9b79a, 0xb9d0d8, 0xe0c8a8, 0xcfd6cf];
-  const nearWalk = (x, z, pad = 4) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
-  function decoHouse(x, z, rot, sc) {
-    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; g.scale.setScalar(sc); wgrp.add(g);
-    const w = 3.4, h = 2.3, d = 3.4;
-    const base = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 1.6, d + 0.5), tmat(0x6e4f30)); base.position.y = 0.0; g.add(base); // dark stilt block on the water
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), tmat(WALLS[(Math.random() * WALLS.length) | 0])); walls.position.y = 1.0 + h / 2; g.add(walls);
-    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, w * 0.8, 1.3, 4), tmat(ROOFS[(Math.random() * ROOFS.length) | 0])); roof.rotation.y = Math.PI / 4; roof.position.y = 1.0 + h + 0.55; roof.scale.z = d / w; g.add(roof);
-    return g;
-  }
-  // scatter a packed cluster of deco houses over a region, skipping the walkways
-  function cluster(cx, cz, halfW, halfD, spacing) {
+  const nearWalk = (x, z, pad = 5) => ALLRECTS.some((r) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad);
+  const HW = 3.4, HH = 2.3, houseXf = [];
+  function clusterPlan(cx, cz, halfW, halfD, spacing) {
     for (let x = cx - halfW; x <= cx + halfW; x += spacing) for (let z = cz - halfD; z <= cz + halfD; z += spacing) {
-      const px = x + rand(-spacing * 0.3, spacing * 0.3), pz = z + rand(-spacing * 0.3, spacing * 0.3);
-      if (nearWalk(px, pz, 5)) continue;
-      if (Math.hypot(px, pz) > 150) continue;
-      decoHouse(px, pz, rand(0, 6.28), rand(0.8, 1.15));
+      const px = x + rand(-spacing * 0.32, spacing * 0.32), pz = z + rand(-spacing * 0.32, spacing * 0.32);
+      if (nearWalk(px, pz, 6) || Math.hypot(px, pz) > 215) continue;
+      houseXf.push({ x: px, z: pz, rot: rand(0, 6.28), sc: rand(0.8, 1.2), wi: (Math.random() * WALLS.length) | 0, ri: (Math.random() * ROOFS.length) | 0 });
     }
   }
-  // clusters filling the water all around the spine (like the satellite kampong)
-  cluster(-46, 30, 18, 16, 6.5); cluster(46, 30, 18, 16, 6.5);     // flanking village A
-  cluster(0, 56, 26, 12, 6.5);                                      // north of the start
-  cluster(-50, -2, 16, 18, 6.5); cluster(50, -2, 16, 18, 6.5);      // flanking village B
-  cluster(-30, 28, 12, 12, 7); cluster(30, 28, 12, 12, 7);
-  cluster(-44, -36, 18, 16, 6.5); cluster(44, -36, 18, 16, 6.5);    // flanking village C
-  cluster(0, -72, 26, 12, 6.5);                                     // far north waterfront sprawl
-  cluster(-70, -20, 14, 30, 8); cluster(70, -20, 14, 30, 8);        // distant banks
+  // clusters spread across ~4× the area — districts of houses all around the spine
+  clusterPlan(-50, 30, 22, 18, 7); clusterPlan(50, 30, 22, 18, 7);
+  clusterPlan(0, 66, 42, 14, 7);
+  clusterPlan(-60, -2, 22, 26, 7); clusterPlan(60, -2, 22, 26, 7);
+  clusterPlan(-52, -40, 22, 18, 7); clusterPlan(52, -40, 22, 18, 7);
+  clusterPlan(0, -88, 42, 14, 7);
+  clusterPlan(-115, 12, 28, 70, 8.5); clusterPlan(115, 12, 28, 70, 8.5);   // far east/west banks
+  clusterPlan(-95, 78, 44, 18, 8.5); clusterPlan(95, 78, 44, 18, 8.5);
+  clusterPlan(-95, -90, 44, 18, 8.5); clusterPlan(95, -90, 44, 18, 8.5);
+  clusterPlan(0, 120, 80, 16, 8.5); clusterPlan(0, -140, 80, 16, 8.5);
+  // build the instanced meshes (1 base + per-colour walls + per-colour roofs)
+  const dummy = new THREE.Object3D();
+  function buildInst(geo, mat, list) { const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = m.receiveShadow = false; list.forEach((h, i) => { dummy.position.set(h.x, 0, h.z); dummy.rotation.set(0, h.rot, 0); dummy.scale.setScalar(h.sc); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); }); m.instanceMatrix.needsUpdate = true; wgrp.add(m); }
+  const baseGeo = new THREE.BoxGeometry(HW + 0.5, 1.6, HW + 0.5);
+  const wallGeo = new THREE.BoxGeometry(HW, HH, HW); wallGeo.translate(0, 1.0 + HH / 2, 0);
+  const roofGeo = new THREE.CylinderGeometry(0.01, HW * 0.8, 1.3, 4); roofGeo.rotateY(Math.PI / 4); roofGeo.translate(0, 1.0 + HH + 0.55, 0);
+  if (houseXf.length) {
+    buildInst(baseGeo, tmat(0x6e4f30), houseXf);
+    for (let w = 0; w < WALLS.length; w++) { const sub = houseXf.filter((h) => h.wi === w); if (sub.length) buildInst(wallGeo, tmat(WALLS[w]), sub); }
+    for (let r = 0; r < ROOFS.length; r++) { const sub = houseXf.filter((h) => h.ri === r); if (sub.length) buildInst(roofGeo, tmat(ROOFS[r]), sub); }
+  }
 
   // a Masjid (mosque) landmark with a green dome + minaret — like the real village
   (function mosque() {
@@ -188,6 +197,33 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const min = toon(new THREE.CylinderGeometry(0.5, 0.6, 8, 12), 0xeef2f0, { thickness: 0.03 }); min.position.set(4.2, 4.5, 4.2); g.add(min);
     const mcap = toon(new THREE.SphereGeometry(0.6, 12, 8, 0, 6.28, 0, Math.PI / 2), 0x2f8f6a, { thickness: 0.03 }); mcap.position.set(4.2, 8.6, 4.2); g.add(mcap);
   })();
+
+  // ---- node-graph landmarks: floating name labels, neutral hubs, legend zones
+  function label(text, x, y, z, sc = 1) {
+    const t = canvasTex(256, 64, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = 'bold 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 7; g.lineJoin = 'round'; g.strokeStyle = 'rgba(12,32,42,0.9)'; g.strokeText(text, w / 2, h / 2); g.fillStyle = '#fff'; g.fillText(text, w / 2, h / 2); });
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, fog: false }));
+    spr.position.set(x, y, z); spr.scale.set((text.length * 0.5 + 2) * sc, 2.2 * sc, 1); wgrp.add(spr);
+  }
+  label('Masjid', 28, 9.4, 30);
+  // neutral civic hubs (police station, school) — meeting places, not districts
+  function civic(x, z, wallC, roofC, name) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); wgrp.add(g);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.4, 0.5), tmat(0x5e4127)); p.position.set(sx * 2.4, -0.6, sz * 2.4); g.add(p); }
+    const body = toon(new THREE.BoxGeometry(6, 3.2, 5.2), wallC, { thickness: 0.04 }); body.position.y = 2.8; g.add(body);
+    const roof = toon(new THREE.BoxGeometry(6.6, 0.5, 5.8), roofC, { thickness: 0.04 }); roof.position.y = 4.6; g.add(roof);
+    label(name, x, 6.6, z);
+  }
+  civic(-30, -20, 0x4f7fb0, 0x32597a, 'Police Station');
+  civic(30, -20, 0xe6d8a8, 0xb06a3a, 'Sekolah');
+  // legendary landmark zones (special areas for the trust/mystery game)
+  function isle(x, z, r, color, name, mirror) {
+    const rock = toon(new THREE.IcosahedronGeometry(r, 1), color, { thickness: 0.06, flat: true }); rock.scale.set(1, rand(0.5, 0.8), 1); rock.rotation.y = rand(0, 6.28); rock.position.set(x, r * 0.2, z); wgrp.add(rock);
+    if (mirror) { const disc = toon(new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.25, 28), 0xbfe6f0, { outline: false }); disc.position.set(x, 0.12, z); wgrp.add(disc); }
+    label(name, x, r + 4, z, 1.25);
+  }
+  isle(-100, -58, 10, 0x3a3f44, 'Jong Batu');        // haunted dark rock
+  isle(104, 54, 9, 0x8a9aa0, 'Pulau Cermin', true);  // mirror island
+  isle(0, -128, 14, 0x4a4036, 'Batu Masap');         // the climax rock
 
   // ---- traditional dress -------------------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#3a1f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(217,178,74,0.7)'; g.lineWidth = 2; for (let i = -w; i < w; i += 18) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); } g.fillStyle = '#e8c75a'; for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) { g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.closePath(); g.fill(); } });
@@ -482,6 +518,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     useNearest: () => { for (const it of interactables) if (it.can()) { const d = Math.hypot(kid.position.x - it.x, kid.position.z - it.z); if (d < it.range + 0.5) { it.act(); return it.label; } } return null; },
     forceUse: (i) => { const it = interactables[i]; if (it && it.can()) it.act(); },
     npcs: () => ({ bikes: bikes.length, kids: kids.length, cats: cats.length, peds: peds.length, vendors: vendors.length, pickups: pickups.length, interactables: interactables.length }),
+    cam: (yaw, pitch, dist) => { camYaw = yaw; camPitch = pitch; camDist = dist; updateCamera(true); },
   };
   return overlay;
 }

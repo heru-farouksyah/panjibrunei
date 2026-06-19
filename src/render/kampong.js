@@ -167,6 +167,18 @@ export function showKampong(audio, { mission, onResult } = {}) {
   const wallGeo = new THREE.BoxGeometry(HW, HH, HW); wallGeo.translate(0, 1.0 + HH / 2, 0);
   const roofGeo = new THREE.CylinderGeometry(0.01, HW * 0.8, 1.3, 4); roofGeo.rotateY(Math.PI / 4); roofGeo.translate(0, 1.0 + HH + 0.55, 0);
   if (houseXf.length) { buildInst(baseGeo, tmat(0x6e4f30), houseXf); for (let w = 0; w < WALLS.length; w++) { const s = houseXf.filter((h) => h.wi === w); if (s.length) buildInst(wallGeo, tmat(WALLS[w]), s); } for (let r = 0; r < ROOFS.length; r++) { const s = houseXf.filter((h) => h.ri === r); if (s.length) buildInst(roofGeo, tmat(ROOFS[r]), s); } }
+  // titian: a plank walkway from every house to the nearest road — or, if deep
+  // in a cluster, to its nearest neighbour — so the whole village is connected.
+  const conn = [];
+  function nearestRoad(hx, hz) { let best = 1e9, bx = hx, bz = hz; for (const r of ALLRECTS) { const cx = clamp(hx, r.x0, r.x1), cz = clamp(hz, r.z0, r.z1); const d = Math.hypot(cx - hx, cz - hz); if (d < best) { best = d; bx = cx; bz = cz; } } return { d: best, x: bx, z: bz }; }
+  for (const h of houseXf) {
+    const road = nearestRoad(h.x, h.z); let tx, tz, td;
+    if (road.d <= 30) { tx = road.x; tz = road.z; td = road.d; }
+    else { let bn = 1e9, nx = h.x, nz = h.z; for (const o of houseXf) { if (o === h) continue; const d = Math.hypot(o.x - h.x, o.z - h.z); if (d < bn) { bn = d; nx = o.x; nz = o.z; } } if (bn > 16) continue; tx = nx; tz = nz; td = bn; }
+    if (td < 1.4) continue;
+    conn.push({ mx: (h.x + tx) / 2, mz: (h.z + tz) / 2, ang: Math.atan2(tz - h.z, tx - h.x), len: td });
+  }
+  if (conn.length) { const plankGeo = new THREE.BoxGeometry(1, 0.2, 0.7); const cm = new THREE.InstancedMesh(plankGeo, tmat(0xb98a4e), conn.length); cm.castShadow = false; cm.receiveShadow = true; conn.forEach((c, i) => { dummy.position.set(c.mx, DECK_Y - 0.12, c.mz); dummy.rotation.set(0, -c.ang, 0); dummy.scale.set(c.len, 1, 1); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); }); cm.instanceMatrix.needsUpdate = true; wgrp.add(cm); }
 
   // ---- hubs + landmark labels --------------------------------------------
   function label(text, x, y, z, sc = 1) { const t = canvasTex(256, 64, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = 'bold 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 7; g.lineJoin = 'round'; g.strokeStyle = 'rgba(12,32,42,0.9)'; g.strokeText(text, w / 2, h / 2); g.fillStyle = '#fff'; g.fillText(text, w / 2, h / 2); }); const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, fog: false })); spr.position.set(x, y, z); spr.scale.set((text.length * 0.5 + 2) * sc, 2.2 * sc, 1); wgrp.add(spr); return spr; }

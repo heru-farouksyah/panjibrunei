@@ -191,20 +191,50 @@ export function showKampong(audio, { mission, onResult } = {}) {
 
   // ---- traditional dress -------------------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#3a1f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(217,178,74,0.7)'; g.lineWidth = 2; for (let i = -w; i < w; i += 18) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); } g.fillStyle = '#e8c75a'; for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) { g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.closePath(); g.fill(); } });
-  function person({ skin = 0xe9b58a, baju = 0x1f6f5a, seluar = null, head = 'songkok', hatColor = 0x16181c, sampin = true, female = false, scale = 1 } = {}) {
+  // brown plaid / tartan (for the casual head-wrap and sinjang)
+  const plaid = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#5a4632'; g.fillRect(0, 0, w, h);
+    const band = (col, a, step, ww, vert) => { g.globalAlpha = a; g.fillStyle = col; for (let p = 0; p < (vert ? w : h); p += step) { if (vert) g.fillRect(p, 0, ww, h); else g.fillRect(0, p, w, ww); } };
+    for (const v of [true, false]) { band('#3a2c1e', 0.55, 34, 12, v); band('#8a6f4e', 0.5, 34, 6, v); band('#d8c39a', 0.45, 17, 3, v); }
+    g.globalAlpha = 1;
+  });
+  function person({ skin = 0xe9b58a, baju = 0x1f6f5a, seluar = null, head = 'songkok', hatColor = 0x16181c, sampin = true, sampinTex = 'songket', sampinColor = 0xb08820, tee = false, female = false, scale = 1 } = {}) {
     seluar = seluar ?? baju; const g = new THREE.Group(); g.scale.setScalar(scale); const legs = [], arms = [];
     if (female) { const skirt = toon(new THREE.CylinderGeometry(0.3, 0.52, 1.35, 14), baju, { thickness: 0.03 }); place(skirt, 0, 0.7, 0); g.add(skirt); }
     else for (const s of [-1, 1]) { const leg = toon(new THREE.CapsuleGeometry(0.14, 0.55, 4, 8), seluar, { thickness: 0.03 }); place(leg, s * 0.16, 0.55, 0); g.add(leg); legs.push(leg); const shoe = toon(new THREE.BoxGeometry(0.22, 0.13, 0.32), 0x2c2c2c, { thickness: 0.02 }); leg.add(shoe); shoe.position.set(0, -0.42, 0.05); }
     const torso = toon(new THREE.CapsuleGeometry(0.3, 0.62, 6, 12), baju, { thickness: 0.035 }); place(torso, 0, 1.3, 0); g.add(torso);
-    for (const s of [-1, 1]) { const arm = toon(new THREE.CapsuleGeometry(0.1, 0.6, 4, 8), baju, { thickness: 0.03 }); place(arm, s * 0.38, 1.28, 0); arm.rotation.z = s * 0.15; g.add(arm); arms.push(arm); const hand = toon(new THREE.SphereGeometry(0.1, 8, 7), skin, { thickness: 0.02 }); place(hand, s * 0.44, 0.96, 0); g.add(hand); }
-    const collar = toon(new THREE.CylinderGeometry(0.2, 0.23, 0.12, 12), baju, { thickness: 0.02 }); place(collar, 0, 1.64, 0); g.add(collar);
-    if (sampin && !female) { const sam = toon(new THREE.CylinderGeometry(0.34, 0.39, 0.5, 16), 0xb08820, { thickness: 0.025, map: songket }); place(sam, 0, 0.96, 0); g.add(sam); const flap = toon(new THREE.BoxGeometry(0.22, 0.5, 0.07), 0xb08820, { thickness: 0.02, map: songket }); place(flap, 0, 0.96, 0.37); g.add(flap); }
+    for (const s of [-1, 1]) {
+      if (tee) { const sleeve = toon(new THREE.CylinderGeometry(0.13, 0.12, 0.22, 8), baju, { thickness: 0.025 }); place(sleeve, s * 0.34, 1.5, 0); g.add(sleeve); const arm = toon(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), skin, { thickness: 0.025 }); place(arm, s * 0.38, 1.18, 0); arm.rotation.z = s * 0.15; g.add(arm); arms.push(arm); }
+      else { const arm = toon(new THREE.CapsuleGeometry(0.1, 0.6, 4, 8), baju, { thickness: 0.03 }); place(arm, s * 0.38, 1.28, 0); arm.rotation.z = s * 0.15; g.add(arm); arms.push(arm); }
+      const hand = toon(new THREE.SphereGeometry(0.1, 8, 7), skin, { thickness: 0.02 }); place(hand, s * 0.44, 0.96, 0); g.add(hand);
+    }
+    if (!tee && !female) { const collar = toon(new THREE.CylinderGeometry(0.2, 0.23, 0.12, 12), baju, { thickness: 0.02 }); place(collar, 0, 1.64, 0); g.add(collar); }
+    if (tee) { const pocket = toon(new THREE.BoxGeometry(0.13, 0.13, 0.04), baju, { thickness: 0.02 }); place(pocket, 0.13, 1.34, 0.29); g.add(pocket); }
+    if (sampin && !female) { const tex = sampinTex === 'plaid' ? plaid : songket; const sam = toon(new THREE.CylinderGeometry(0.34, 0.39, 0.5, 16), sampinColor, { thickness: 0.025, map: tex }); place(sam, 0, 0.96, 0); g.add(sam); const flap = toon(new THREE.BoxGeometry(0.22, 0.5, 0.07), sampinColor, { thickness: 0.02, map: tex }); place(flap, 0, 0.96, 0.37); g.add(flap); }
     const headM = toon(new THREE.SphereGeometry(0.27, 16, 14), skin, { thickness: 0.03 }); place(headM, 0, 1.96, 0); g.add(headM);
     if (head === 'songkok') { const cap = toon(new THREE.CylinderGeometry(0.27, 0.29, 0.3, 16), hatColor, { thickness: 0.025 }); place(cap, 0, 2.15, 0); g.add(cap); }
     else if (head === 'tudung') { const tud = toon(new THREE.SphereGeometry(0.33, 16, 14), hatColor, { thickness: 0.03 }); tud.scale.set(1, 1.05, 1); place(tud, 0, 1.99, 0); g.add(tud); const drape = toon(new THREE.CylinderGeometry(0.37, 0.26, 0.7, 16, 1, true), hatColor, { outline: false }); place(drape, 0, 1.55, 0); g.add(drape); }
+    else if (head === 'headscarf') { const wrap = toon(new THREE.SphereGeometry(0.3, 16, 12), 0x7a5f42, { thickness: 0.03, map: plaid }); wrap.scale.set(1.06, 0.72, 1.06); place(wrap, 0, 2.12, 0); g.add(wrap); const knot = toon(new THREE.BoxGeometry(0.18, 0.16, 0.16), 0x5a4632, { thickness: 0.02, map: plaid }); place(knot, 0, 2.22, -0.26); knot.rotation.y = 0.5; g.add(knot); }
     else { const hair = toon(new THREE.SphereGeometry(0.29, 16, 12), 0x35251c, { thickness: 0.03 }); hair.scale.set(1, 0.85, 1); place(hair, 0, 2.0, -0.02); g.add(hair); }
     return { group: g, legs, arms };
   }
+  // a palette of village outfits (casual tees, baju melayu in many colours,
+  // baju kurung + tudung) so the crowd looks varied, like a real kampong.
+  const OUTFITS = [
+    { baju: 0xeee7d8, seluar: 0x1c1c1c, tee: true, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x6a533a }, // casual tee + plaid (player look)
+    { baju: 0xf2efe6, head: 'hair', sampin: true },                                  // white baju + gold sampin
+    { baju: 0xf2efe6, head: 'songkok', sampin: true },                               // white baju + songkok
+    { baju: 0xf2efe6, seluar: 0x6a3a3a, tee: true, head: 'songkok', sampin: true, sampinTex: 'plaid', sampinColor: 0x7a3030 }, // tee + red plaid
+    { baju: 0x244f8a, head: 'songkok' },                                             // navy formal
+    { baju: 0x8a2f3a, head: 'songkok', sampin: true },                              // maroon + sampin
+    { baju: 0x2f8f6a, head: 'songkok', sampin: true },                              // green + sampin
+    { baju: 0xe7b2c2, hatColor: 0xe7b2c2, head: 'tudung', female: true },           // pink baju kurung lady
+    { baju: 0x3a6f8a, hatColor: 0x213a5a, head: 'songkok' },                        // blue + dark cap
+    { baju: 0xd8cdb6, seluar: 0x2c2c2c, tee: true, head: 'hair' },                  // plain cream tee
+    { baju: 0x6a4f8a, head: 'songkok', sampin: true },                             // purple + sampin
+    { baju: 0xf0e6d0, hatColor: 0xf0e6d0, head: 'tudung', female: true },           // cream tudung lady
+  ];
+  const outfit = (i) => ({ ...OUTFITS[((i % OUTFITS.length) + OUTFITS.length) % OUTFITS.length] });
 
   // ---- vendor stalls (clues that guide the puzzles) ----------------------
   const vendors = [];
@@ -217,9 +247,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const v = person(vopts); v.group.position.set(0, DECK_Y, -0.9); v.group.rotation.y = Math.PI; g.add(v.group);
     addSolid(x, z, 1.7); vendors.push({ x, z, clue, spoken: false }); greetables.push({ x: x + Math.sin(rot) * 1.4, z: z + Math.cos(rot) * 1.4, greeted: false });
   }
-  stall(-9, 30, 0.4, 0xd9695a, { baju: 0x8a2f3a, head: 'songkok' }, 'Salam, adik! The Boatman by the east jetty has lost 3 fish — find them around this village and he’ll give you a plank to mend the broken bridge.');
-  stall(-20, 2, 1.0, 0x4f9ad0, { baju: 0x244f8a, head: 'songkok' }, 'The Brass Key to the north gate is kept by old Pak Mat — he’s standing on the west jetty. Greet him kindly and he’ll let you by.');
-  stall(10, -40, -0.4, 0xe0b24a, { baju: 0x6a2f7a, head: 'tudung', hatColor: 0xead6e6, female: true }, 'Bring three cargo baskets here to the waterfront and load them on the boat — then your task is done. Selamat jalan!');
+  stall(-9, 30, 0.4, 0xd9695a, outfit(5), 'Salam, adik! The Boatman by the east jetty has lost 3 fish — find them around this village and he’ll give you a plank to mend the broken bridge.');
+  stall(-20, 2, 1.0, 0x4f9ad0, outfit(4), 'The Brass Key to the north gate is kept by old Pak Mat — he’s standing on the west jetty. Greet him kindly and he’ll let you by.');
+  stall(10, -40, -0.4, 0xe0b24a, outfit(11), 'Bring three cargo baskets here to the waterfront and load them on the boat — then your task is done. Selamat jalan!');
 
   function lantern(x, z) { const pole = toon(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), 0x6a4f30, { thickness: 0.02 }); place(pole, x, DECK_Y + 1.2, z); wgrp.add(pole); const bulb = toon(new THREE.SphereGeometry(0.22, 12, 10), 0xffe08a, { thickness: 0.02, emissive: 0xffb84d }); place(bulb, x, DECK_Y + 2.45, z); wgrp.add(bulb); }
   [[-3, 18], [3, 18], [-3, 8], [3, 8], [-3, -12], [3, -12], [-3, -26], [3, -26], [-12, 30], [12, 30], [-12, -34], [12, -34]].forEach(([x, z]) => lantern(x, z));
@@ -267,7 +297,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const seat = toon(new THREE.BoxGeometry(0.3, 0.12, 0.2), 0x222222, { thickness: 0.02 }); place(seat, -0.4, 0.95, 0); g.add(seat);
     const bar = toon(new THREE.BoxGeometry(0.1, 0.5, 0.1), 0x2f6f8f, { thickness: 0.02 }); place(bar, 0.5, 0.95, 0); g.add(bar);
     for (const sx of [-0.5, 0.5]) { const wheel = toon(new THREE.TorusGeometry(0.42, 0.08, 8, 16), 0x222222, { thickness: 0.02 }); place(wheel, sx, 0.42, 0); wheel.rotation.y = Math.PI / 2; g.add(wheel); wheel._spin = true; }
-    const rider = person({ baju: 0x2f7d6b, head: 'songkok', sampin: false, scale: 0.92 }); rider.group.position.set(-0.1, 0.5, 0); g.add(rider.group);
+    const rider = person({ ...outfit((Math.random() * OUTFITS.length) | 0), sampin: false, scale: 0.92 }); rider.group.position.set(-0.1, 0.5, 0); g.add(rider.group);
     bikes.push({ g, z, dir, speed, x0, x1, x: dir > 0 ? x0 : x1, bellCd: 0 });
   }
   bicycle(30, 1, 5, -12, 12); bicycle(-1, -1, 5, -14, 14);
@@ -278,17 +308,17 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const pd = { group: pr.group, x, z, ax, az, blocking: true, stepping: false, bob: rand(0, 6.28) }; peds.push(pd);
     greetables.push({ x, z, greeted: false, ped: pd });
   }
-  blocker(0, 39.5, 2.6, 39.5, { baju: 0x3a6f8a, head: 'songkok' });                          // greet to enter Village A proper
-  blocker(-28, 0, -28, 3.5, { baju: 0x7a5a2f, head: 'songkok' }, true);                       // Pak Mat — guards the Brass Key
-  blocker(0, -25.5, 2.6, -25.5, { baju: 0x6a2f5a, head: 'tudung', hatColor: 0xe6d2dc, female: true }); // greet to enter Village C
-  function playingKid(hx, hz) { const pr = person({ baju: [0xd9695a, 0x4f9ad0, 0x6cae6a, 0xe0b24a][(Math.random() * 4) | 0], head: Math.random() < 0.5 ? 'songkok' : 'hair', sampin: false, scale: 0.66 }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group); kids.push({ group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(1.8, 2.6), t: 0, ph: rand(0, 6.28) }); }
+  blocker(0, 39.5, 2.6, 39.5, outfit(8));                          // greet to enter Village A proper
+  blocker(-28, 0, -28, 3.5, outfit(2), true);                      // Pak Mat (white baju elder) — guards the Brass Key
+  blocker(0, -25.5, 2.6, -25.5, outfit(7));                        // greet to enter Village C (lady)
+  function playingKid(hx, hz) { const pr = person({ ...outfit((Math.random() * OUTFITS.length) | 0), sampin: false, scale: 0.66 }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group); kids.push({ group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(1.8, 2.6), t: 0, ph: rand(0, 6.28) }); }
   playingKid(8, 30); playingKid(-7, 26); playingKid(7, 2); playingKid(-9, -2); playingKid(8, -36); playingKid(-8, -40);
   function buildCat(color) { const g = new THREE.Group(); const body = toon(new THREE.CapsuleGeometry(0.17, 0.4, 4, 8), color, { thickness: 0.02 }); body.rotation.z = Math.PI / 2; place(body, 0, 0.26, 0); g.add(body); const head = toon(new THREE.SphereGeometry(0.16, 10, 9), color, { thickness: 0.02 }); place(head, 0.33, 0.38, 0); g.add(head); for (const sx of [-1, 1]) { const ear = toon(new THREE.ConeGeometry(0.07, 0.13, 4), color, { thickness: 0.012 }); place(ear, 0.34, 0.54, sx * 0.08); g.add(ear); } const tail = toon(new THREE.CylinderGeometry(0.03, 0.05, 0.5, 6), color, { thickness: 0.012 }); place(tail, -0.36, 0.4, 0); tail.rotation.z = 0.8; g.add(tail); for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const leg = toon(new THREE.CylinderGeometry(0.045, 0.045, 0.26, 6), color, { thickness: 0.012 }); place(leg, 0.05 + sx * 0.16, 0.13, sz * 0.1); g.add(leg); } return g; }
   function spawnCat(hx, hz, color) { const g = buildCat(color); g.position.set(hx, DECK_Y, hz); wgrp.add(g); cats.push({ group: g, hx, hz, tx: hx, tz: hz, t: rand(1, 4), spd: rand(0.8, 1.3), meowCd: rand(4, 10) }); }
   spawnCat(10, 28, 0xd98b46); spawnCat(-12, 2, 0x8a8a8a); spawnCat(11, -38, 0x3a3a3a);
 
   // ---- player (traditional dress) ----------------------------------------
-  const kidP = person({ baju: 0x1f6f5a, seluar: 0x16554a, head: 'songkok', hatColor: 0x14140f, sampin: true });
+  const kidP = person({ baju: 0xeee7d8, seluar: 0x1c1c1c, tee: true, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x6a533a });
   const kid = kidP.group; wgrp.add(kid); kid.position.set(0, DECK_Y, 46); kid.rotation.y = Math.PI;
   const legs = kidP.legs, arms = kidP.arms;
   const bag = toon(new THREE.BoxGeometry(0.42, 0.5, 0.22), 0xb5894f, { thickness: 0.03 }); place(bag, 0.16, 1.15, -0.3); kid.add(bag);
@@ -375,7 +405,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
     { x: 0, z: -54, range: 3.5, can: () => inv.basket >= 3 && !won, label: 'Load baskets on the boat', act: () => { finishWin(); } },
   );
   // the Boatman NPC model at his spot
-  { const bm = person({ baju: 0x35506a, head: 'songkok', sampin: true }); bm.group.position.set(11, DECK_Y, 33); bm.group.rotation.y = Math.PI; wgrp.add(bm.group); addSolid(11, 33, 1.2); greetables.push({ x: 11, z: 31.6, greeted: false }); }
+  { const bm = person({ baju: 0x35506a, tee: true, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x5a4632 }); bm.group.position.set(11, DECK_Y, 33); bm.group.rotation.y = Math.PI; wgrp.add(bm.group); addSolid(11, 33, 1.2); greetables.push({ x: 11, z: 31.6, greeted: false }); }
   function openGate(g) { g.open = true; }
 
   function tryTalk() { if (!nearVendor || dialogOpen || won) return; sfx.unlock(); sfx.talk(); q('.kq-text').textContent = nearVendor.clue; dialog.hidden = false; dialogOpen = true; nearVendor.spoken = true; }

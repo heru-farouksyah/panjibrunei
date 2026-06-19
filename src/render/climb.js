@@ -49,15 +49,18 @@ export function showClimb(audio, { mission, onResult } = {}) {
 
   // ---- traditional-dress climber -----------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#3a1f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(217,178,74,0.7)'; g.lineWidth = 2; for (let i = -w; i < w; i += 18) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); } g.fillStyle = '#e8c75a'; for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) { g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.closePath(); g.fill(); } });
+  const plaid = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#5a4632'; g.fillRect(0, 0, w, h); const band = (col, a, step, ww, vert) => { g.globalAlpha = a; g.fillStyle = col; for (let p = 0; p < (vert ? w : h); p += step) { if (vert) g.fillRect(p, 0, ww, h); else g.fillRect(0, p, w, ww); } }; for (const v of [true, false]) { band('#3a2c1e', 0.55, 34, 12, v); band('#8a6f4e', 0.5, 34, 6, v); band('#d8c39a', 0.45, 17, 3, v); } g.globalAlpha = 1; });
   const climber = new THREE.Group(); scene.add(climber);
+  const SKIN = 0xe9b58a, TEE = 0xeee7d8;
   const legs = [];
-  for (const s of [-1, 1]) { const leg = toon(new THREE.CapsuleGeometry(0.13, 0.45, 4, 8), 0x16554a, { thickness: 0.03 }); place(leg, s * 0.15, 0.45, 0); climber.add(leg); legs.push(leg); }
-  const torso = toon(new THREE.CapsuleGeometry(0.28, 0.55, 6, 12), 0x1f6f5a, { thickness: 0.035 }); place(torso, 0, 1.12, 0); climber.add(torso);
-  const armL = toon(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), 0x1f6f5a, { thickness: 0.03 }); place(armL, -0.34, 1.12, 0); climber.add(armL);
-  const armR = toon(new THREE.CapsuleGeometry(0.09, 0.5, 4, 8), 0x1f6f5a, { thickness: 0.03 }); place(armR, 0.34, 1.12, 0); climber.add(armR);
-  const sampin = toon(new THREE.CylinderGeometry(0.32, 0.37, 0.46, 16), 0xb08820, { thickness: 0.025, map: songket }); place(sampin, 0, 0.82, 0); climber.add(sampin);
-  const head = toon(new THREE.SphereGeometry(0.25, 16, 14), 0xe9b58a, { thickness: 0.03 }); place(head, 0, 1.56, 0); climber.add(head);
-  const songkok = toon(new THREE.CylinderGeometry(0.25, 0.27, 0.28, 16), 0x14140f, { thickness: 0.025 }); place(songkok, 0, 1.74, 0); climber.add(songkok);
+  for (const s of [-1, 1]) { const leg = toon(new THREE.CapsuleGeometry(0.13, 0.45, 4, 8), 0x1c1c1c, { thickness: 0.03 }); place(leg, s * 0.15, 0.45, 0); climber.add(leg); legs.push(leg); }   // black trousers
+  const torso = toon(new THREE.CapsuleGeometry(0.28, 0.55, 6, 12), TEE, { thickness: 0.035 }); place(torso, 0, 1.12, 0); climber.add(torso);                                            // white pocket tee
+  const pocket = toon(new THREE.BoxGeometry(0.12, 0.12, 0.04), TEE, { thickness: 0.02 }); place(pocket, 0.12, 1.18, 0.27); climber.add(pocket);
+  for (const s of [-1, 1]) { const sleeve = toon(new THREE.CylinderGeometry(0.12, 0.11, 0.2, 8), TEE, { thickness: 0.025 }); place(sleeve, s * 0.31, 1.3, 0); climber.add(sleeve); const arm = toon(new THREE.CapsuleGeometry(0.085, 0.42, 4, 8), SKIN, { thickness: 0.025 }); place(arm, s * 0.34, 1.0, 0); climber.add(arm); }   // short sleeves, bare arms
+  const sampin = toon(new THREE.CylinderGeometry(0.32, 0.37, 0.46, 16), 0x6a533a, { thickness: 0.025, map: plaid }); place(sampin, 0, 0.82, 0); climber.add(sampin);                       // plaid sinjang
+  const head = toon(new THREE.SphereGeometry(0.25, 16, 14), SKIN, { thickness: 0.03 }); place(head, 0, 1.56, 0); climber.add(head);
+  const wrap = toon(new THREE.SphereGeometry(0.28, 16, 12), 0x7a5f42, { thickness: 0.03, map: plaid }); wrap.scale.set(1.06, 0.72, 1.06); place(wrap, 0, 1.72, 0); climber.add(wrap);          // plaid head-wrap
+  const knot = toon(new THREE.BoxGeometry(0.16, 0.14, 0.14), 0x5a4632, { thickness: 0.02, map: plaid }); place(knot, 0, 1.8, -0.24); knot.rotation.y = 0.5; climber.add(knot);
   climber.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
   // ---- platforms / coins / balloons --------------------------------------

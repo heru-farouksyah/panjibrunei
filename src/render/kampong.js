@@ -94,7 +94,17 @@ function injectStyle() {
   .kampong .kq-journal .jrow{display:flex;justify-content:space-between;font-size:13.5px;color:#234;padding:3px 0;}
   .kampong .kq-journal .jrow b{color:#2f7f78;}
   .kampong .kq-journal .jclues{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:#2a4450;}
-  .kampong .kq-journal .jclues li{margin-bottom:6px;} .kampong .kq-journal .jclues li b{color:#c8821a;} .kampong .kq-journal .jclues .dim{color:#8aa;list-style:none;margin-left:-12px;}`;
+  .kampong .kq-journal .jclues li{margin-bottom:6px;} .kampong .kq-journal .jclues li b{color:#c8821a;} .kampong .kq-journal .jclues .dim{color:#8aa;list-style:none;margin-left:-12px;}
+  .kampong .kq-energy{position:absolute;transform:translate(-50%,-100%);width:54px;height:8px;border-radius:5px;background:rgba(20,55,65,0.55);border:1px solid rgba(255,255,255,0.55);overflow:hidden;pointer-events:none;z-index:4;display:none;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+  .kampong .kq-energy span{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);transition:width .2s;}
+  .kampong .kq-energy.low span{background:linear-gradient(90deg,#c0463a,#ef8a7a);}
+  .kampong .kq-pray{position:absolute;inset:0;z-index:25;display:flex;align-items:center;justify-content:center;background:rgba(12,40,50,0.62);}
+  .kampong .kq-pray[hidden]{display:none;}
+  .kampong .kq-pray .pcard{text-align:center;color:#fff;padding:18px;}
+  .kampong .kq-pray .picon{font-size:64px;animation:kqpulse 1.6s ease-in-out infinite;}
+  .kampong .kq-pray .pttl{font-size:26px;font-weight:800;letter-spacing:2px;margin-top:6px;}
+  .kampong .kq-pray .psub{font-size:14px;opacity:0.85;margin-top:6px;max-width:300px;}
+  @keyframes kqpulse{50%{transform:scale(1.08);opacity:0.85;}}`;
   const el = document.createElement('style'); el.id = 'kq-style'; el.textContent = css; document.head.appendChild(el);
 }
 
@@ -115,7 +125,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   rotateEl.innerHTML = '<div class="ph">📱</div><b>Rotate to landscape</b><small>Kampong Ayer is best explored in landscape — turn your device sideways.</small>';
   overlay.appendChild(rotateEl);
 
-  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 110, 340);
+  const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x9bd9d0, 70, 210);  // smaller, cosier kampong
   const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1500);
   const sun = new THREE.DirectionalLight(0xfff3df, 2.1); sun.position.set(-16, 26, 14); sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 1; sun.shadow.camera.far = 160;
@@ -220,12 +230,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   // the central lorong grid: verticals + horizontals that intersect one another
   // and overlap the spine (B_HUB / BR_AB / hubs) → fully connected, walkable.
-  for (const x of [-86, -58, -30, 30, 58, 86]) street(x, -52, x, 94);
-  for (const z of [-46, -20, 8, 34, 60, 86]) street(-100, z, 100, z);
-  street(0, 50, 0, 94);   // tie the north rows down to the spine's start pier
-  // far-bank rows beyond the boat gate (rasterized only once the boat is built)
-  for (const x of [-16, 16]) street(x, -150, x, -96);
-  for (const z of [-128, -104]) street(-46, z, 46, z);
+  for (const x of [-46, -18, 18, 46]) street(x, -40, x, 52);
+  for (const z of [-26, 2, 30]) street(-52, z, 52, z);
+  street(0, 50, 0, 30);   // tie the north rows down to the spine's start pier
   // 2nd pass: place the house rows now that every lane exists, dropping any that
   // would sit on a lane (e.g. at crossings) so no house blocks the road.
   for (const cd of houseCands) placeHouse(cd.x, cd.z, cd.rot);
@@ -259,7 +266,7 @@ export function showKampong(audio, { mission, onResult } = {}) {
   function civic(x, z, wallC, roofC, name) { const g = new THREE.Group(); g.position.set(x, 0, z); wgrp.add(g); const body = toon(new THREE.BoxGeometry(6, 3.2, 5.2), wallC, { thickness: 0.04 }); body.position.y = 2.8; g.add(body); const roof = toon(new THREE.BoxGeometry(6.6, 0.5, 5.8), roofC, { thickness: 0.04 }); roof.position.y = 4.6; g.add(roof); label(name, x, 6.6, z); }
   civic(-34, -20, 0x4f7fb0, 0x32597a, 'Police Station'); civic(36, -20, 0xe6d8a8, 0xb06a3a, 'Sekolah');
   function isle(x, z, r, color, name, mirror) { const rock = toon(new THREE.IcosahedronGeometry(r, 1), color, { thickness: 0.06, flat: true }); rock.scale.set(1, rand(0.5, 0.8), 1); rock.rotation.y = rand(0, 6.28); rock.position.set(x, r * 0.2, z); wgrp.add(rock); if (mirror) { const disc = toon(new THREE.CylinderGeometry(r * 1.5, r * 1.5, 0.25, 28), 0xbfe6f0, { outline: false }); disc.position.set(x, 0.12, z); wgrp.add(disc); } label(name, x, r + 4, z, 1.25); }
-  isle(-120, -70, 11, 0x3a3f44, 'Jong Batu'); isle(124, 60, 10, 0x8a9aa0, 'Pulau Cermin', true); isle(0, -150, 16, 0x4a4036, 'Batu Masap');
+  isle(-78, -44, 10, 0x3a3f44, 'Jong Batu'); isle(80, 40, 9, 0x8a9aa0, 'Pulau Cermin', true); isle(0, -82, 13, 0x4a4036, 'Batu Masap');
 
   // ---- traditional dress -------------------------------------------------
   const songket = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#3a1f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(217,178,74,0.7)'; g.lineWidth = 2; for (let i = -w; i < w; i += 18) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); } g.fillStyle = '#e8c75a'; for (let y = 12; y < h; y += 24) for (let x = 12; x < w; x += 24) { g.fillRect(x - 2, y - 2, 4, 4); } });
@@ -329,9 +336,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
     const name = mk.female ? FEMALE[_nf++ % FEMALE.length] : MALE[_nm++ % MALE.length];
     const prof = PROFS[(Math.random() * PROFS.length) | 0];
     const grumpy = mood === 'grump'; const helper = mood === 'help';
-    const e = { group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(0.9, 1.8), t: rand(0, 2), ph: rand(0, 6.28), roam,
-      name, prof, grumpy, helper, done: false, avatar: mk.o.baju || 0xddccaa, line: grumpy ? GRUMPS[(Math.random() * GRUMPS.length) | 0] : QUIPS[(Math.random() * QUIPS.length) | 0] };
-    if (helper) { e.quiz = QUIZZES[_qz++ % QUIZZES.length]; e.reward = 4 + ((Math.random() * 3) | 0); e.line = 'Boleh tolong sat? I have a teaser for you…'; }
+    const e = { group: pr.group, legs: pr.legs, hx, hz, tx: hx, tz: hz, spd: rand(0.9, 1.8), t: rand(0, 2), ph: rand(0, 6.28), roam, cool: 0,
+      name, prof, grumpy, helper, avatar: mk.o.baju || 0xddccaa, line: grumpy ? GRUMPS[(Math.random() * GRUMPS.length) | 0] : QUIPS[(Math.random() * QUIPS.length) | 0] };
+    if (helper) { e.quiz = QUIZZES[_qz++ % QUIZZES.length]; e.reward = 4 + ((Math.random() * 3) | 0); e.line = 'Boleh tolong sat? Earn some 💰 — answer me this…'; }
     kids.push(e); return e;
   }
   // children playing — flanking the start area (off the central spine)
@@ -366,8 +373,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
   // ---- HUD ---------------------------------------------------------------
   const hud = document.createElement('div'); hud.className = 'kq'; overlay.appendChild(hud);
   hud.innerHTML = `<button class="kq-quit" aria-label="Quit">‹</button><button class="kq-jbtn" aria-label="Journal">📖</button><div class="kq-obj"></div>` +
-    `<div class="kq-stats"><div class="kq-chip">👥 <b class="kq-fol">0</b>/<span class="kq-folt">6</span></div><div class="kq-chip">🎟 <b class="kq-tok">0</b></div><div class="kq-chip">💰 <b class="kq-coin">0</b></div><div class="kq-chip">🛒 <b class="kq-mkt">0/6</b></div><div class="kq-chip">🛶 <b class="kq-boat">0</b>/3</div><div class="kq-hbar"><span></span></div></div>` +
-    `<div class="kq-tag"></div>` +
+    `<div class="kq-stats"><div class="kq-chip">💰 <b class="kq-coin">0</b></div><div class="kq-chip">👥 <b class="kq-fol">0</b>/2</div><div class="kq-chip">🛶 <b class="kq-tok">0</b>/3</div><div class="kq-chip">⚙️ <b class="kq-boat">0</b>/3</div><div class="kq-chip">💥 <b class="kq-mkt">0</b>/3</div></div>` +
+    `<div class="kq-tag"></div><div class="kq-energy"><span></span></div>` +
+    `<div class="kq-pray" hidden><div class="pcard"><div class="picon">🕌</div><div class="pttl">Waktu Solat</div><div class="psub">The kampong gathers at the masjid to pray…</div></div></div>` +
     `<div class="kq-joy"></div><button class="kq-act" hidden></button>` +
     `<div class="kq-dialog" hidden><div class="kq-who">Villager</div><div class="kq-text"></div><div class="kq-judge"></div><button class="kq-ok">Close</button></div>` +
     `<div class="kq-banner"></div>` +
@@ -375,55 +383,43 @@ export function showKampong(audio, { mission, onResult } = {}) {
     `<div class="kq-journal" hidden><div class="card"><button class="kq-jx" aria-label="Close">✕</button><div class="jbody"></div></div></div>` +
     `<div class="kq-win" hidden><div class="card"><h2></h2><p></p><div class="clue"></div><button>Continue</button></div></div>`;
   const q = (s) => hud.querySelector(s);
-  const elFol = q('.kq-fol'), elFolt = q('.kq-folt'), elTok = q('.kq-tok'), elCoin = q('.kq-coin'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), elHbar = q('.kq-hbar'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge'), tagEl = q('.kq-tag'), introEl = q('.kq-intro'), journalEl = q('.kq-journal');
+  const elFol = q('.kq-fol'), elTok = q('.kq-tok'), elCoin = q('.kq-coin'), elBoat = q('.kq-boat'), elMkt = q('.kq-mkt'), energyEl = q('.kq-energy'), prayEl = q('.kq-pray'), objEl = q('.kq-obj'), actBtn = q('.kq-act'), dialog = q('.kq-dialog'), banner = q('.kq-banner'), joy = q('.kq-joy'), judgeRow = q('.kq-judge'), tagEl = q('.kq-tag'), introEl = q('.kq-intro'), journalEl = q('.kq-journal');
   q('.kq-quit').onclick = () => { sfx.unlock(); endMission(false, true); };
   q('.kq-jbtn').onclick = () => openJournal();
   q('.kq-jx').onclick = () => { journalEl.hidden = true; journalOpen = false; };
   q('.kq-dialog .kq-ok').onclick = () => { dialog.hidden = true; dialogOpen = false; clearInterval(dlgTimer); };
   actBtn.onclick = doAction;
   q('.kq-win button').onclick = () => endMission(true);
-  let dialogOpen = false, salamBusy = false, actTarget = null, introOpen = false, journalOpen = false, dlgTimer = 0;
+  let dialogOpen = false, salamBusy = false, actTarget = null, introOpen = false, journalOpen = false, prayerOpen = false, dlgTimer = 0;
   const clueLog = [];   // your pocket-book of gathered clues
   function addClue(who, text) { if (!clueLog.some((c) => c.who === who && c.text === text)) { clueLog.push({ who, text }); q('.kq-jbtn').classList.add('glow'); } }
   function showBanner(t, ms = 2400) { banner.textContent = t; banner.classList.add('show'); clearTimeout(showBanner._t); showBanner._t = setTimeout(() => banner.classList.remove('show'), ms); }
   function saySalam() { if (salamBusy) return; salamBusy = true; sfx.unlock(); sfx.clue(); speak('Assalamualaikum', 0.85); setTimeout(() => speak('Waalaikumsalam', 1.5), 1100); setTimeout(() => { salamBusy = false; }, 2600); }
 
-  // ---- TITIAN state ------------------------------------------------------
-  let tokens = 0, followers = 0, boatParts = 0, boatBuilt = false, won = false, ended = false, elapsed = 0, stun = 0, running = true, raf = 0;
-  let coins = 10, hunger = 100, hungryWarned = false;   // 💰 money (earn by helping/puzzles, spend on food) · 🍚 fullness (drains as you walk)
-  const stashes = []; // {x,z, group, beacon, revealed, cleared, claimId}
-  let stashesCleared = 0, totalStashes = 0, culpritReady = false, mysterySolved = false, marketsVisited = 0;
+  // ---- mission state (war-prep finale) -----------------------------------
+  let won = false, ended = false, elapsed = 0, stun = 0, running = true, raf = 0;
+  let coins = 16, energy = 100, hungryWarned = false;     // 💰 money · 🔋 energy (drains as you walk; eat to refill)
+  let recruited = 0, warBoats = 0, engines = 0, cannons = 0, submitted = false;   // the war kit (3 of each), 2 men
+  const PRICE = { boat: 4, engine: 3, cannon: 3 };
+  const stashes = [], markets2 = [];   // (stashes unused now); markets defined earlier
+  let marketsVisited = 0;
 
   // informants: each gives a CLAIM you must judge. truth: rumour|crime|sacred.
   // crime claims expose a drug stash (their stashId).
+  // kampong folk you socialise with; two will join you as your "2 men"
   const informants = [];
-  function informer(name, prof, x, z, opts, claim, truth, stashId) {
-    const pr = person(opts); pr.group.position.set(x, DECK_Y, z); pr.group.rotation.y = Math.atan2(0 - x, 0 - z); wgrp.add(pr.group);
+  function folk(name, prof, x, z, opts, line, recruitable) {
+    const pr = person(opts); pr.group.position.set(x, DECK_Y, z); pr.group.rotation.y = Math.atan2(-x, -z); wgrp.add(pr.group);
     addSolid(x, z, 1.0);
-    const inf = { name, prof, gx: x, gz: z, x: x + Math.sin(pr.group.rotation.y) * 1.4, z: z + Math.cos(pr.group.rotation.y) * 1.4, claim, truth, stashId, judged: false, follower: false };
-    informants.push(inf); greetables.push({ x, z, greeted: false, name, prof });
-    return inf;
+    const f = { name, prof, gx: x, gz: z, group: pr.group, x: x + Math.sin(pr.group.rotation.y) * 1.4, z: z + Math.cos(pr.group.rotation.y) * 1.4, line, recruitable: !!recruitable, recruited: false, met: false };
+    informants.push(f); greetables.push({ x, z, greeted: false, name, prof });
+    return f;
   }
-  // informants spread to every corner of the kampong — you must explore to find them
-  informer('Mak Limah', 'Penjual ikan', 86, 58, outfit(5), 'They whisper that Pak Hassan stole the surau fund… but nobody has seen a single ringgit move.', 'rumour');       // NE
-  informer('Awang', 'Nelayan', -86, 58, outfit(7), 'Don’t go near the old blue house after Maghrib — a pontianak wails there. Stay away, ya.', 'crime', 's1');               // NW
-  informer('Hjh Noraini', 'Bidan kampong', -98, 8, outfit(9), 'On still nights a pale light drifts over Jong Batu, and a cold wind follows it. Some things we leave to Allah.', 'sacred'); // far W
-  informer('Pak Mat', 'Pengayuh perahu', 98, 8, outfit(1), 'Strange boats slip up the channel after Isyak and leave again empty before dawn. I’ve counted three.', 'crime', 's2');     // far E
-  informer('Cikgu Rahim', 'Cikgu sekolah', 58, -46, outfit(2), 'The fund vanished the very week Pak Long sailed home rich and changed. Too neat to be chance.', 'rumour');          // SE
-  informer('Sarjan', 'Polis kampong', -58, -46, outfit(2), 'No proof, no arrest. Bring me what’s true — separate the gossip from the crime — and I’ll act.', 'sacred');   // SW
-  // far kampong informant (after the boat) — names the culprit
-  const farInf = informer('Bilal Tua', 'Bilal masjid', 0, -104, outfit(3), 'Pak Long keeps a locked store on Batu Masap. That cursed rock hides no ghost — it hides his poison.', 'crime', 's3');
-  farInf._far = true;
-
-  // stashes (hidden, revealed when their crime claim is judged correctly)
-  function makeStash(id, x, z) {
-    const g = new THREE.Group(); g.position.set(x, DECK_Y, z); g.visible = false; wgrp.add(g);
-    const crate = toon(new THREE.BoxGeometry(1, 0.8, 0.7), 0x6a4a2a, { thickness: 0.03 }); place(crate, 0, 0.4, 0); g.add(crate);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.5, 7, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xff5a3a, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })); place(beam, 0, 3.6, 0); g.add(beam);
-    const st = { id, x, z, group: g, beam, revealed: false, cleared: false };
-    stashes.push(st); totalStashes++; return st;
-  }
-  makeStash('s1', HAUNTED_X, HAUNTED_Z - 3); makeStash('s2', 58, -8); makeStash('s3', 0, -108);
+  folk('Awang Mberanian', 'Bekas askar', -18, 30, outfit(2), 'Aku dengar a warlord masses across the water. If you lead, I will fight beside you — just ask.', true);
+  folk('Pak Wira', 'Nelayan kuat', 46, 2, outfit(3), 'My boat is fast and my arm strong. Say the word and I am your man.', true);
+  folk('Mak Limah', 'Penjual ikan', 18, 30, outfit(5), 'Selamat datang, adik. Buy fresh fish to keep your strength up!');
+  folk('Hjh Noraini', 'Bidan kampong', -46, 2, outfit(9), 'Rest and eat — you look tired. The kampong needs you strong.');
+  folk('Cikgu Rahim', 'Cikgu sekolah', 18, -26, outfit(2), 'The children will be safer once the war-boats are armed. Hurry, ya.');
 
   // ---- vendor stalls (gerai) — spread to the corners; visiting each rewards
   // tokens + a clue, so the mission rewards exploring the whole kampong. ------
@@ -441,66 +437,75 @@ export function showKampong(audio, { mission, onResult } = {}) {
     addSolid(x, z, 1.0);
     markets.push({ x: x + Math.sin(rot) * 1.8, z: z + Math.cos(rot) * 1.8, name, prof, clue, food: !!food, visited: false }); // visit point in front
   }
-  vendorStall(86, 92, 'Gerai Mak Som', 'Penjual ikan', 'fresh ikan and tapai — and plenty of gossip', true);
-  vendorStall(-86, 92, 'Warung Pak Atan', 'Tukang kuih', 'kuih and strong kopi for tired feet', true);
-  vendorStall(98, -20, 'Gerai Awang Itam', 'Tukang jala', 'nets, rope and lampu for the night boats', false);
-  vendorStall(-98, 34, 'Gerai Hjh Mona', 'Penjual kain', 'songket and sampin brought from upriver', false);
-  vendorStall(86, -50, 'Warung Kak Ani', 'Penjual sayur', 'nasi katok, sayur and buah by the school jetty', true);
-  vendorStall(-86, -50, 'Gerai Pak Usop', 'Penjual belacan', 'belacan and budu — you can smell it from afar!', true);
+  vendorStall(46, 30, 'Gerai Mak Som', 'Penjual ikan', 'fresh ikan and tapai — eat to keep your energy up', true);
+  vendorStall(-46, 30, 'Warung Pak Atan', 'Tukang kuih', 'kuih and strong kopi for tired feet', true);
+  vendorStall(-46, -26, 'Warung Kak Ani', 'Penjual sayur', 'nasi katok and sayur by the jetty', true);
+  vendorStall(46, -26, 'Gerai Awang Itam', 'Tukang jala', 'nets, rope and lamps for the boats', false);
+
+  // ---- the war-prep finale: a war chandler + a boat mechanic by the water ---
+  let warPt = null, MECH_PT = null;
+  (function warChandler(x, z) {
+    const rot = Math.atan2(-x, -z); const g = new THREE.Group(); g.position.set(x, DECK_Y, z); g.rotation.y = rot; wgrp.add(g);
+    const tbl = toon(new THREE.BoxGeometry(2.2, 0.9, 1.1), 0x5a3a2a, { thickness: 0.03 }); place(tbl, 0, 0.55, 0); g.add(tbl);
+    for (let i = 0; i < 3; i++) { const cn = toon(new THREE.CylinderGeometry(0.12, 0.16, 0.7, 8), 0x3a3a3e, { thickness: 0.02 }); cn.rotation.z = Math.PI / 2; place(cn, -0.55 + i * 0.55, 1.22, 0.12); g.add(cn); }
+    const sign = toon(new THREE.BoxGeometry(0.9, 0.5, 0.06), 0x7a1f1f, { thickness: 0.02 }); place(sign, 0, 1.95, 0.52); g.add(sign);
+    const vp = person({ baju: 0x4a3a2a, head: 'songkok', sampin: true, sampinColor: 0x6a1f1f }); vp.group.position.set(x - Math.sin(rot) * 0.95, DECK_Y, z - Math.cos(rot) * 0.95); vp.group.rotation.y = rot; wgrp.add(vp.group);
+    addSolid(x, z, 1.0); label('Gerai Senjata ⚔', x, 3.3, z); warPt = { x: x + Math.sin(rot) * 1.8, z: z + Math.cos(rot) * 1.8 };
+  })(20, -38);
+  (function boatMechanic(x, z) {
+    const g = new THREE.Group(); g.position.set(x, DECK_Y, z); wgrp.add(g);
+    const hull = toon(new THREE.BoxGeometry(1.5, 0.7, 4.4), 0x6a4a2a, { thickness: 0.03 }); place(hull, 0, 0.5, 0); g.add(hull);
+    const bench = toon(new THREE.BoxGeometry(1.6, 0.5, 0.7), 0x5a4632, { thickness: 0.03 }); place(bench, 1.7, 0.5, 0); g.add(bench);
+    const vp = person({ baju: 0x3a5a6a, head: 'headscarf', sampin: true, sampinTex: 'plaid', sampinColor: 0x4a4030 }); vp.group.position.set(x + 1.7, DECK_Y, z + 0.7); vp.group.rotation.y = Math.PI; wgrp.add(vp.group);
+    addSolid(x, z, 1.5); label('Tukang Bot ⚓', x, 4.6, z); MECH_PT = { x, z: z + 2.6 };
+  })(0, -52);
 
   // ---- spread the strolling crowd EVENLY across the district lane-grid -----
   // one villager per lane-intersection (no central-spine pile-up), skipping the
   // start area and any cell already taken by an informant or a vendor.
-  const occupied = (x, z, r) => informants.some((i) => Math.hypot(i.gx - x, i.gz - z) < r) || markets.some((m) => Math.hypot(m.x - x, m.z - z) < r);
+  const occupied = (x, z, r) => informants.some((i) => Math.hypot(i.gx - x, i.gz - z) < r) || markets.some((m) => Math.hypot(m.x - x, m.z - z) < r) || (warPt && Math.hypot(warPt.x - x, warPt.z - z) < r);
   let _crowd = 0;
-  // 6 columns × 6 rows (3 rows south of centre, 3 north) → even coverage of every district
-  for (const z of [-50, -30, -10, 12, 36, 64]) for (const x of [-86, -58, -30, 30, 58, 86]) {
-    if (_crowd >= 30) break;
-    if (Math.hypot(x, z) < 16 || occupied(x, z, 9)) continue;        // keep the start + NPC spots clear
-    const mood = (_crowd % 6 === 2) ? 'help' : (_crowd % 3 === 0 ? 'grump' : 'ok');  // ~5 helpers, ~1/3 grumpy
-    makeSim(x + rand(-2.5, 2.5), z + rand(-2.5, 2.5), 1, 2.4, mood); _crowd++;
+  // finer even grid across the small district (skip the start + the NPC cells)
+  for (const z of [-26, -8, 12, 30]) for (const x of [-44, -28, -12, 12, 28, 44]) {
+    if (_crowd >= 18) break;
+    if (Math.hypot(x, z) < 13 || occupied(x, z, 7)) continue;
+    const mood = (_crowd % 5 === 2) ? 'help' : (_crowd % 3 === 0 ? 'grump' : 'ok');  // ~3-4 helpers, ~1/3 grumpy
+    makeSim(x + rand(-2.2, 2.2), z + rand(-2.2, 2.2), 1, 2.2, mood); _crowd++;
   }
   const helpers = kids.filter((k) => k.helper);
 
   // ---- UI helpers --------------------------------------------------------
-  const marketsNeeded = () => Math.max(1, markets.length - 1);   // visit all but one
-  const centralInf = () => informants.filter((i) => !i._far).length;
+  const kit = () => warBoats + engines + cannons;          // war-kit pieces bought (of 9)
+  const kitDone = () => warBoats >= 3 && engines >= 3 && cannons >= 3;
   function refreshHud() {
-    elFol.textContent = followers; elFolt.textContent = centralInf(); elTok.textContent = tokens; elCoin.textContent = coins;
-    elBoat.textContent = boatParts; elMkt.textContent = marketsVisited + '/' + markets.length;
-    const hp = Math.max(0, Math.min(100, hunger)); elHbar.firstElementChild.style.width = hp + '%'; elHbar.classList.toggle('low', hp < 30);
+    elFol.textContent = recruited; elTok.textContent = warBoats; elCoin.textContent = coins; elBoat.textContent = engines; elMkt.textContent = cannons;
+    const hp = Math.max(0, Math.min(100, energy)); energyEl.firstElementChild.style.width = hp + '%'; energyEl.classList.toggle('low', hp < 30);
   }
   function setObjective() {
     let t;
-    const judged = informants.filter((i) => i.judged && !i._far).length;
-    if (judged < centralInf()) t = 'Walk the whole kampong — the villagers are spread to every corner. <b>Talk to each and judge their claim</b>.';
-    else if (marketsVisited < marketsNeeded()) t = `Explore further — <b>visit the gerai</b> in every corner (${marketsVisited}/${markets.length}). Eat at the green food stalls; earn 💰 by helping folk.`;
-    else if (stashesCleared < 2) t = 'Crime hides behind ghost stories. <b>Clear the drug stashes</b> you’ve uncovered.';
-    else if (!boatBuilt) t = `Earn tokens, then <b>build the boat</b> at the waterfront (${boatParts}/3) to reach the far kampong.`;
-    else if (!mysterySolved) t = 'Cross to the far kampong and <b>confront Pak Long</b> on Batu Masap.';
-    else t = 'Rally the kampong — you’ve earned their trust.';
+    if (recruited < 2) t = `Rally <b>2 men</b> to your side (${recruited}/2) — find the fighters and ask them to join.`;
+    else if (!kitDone()) t = `Earn 💰 (help folk, do puzzles), then at the <b>Gerai Senjata</b> buy <b>3 war-boats, 3 engines, 3 cannons</b> (kit ${kit()}/9).`;
+    else if (!submitted) t = 'Carry the war-kit to the <b>Tukang Bot (boat mechanic)</b> at the waterfront and arm the fleet.';
+    else t = 'The fleet is armed — Kampong Ayer is ready.';
     objEl.innerHTML = t;
   }
   refreshHud(); setObjective();
 
-  // the "pocket-book": tap 📖 to see your money/items, progress, and every clue
+  // the "pocket-book": tap 📖 to see your money/kit, progress, and clues
   function openJournal() {
     sfx.unlock(); journalOpen = true; dialog.hidden = true; dialogOpen = false;
-    const judged = informants.filter((i) => i.judged && !i._far).length;
     const row = (k, v) => `<div class="jrow"><span>${k}</span><b>${v}</b></div>`;
     const tk = (b) => (b ? '✅' : '◻️');
-    const clues = clueLog.length ? clueLog.map((c) => `<li><b>${c.who}:</b> ${c.text}</li>`).join('') : '<li class="dim">No clues yet — greet villagers and visit the gerai.</li>';
+    const clues = clueLog.length ? clueLog.map((c) => `<li><b>${c.who}:</b> ${c.text}</li>`).join('') : '<li class="dim">No notes yet — greet folk and visit the gerai.</li>';
     q('.kq-journal .jbody').innerHTML =
       `<h2>📖 Pocket &amp; Journal</h2>` +
-      `<div class="jsec">POCKET</div>` + row('💰 Money (coins)', coins) + row('🎟 Trust tokens', tokens) + row('🛶 Boat parts', boatParts + '/3') + row('🍚 Fullness', Math.round(hunger) + '%') +
-      `<div class="jsec">PROGRESS — to win, finish all of these</div>` +
-      row(tk(judged >= centralInf()) + ' Villagers judged', judged + '/' + centralInf()) +
-      row(tk(followers >= 5) + ' Households on your side', followers + ' (need 5)') +
-      row(tk(marketsVisited >= marketsNeeded()) + ' Gerai visited', marketsVisited + '/' + markets.length) +
-      row(tk(stashesCleared >= 2) + ' Stashes cleared', stashesCleared + '/2') +
-      row(tk(boatBuilt) + ' Boat built', boatBuilt ? 'done' : 'no') +
-      row(tk(mysterySolved) + ' Pak Long confronted', mysterySolved ? 'done' : 'no') +
-      `<div class="jsec">CLUES GATHERED (${clueLog.length})</div><ul class="jclues">${clues}</ul>`;
+      `<div class="jsec">POCKET</div>` + row('💰 Money (coins)', coins) + row('🔋 Energy', Math.round(energy) + '%') + row('👥 Men recruited', recruited + '/2') +
+      `<div class="jsec">WAR-KIT (buy at Gerai Senjata)</div>` + row(tk(warBoats >= 3) + ' 🛶 War-boats', warBoats + '/3') + row(tk(engines >= 3) + ' ⚙️ Boat engines', engines + '/3') + row(tk(cannons >= 3) + ' 💥 Cannons', cannons + '/3') +
+      `<div class="jsec">MISSION — to win, finish all of these</div>` +
+      row(tk(recruited >= 2) + ' Gather 2 men', recruited + '/2') +
+      row(tk(kitDone()) + ' Buy the full war-kit', kit() + '/9') +
+      row(tk(submitted) + ' Deliver to the boat mechanic', submitted ? 'done' : 'no') +
+      `<div class="jsec">NOTES (${clueLog.length})</div><ul class="jclues">${clues}</ul>`;
     journalEl.hidden = false; q('.kq-jbtn').classList.remove('glow');
   }
 
@@ -516,80 +521,89 @@ export function showKampong(audio, { mission, onResult } = {}) {
   }
   const setDlgText = (t) => { clearInterval(dlgTimer); q('.kq-text').textContent = t; };
 
-  function judge(inf, verdict) {
-    const correct = inf.truth === verdict;
-    judgeRow.innerHTML = '';
-    if (correct) {
-      inf.judged = true; if (!inf.follower) { inf.follower = true; followers++; }
-      tokens += 2; coins += 2; sfx.pickup();
-      if (inf.truth === 'crime' && inf.stashId) { const st = stashes.find((s) => s.id === inf.stashId); if (st && !st.revealed) { st.revealed = true; st.group.visible = true; addClue('Penemuan (lead)', `${inf.name}'s "ghost story" hid a real stash — a red beacon now marks it. Go clear it.`); showBanner('A stash uncovered — the “ghost” was a cover! 🔥 (+2🎟 +2💰)', 2600); } else showBanner('Trust earned. +2🎟 +2💰', 1800); }
-      else if (inf.truth === 'sacred') showBanner('You left it be, out of respect. +2🎟 +2💰', 2200);
-      else showBanner('You saw through the gossip. +2🎟 +2💰', 2200);
-      if (inf._far) culpritReady = true;
-      setDlgText('Terima kasih, adik. You see clearly. I stand with you.');
-    } else {
-      setDlgText('Hmm… not quite. Cross-check with the others before you decide.');
-    }
-    refreshHud(); setObjective(); checkWin();
-  }
+  // talk to a villager — socialise (a small tip the first time) + recruit the fighters
   function tryTalk(inf) {
     if (dialogOpen || won) return;
-    addClue(`${inf.name} · ${inf.prof}`, inf.claim);
-    const choices = inf.judged ? [] : [
-      { label: '🗣 Rumour — just gossip', cls: '', fn: () => judge(inf, 'rumour') },
-      { label: '🔪 Crime — act on it', cls: '', fn: () => judge(inf, 'crime') },
-      { label: '👻 Sacred — leave it be', cls: '', fn: () => judge(inf, 'sacred') },
-    ];
-    say(inf.name, inf.prof, inf.claim + (inf.judged ? '' : '\n\n💡 Idle gossip, a real crime to act on, or something sacred to respect?'), choices);
+    if (!inf.met) { inf.met = true; coins += 1; addClue(`${inf.name} · ${inf.prof}`, inf.line); refreshHud(); }
+    const choices = [];
+    if (inf.recruitable && !inf.recruited) choices.push({ label: '🤝 Ask to join you', cls: 'ok', fn: () => { inf.recruited = true; recruited++; sfx.win(); showBanner(`${inf.name} joins your band! (${recruited}/2 men)`, 2400); addClue('Recruited', `${inf.name} (${inf.prof}) stands with you.`); refreshHud(); setObjective(); checkWin(); setDlgText('Insya-Allah. I am with you, ketua.'); judgeRow.innerHTML = ''; } });
+    say(inf.name, inf.prof, inf.line, choices);
   }
-  // ---- helping folk: a quick quiz/puzzle for coins (and some folk won't help)
+  // ---- helping folk: a quick quiz/puzzle for coins (renewable income)
   function openQuiz(h) {
     if (dialogOpen || won) return;
     const Z = h.quiz;
     say(h.name, h.prof + ' · needs a hand', '“' + Z.q + '”', Z.o.map((opt, i) => ({
       label: opt, fn: (btn) => {
-        if (i === Z.a) { btn.classList.add('ok'); h.done = true; coins += h.reward; sfx.win(); showBanner(`Betul! ${h.name} thanks you. +${h.reward}💰`, 2400); refreshHud(); judgeRow.querySelectorAll('button').forEach((b) => b.disabled = true); setDlgText('Terima kasih! Here, take this for your trouble.'); }
+        if (i === Z.a) { btn.classList.add('ok'); h.cool = 7; coins += h.reward; sfx.win(); showBanner(`Betul! ${h.name} thanks you. +${h.reward}💰`, 2400); refreshHud(); judgeRow.querySelectorAll('button').forEach((b) => b.disabled = true); setDlgText('Terima kasih! Come again if you need more work.'); }
         else { btn.classList.add('no'); sfx.bump?.(); setDlgText('Alaa, not quite — cuba lagi (try again).'); }
       },
     })));
   }
   function buyFood(m) {
     if (won) return;
-    if (hunger >= 99) { showBanner('You’re full — jalan dulu, walk it off first.', 1600); return; }
-    if (coins < 2) { showBanner('Not enough 💰 — earn coins by helping folk or solving their puzzles.', 2400); return; }
-    coins -= 2; hunger = Math.min(100, hunger + 45); sfx.pickup(); showBanner(`Makan at ${m.name}! +45🍚  (−2💰)`, 2000); refreshHud();
+    if (energy >= 99) { showBanner('You’re full — jalan dulu, walk it off first.', 1600); return; }
+    if (coins < 2) { showBanner('Not enough 💰 — earn coins by helping folk or doing their puzzles.', 2400); return; }
+    coins -= 2; energy = Math.min(100, energy + 45); sfx.pickup(); showBanner(`Makan at ${m.name}! +45🔋  (−2💰)`, 2000); refreshHud();
   }
-  function clearStash(st) { st.cleared = true; st.group.visible = false; stashesCleared++; tokens += 5; coins += 3; sfx.win(); showBanner(`Stash destroyed (${stashesCleared}/2). +5🎟 +3💰`, 2400); refreshHud(); setObjective(); checkWin(); }
-  function buildBoat() { if (boatParts >= 3 || tokens < 4) { if (tokens < 4) showBanner('Need 4🎟 for the next boat part.', 1800); return; } tokens -= 4; boatParts++; sfx.pickup(); if (boatParts >= 3) { boatBuilt = true; WALK.push(...FAR); rasterize(true); showBanner('The boat is ready! The far kampong is open — sail north. 🛶', 3000); } else showBanner(`Boat part fitted (${boatParts}/3). +parts with tokens.`, 2200); refreshHud(); setObjective(); }
-  function confront() { if (mysterySolved) return; mysterySolved = true; sfx.win(); addClue('Solved', 'Pak Long kept the poison on Batu Masap — he is the culprit. The kampong knows the truth now.'); showBanner('Pak Long is exposed. The poison stops here. ⚖', 2800); setObjective(); checkWin(); }
+  // ---- the war chandler: buy boats / engines / cannons (3 of each) --------
+  function buyWar(kind) {
+    const have = kind === 'boat' ? warBoats : kind === 'engine' ? engines : cannons;
+    const p = PRICE[kind], nm = kind === 'boat' ? '🛶 war-boat' : kind === 'engine' ? '⚙️ engine' : '💥 cannon';
+    if (have >= 3) { showBanner(`You already have 3 ${nm}s.`, 1600); return; }
+    if (coins < p) { showBanner(`Need ${p}💰 for a ${nm} — earn more by helping folk.`, 2400); return; }
+    coins -= p; if (kind === 'boat') warBoats++; else if (kind === 'engine') engines++; else cannons++;
+    sfx.pickup(); showBanner(`Bought a ${nm} (−${p}💰). Kit ${kit()}/9.`, 2000); refreshHud(); setObjective();
+    openWarMenu();   // refresh the menu in place
+  }
+  function openWarMenu() {
+    say('Gerai Senjata', 'Tukang senjata', `For the warlord coming? Arm your boats.  Kit so far: ${warBoats}/3 boats · ${engines}/3 engines · ${cannons}/3 cannons.  You have ${coins}💰.`, [
+      { label: `🛶 War-boat (${PRICE.boat}💰)`, fn: () => buyWar('boat') },
+      { label: `⚙️ Engine (${PRICE.engine}💰)`, fn: () => buyWar('engine') },
+      { label: `💥 Cannon (${PRICE.cannon}💰)`, fn: () => buyWar('cannon') },
+    ]);
+  }
+  // ---- the boat mechanic: deliver the full kit to win --------------------
+  function submitKit() {
+    if (won) return;
+    if (recruited < 2) { showBanner('Gather your 2 men first — I won’t arm boats with no crew.', 2400); return; }
+    if (!kitDone()) { showBanner(`Bring the full kit first: ${warBoats}/3 boats, ${engines}/3 engines, ${cannons}/3 cannons.`, 2800); return; }
+    submitted = true; sfx.win(); setObjective(); checkWin();
+  }
   function checkWin() {
     if (won) return;
-    if (stashesCleared >= 2 && mysterySolved && followers >= 5 && marketsVisited >= marketsNeeded()) {
+    if (recruited >= 2 && kitDone() && submitted) {
       won = true; sfx.win();
-      q('.kq-win h2').textContent = 'THE KAMPONG STANDS TOGETHER';
-      q('.kq-win p').textContent = `You walked every lorong and won every corner — ${followers} households behind you, the drugs gone, the truth told.`;
-      q('.kq-win .clue').innerHTML = '🔮 <b>A runner pants up the titian:</b> “Awang! A warlord twice our size masses across the water — Kampong Ayer is next.” Your next stand: <b>Defence of Kampong Ayer</b>.';
+      q('.kq-win h2').textContent = 'THE FLEET IS ARMED';
+      q('.kq-win p').textContent = `With 2 good men and 3 war-boats fitted with engines and cannons, Kampong Ayer is ready to stand.`;
+      q('.kq-win .clue').innerHTML = '🔮 <b>A runner pants up the titian:</b> “Ketua! The warlord’s host is sighted across the water.” Your next stand: <b>Defence of Kampong Ayer</b>.';
       q('.kq-win').hidden = false;
     }
   }
 
   function doAction() {
-    if (won || dialogOpen || introOpen || journalOpen || !actTarget) return;
+    if (won || dialogOpen || introOpen || journalOpen || prayerOpen || !actTarget) return;
     if (actTarget.kind === 'talk') tryTalk(actTarget.inf);
     else if (actTarget.kind === 'help') openQuiz(actTarget.helper);
     else if (actTarget.kind === 'food') buyFood(actTarget.m);
-    else if (actTarget.kind === 'stash') clearStash(actTarget.st);
-    else if (actTarget.kind === 'boat') buildBoat();
-    else if (actTarget.kind === 'confront') confront();
+    else if (actTarget.kind === 'war') openWarMenu();
+    else if (actTarget.kind === 'mech') submitKit();
   }
 
-  // boat-building point at the waterfront jetty; confront point on Batu Masap
-  const BOAT_PT = { x: 0, z: -56 }, CONFRONT_PT = { x: 0, z: -112 };
+  // ---- prayer time: the game pauses and the kampong gathers at the masjid --
+  let prayerTimer = 50, prayerDur = 0;
+  function startPrayer() {
+    prayerOpen = true; prayerDur = 6; prayerTimer = 78; prayEl.hidden = false; dialog.hidden = true; dialogOpen = false; actBtn.hidden = true; tagEl.classList.remove('show');
+    sfx.bell?.(); speak('Allahu akbar', 0.7);
+    for (const k of kids) { k.tx = 30 + rand(-7, 7); k.tz = 30 + rand(-7, 7); k.t = 99; }   // all to the masjid (30,30)
+  }
+  function endPrayer() { if (!prayerOpen) return; prayerOpen = false; prayEl.hidden = true; for (const k of kids) k.t = rand(0, 1); showBanner('Solat selesai — back to the kampong.', 2000); }
+  prayEl.onclick = () => endPrayer();
 
   // ---- mission plumbing --------------------------------------------------
   function collide(p) { for (const s of solids) { const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz), min = s.r + PLAYER_R; if (d < min && d > 1e-4) { p.x = s.x + dx / d * min; p.z = s.z + dz / d * min; } } for (const pd of peds) if (pd.blocking) { const dx = p.x - pd.x, dz = p.z - pd.z, d = Math.hypot(dx, dz), min = 0.85 + PLAYER_R; if (d < min && d > 1e-4) { p.x = pd.x + dx / d * min; p.z = pd.z + dz / d * min; } } }
   function clampWalk(p) { if (WALK.some((r) => p.x >= r.x0 && p.x <= r.x1 && p.z >= r.z0 && p.z <= r.z1)) return; let best = null, bd = Infinity; for (const r of WALK) { const cx = clamp(p.x, r.x0, r.x1), cz = clamp(p.z, r.z0, r.z1); const d = (cx - p.x) ** 2 + (cz - p.z) ** 2; if (d < bd) { bd = d; best = { x: cx, z: cz }; } } p.x = best.x; p.z = best.z; }
-  function endMission(win, quit = false) { if (ended) return; ended = true; let stars = 0; if (win) { stars = 1; if (followers >= informants.length) stars++; if (stashesCleared >= totalStashes) stars++; } cleanup(); onResult?.({ win: quit ? false : win, stars: quit ? 0 : stars, minutes: elapsed / 60, quit }); }
+  function endMission(win, quit = false) { if (ended) return; ended = true; let stars = 0; if (win) { stars = 1; if (energy > 30) stars++; if (elapsed / 60 < 6) stars++; } cleanup(); onResult?.({ win: quit ? false : win, stars: quit ? 0 : stars, minutes: elapsed / 60, quit }); }
   function cleanup() { running = false; cancelAnimationFrame(raf); clearInterval(dlgTimer); clearTimeout(showBanner._t); removeEventListener('mousemove', onMM); removeEventListener('mouseup', onMU); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKD); removeEventListener('keyup', onKU); removeEventListener('resize', onResize); removeEventListener('orientationchange', onOrient); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
 
   // ---- loop --------------------------------------------------------------
@@ -602,56 +616,62 @@ export function showKampong(audio, { mission, onResult } = {}) {
     let ix = stick.dx, iy = stick.dy;
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1; if (keys.has('d') || keys.has('arrowright')) ix += 1;
     if (keys.has('w') || keys.has('arrowup')) iy -= 1; if (keys.has('s') || keys.has('arrowdown')) iy += 1;
+    // prayer time — periodically the kampong pauses to pray together at the masjid
+    if (!won && !introOpen) {
+      if (prayerOpen) { prayerDur -= dt; if (prayerDur <= 0) endPrayer(); }
+      else { prayerTimer -= dt; if (prayerTimer <= 0) startPrayer(); }
+    }
+    const frozen = dialogOpen || won || introOpen || journalOpen || prayerOpen;
     const mag = Math.hypot(ix, iy); let moving = false; if (stun > 0) stun -= dt;
-    if (mag > 0.05 && !dialogOpen && !won && !introOpen && !journalOpen) {
+    if (mag > 0.05 && !frozen) {
       moving = true; const nx = ix / (mag > 1 ? mag : 1), ny = iy / (mag > 1 ? mag : 1);
       const fwdX = Math.sin(camYaw), fwdZ = Math.cos(camYaw), rightX = Math.cos(camYaw), rightZ = -Math.sin(camYaw);
-      const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = hunger < 25 ? 3.7 : 6.2;   // hungry = tired = slower
-      // move along the walkable grid (titian + roads + house platforms); slide along walls
+      const mvX = rightX * nx + fwdX * ny, mvZ = rightZ * nx + fwdZ * ny, spd = energy < 25 ? 3.7 : 6.2;   // tired = slower
       const ox = kid.position.x, oz = kid.position.z, nX = ox + mvX * spd * dt, nZ = oz + mvZ * spd * dt; let px = ox, pz = oz;
       if (walkableAt(nX, nZ)) { px = nX; pz = nZ; } else if (walkableAt(nX, oz)) px = nX; else if (walkableAt(ox, nZ)) pz = nZ;
       kid.position.x = px; kid.position.z = pz; collide(kid.position);
       if (!walkableAt(kid.position.x, kid.position.z)) { kid.position.x = px; kid.position.z = pz; }
       kid.rotation.y = Math.atan2(mvX, mvZ); stepAcc += dt; if (stepAcc > 0.28) { stepAcc = 0; sfx.footstep(); }
-      hunger = Math.max(0, hunger - dt * 1.7);   // all this walking is hungry work
+      energy = Math.max(0, energy - dt * 1.6);   // walking burns energy
     }
     const sw = moving ? Math.sin(tnow * 11) : 0; if (legs[0]) { legs[0].rotation.x = sw * 0.6; legs[1].rotation.x = -sw * 0.6; } if (arms[0]) { arms[0].rotation.x = -sw * 0.5; arms[1].rotation.x = sw * 0.5; }
     kid.position.y = DECK_Y + (moving ? Math.abs(Math.sin(tnow * 11)) * 0.04 : 0);
-    // keep the hunger bar live; warn once when you get peckish
-    { const hp = Math.max(0, hunger); elHbar.firstElementChild.style.width = hp + '%'; elHbar.classList.toggle('low', hp < 30);
-      if (hp < 30 && !hungryWarned && !won) { hungryWarned = true; showBanner('Lapar! You’re getting hungry — buy food (🍢) at a green stall.', 2600); } else if (hp > 55) hungryWarned = false; }
+    // energy bar floats above the player's head + warns once when low
+    { const hp = Math.max(0, energy); energyEl.firstElementChild.style.width = hp + '%'; energyEl.classList.toggle('low', hp < 30);
+      tmpV.set(kid.position.x, DECK_Y + 2.5, kid.position.z).project(camera);
+      if (tmpV.z < 1 && !won) { energyEl.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + 'px'; energyEl.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + 'px'; energyEl.style.display = 'block'; } else energyEl.style.display = 'none';
+      if (hp < 30 && !hungryWarned && !won) { hungryWarned = true; showBanner('Penat! Your energy is low — eat at a green food stall (🍢).', 2600); } else if (hp > 55) hungryWarned = false; }
 
     // salam on proximity
-    if (!salamBusy && !dialogOpen && !won) { for (const gg of greetables) { if (gg.greeted) continue; if (Math.hypot(kid.position.x - gg.x, kid.position.z - gg.z) < 3) { gg.greeted = true; saySalam(); break; } } }
-    // visit a market stall on proximity → reward + clue (rewards exploring)
-    if (!won && !dialogOpen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; marketsVisited++; tokens += 2; sfx.pickup(); addClue(`${m.name} · ${m.prof}`, m.clue + (m.food ? ' (a food stall — eat here)' : '')); showBanner(`${m.name}: ${m.clue}. +2🎟 (markets ${marketsVisited}/${markets.length})`, 2800); refreshHud(); setObjective(); checkWin(); break; } }
-    for (const k of kids) { k.t -= dt; if (k.t <= 0) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx + rand(-rm, rm); k.tz = k.hz + rand(-rm, rm); } const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false; if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); } const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0); }
+    if (!salamBusy && !frozen) { for (const gg of greetables) { if (gg.greeted) continue; if (Math.hypot(kid.position.x - gg.x, kid.position.z - gg.z) < 3) { gg.greeted = true; saySalam(); break; } } }
+    // a small tip + a note the first time you visit a gerai
+    if (!frozen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; coins += 1; sfx.pickup(); addClue(`${m.name} · ${m.prof}`, m.clue); showBanner(`${m.name}: ${m.clue}. (+1💰)`, 2600); refreshHud(); break; } }
+    for (const k of kids) { if (k.cool > 0) k.cool -= dt; k.t -= dt; if (k.t <= 0 && !prayerOpen) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx + rand(-rm, rm); k.tz = k.hz + rand(-rm, rm); } const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false; if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); } const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0); }
     for (const c of cats) { c.t -= dt; if (c.t <= 0) { c.t = rand(2, 5); c.tx = c.hx + rand(-3, 3); c.tz = c.hz + rand(-3, 3); } const dx = c.tx - c.group.position.x, dz = c.tz - c.group.position.z, d = Math.hypot(dx, dz); if (d > 0.2) { c.group.position.x += dx / d * c.spd * dt; c.group.position.z += dz / d * c.spd * dt; c.group.rotation.y = Math.atan2(dx, dz); } c.meowCd -= dt; if (c.meowCd <= 0) { c.meowCd = rand(7, 16); if (Math.hypot(kid.position.x - c.group.position.x, kid.position.z - c.group.position.z) < 10) sfx.meow(); } }
 
     // floating speech bubble over the nearest sim — shows who they are + a line
-    if (!introOpen && !won) {
+    if (!introOpen && !won && !prayerOpen) {
       let best = null, bd = 49;   // within ~7m
-      for (const k of kids) { if (!k.name) continue; const dd = (k.group.position.x - kid.position.x) ** 2 + (k.group.position.z - kid.position.z) ** 2; if (dd < bd) { bd = dd; best = { wx: k.group.position.x, wz: k.group.position.z, name: k.name, prof: k.prof, grump: k.grumpy, help: k.helper && !k.done, avatar: k.avatar, line: k.helper ? (k.done ? 'Terima kasih, adik!' : k.line) : k.line }; } }
-      for (const inf of informants) { if (inf._far && !boatBuilt) continue; const dd = (inf.gx - kid.position.x) ** 2 + (inf.gz - kid.position.z) ** 2; if (dd < bd) { bd = dd; best = { wx: inf.gx, wz: inf.gz, name: inf.name, prof: inf.prof, grump: false, help: false, avatar: 0x2f7f78, line: inf.judged ? 'Saya dengan kamu, adik.' : 'Come, I have something to tell you…' }; } }
+      for (const k of kids) { if (!k.name) continue; const dd = (k.group.position.x - kid.position.x) ** 2 + (k.group.position.z - kid.position.z) ** 2; if (dd < bd) { const av = k.helper && k.cool <= 0; bd = dd; best = { wx: k.group.position.x, wz: k.group.position.z, name: k.name, prof: k.prof, grump: k.grumpy, help: av, avatar: k.avatar, line: k.helper ? (av ? k.line : 'Terima kasih, adik!') : k.line }; } }
+      for (const inf of informants) { const dd = (inf.gx - kid.position.x) ** 2 + (inf.gz - kid.position.z) ** 2; if (dd < bd) { const rc = inf.recruitable && !inf.recruited; bd = dd; best = { wx: inf.gx, wz: inf.gz, name: inf.name, prof: inf.prof, grump: false, help: rc, avatar: 0x2f7f78, line: inf.recruited ? 'Saya dengan kamu, ketua.' : inf.line }; } }
       if (best) { tmpV.set(best.wx, DECK_Y + 2.55, best.wz).project(camera);
         if (tmpV.z < 1) { tagEl.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + 'px'; tagEl.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + 'px'; tagEl.className = 'kq-tag show' + (best.grump ? ' grump' : best.help ? ' help' : ''); tagEl.innerHTML = `<span class="kq-avatar" style="background:#${(best.avatar | 0).toString(16).padStart(6, '0')}"></span><span class="pf">${best.name} · ${best.prof}</span><span class="ln">${best.line}</span>`; }
         else tagEl.classList.remove('show');
       } else tagEl.classList.remove('show');
     } else tagEl.classList.remove('show');
-    for (const st of stashes) if (st.revealed && !st.cleared) { st.beam.material.opacity = 0.25 + Math.sin(tnow * 4) * 0.12; st.group.rotation.y += dt * 0.5; }
 
     // pick the nearest contextual action
     actTarget = null; let bd = Infinity;
     const consider = (kind, x, z, range, extra) => { const d = Math.hypot(kid.position.x - x, kid.position.z - z); if (d < range && d < bd) { bd = d; actTarget = { kind, ...extra }; } };
-    for (const st of stashes) if (st.revealed && !st.cleared) consider('stash', st.x, st.z, 2.4, { st });
-    for (const inf of informants) { if (inf._far && !boatBuilt) continue; consider('talk', inf.x, inf.z, 2.8, { inf }); }
-    for (const h of helpers) if (!h.done) consider('help', h.group.position.x, h.group.position.z, 2.6, { helper: h });
+    for (const inf of informants) consider('talk', inf.x, inf.z, 2.8, { inf });
+    for (const h of helpers) if (h.cool <= 0) consider('help', h.group.position.x, h.group.position.z, 2.6, { helper: h });
     for (const m of markets) if (m.food) consider('food', m.x, m.z, 3.0, { m });
-    if (!boatBuilt) consider('boat', BOAT_PT.x, BOAT_PT.z, 3.2, {});
-    if (boatBuilt && culpritReady && !mysterySolved) consider('confront', CONFRONT_PT.x, CONFRONT_PT.z, 4, {});
-    if (actTarget && !dialogOpen && !won && !introOpen && !journalOpen) {
+    if (warPt) consider('war', warPt.x, warPt.z, 3.0, {});
+    if (MECH_PT && recruited >= 2 && kitDone()) consider('mech', MECH_PT.x, MECH_PT.z, 3.4, {});
+    if (actTarget && !frozen) {
       actBtn.hidden = false;
-      actBtn.textContent = actTarget.kind === 'talk' ? '💬 Talk' : actTarget.kind === 'help' ? '❓ Help (earn 💰)' : actTarget.kind === 'food' ? '🍢 Eat (2💰 → +45🍚)' : actTarget.kind === 'stash' ? '🔥 Clear stash' : actTarget.kind === 'boat' ? '🛶 Build boat (4🎟)' : '⚖ Confront';
+      const t = actTarget.kind; const inf = actTarget.inf;
+      actBtn.textContent = t === 'talk' ? (inf && inf.recruitable && !inf.recruited ? '🤝 Recruit' : '💬 Talk') : t === 'help' ? '❓ Help (earn 💰)' : t === 'food' ? '🍢 Eat (2💰 → +45🔋)' : t === 'war' ? '⚔ War supplies' : '⚓ Arm the fleet';
     } else actBtn.hidden = true;
 
     updateCamera(false);
@@ -665,39 +685,41 @@ export function showKampong(audio, { mission, onResult } = {}) {
   introEl.querySelector('.card').innerHTML =
     `<div class="sub">Mission 1 of 7 · The River Campaign</div>` +
     `<h2>Landing at Muara</h2>` +
-    `<p>Awang Semaun comes ashore at <b>Kampong Ayer</b> — a water-village fraying with whispered rumour, real crime, and things best left sacred. Walk every lorong, win the people back.</p>` +
+    `<p>Awang Semaun comes ashore at <b>Kampong Ayer</b>. A warlord masses across the water — ready the kampong’s war-boats before he strikes.</p>` +
     `<ul>` +
-    `<li>🗣 <b>Talk</b> to villagers in every corner; <b>judge each claim</b> — rumour, crime, or sacred.</li>` +
-    `<li>🛒 <b>Visit the gerai</b> (market stalls) spread to the corners; clear the drug <b>stashes</b> you uncover.</li>` +
-    `<li>🍢 Walking makes you <b>hungry</b> — buy food at the <b>green stalls</b> with 💰; earn 💰 by <b>helping folk & solving their puzzles</b>.</li>` +
-    `<li>🛶 <b>Build the boat</b> with trust 🎟, cross over, and <b>confront Pak Long</b> on Batu Masap.</li>` +
+    `<li>🤝 <b>Gather 2 men</b> — find the fighters and ask them to join you.</li>` +
+    `<li>💰 <b>Survive &amp; socialise:</b> walking drains 🔋 energy — eat at the <b>green food stalls</b>; earn 💰 by <b>helping folk &amp; their puzzles</b>.</li>` +
+    `<li>⚔ At the <b>Gerai Senjata</b> buy <b>3 war-boats, 3 engines, 3 cannons</b>.</li>` +
+    `<li>⚓ Deliver the kit to the <b>Tukang Bot</b> at the waterfront to arm the fleet — and win.</li>` +
     `</ul>` +
+    `<p style="font-size:12px;color:#5a7580;">🕌 When the azan sounds it is prayer time — the kampong pauses and gathers at the masjid.</p>` +
     `<button>Come ashore →</button>`;
   introEl.hidden = false; introOpen = true;
-  introEl.querySelector('button').onclick = () => { introEl.hidden = true; introOpen = false; sfx.unlock(); showBanner('Selamat datang. Listen, help, and earn their trust.', 3200); };
+  introEl.querySelector('button').onclick = () => { introEl.hidden = true; introOpen = false; sfx.unlock(); showBanner('Selamat datang. Gather your men and arm the boats!', 3200); };
 
   // ---- debug hook --------------------------------------------------------
   window.__kampong = {
-    state: () => ({ x: +kid.position.x.toFixed(1), z: +kid.position.z.toFixed(1), tokens, coins, hunger: Math.round(hunger), followers, boatParts, boatBuilt, stashesCleared, totalStashes, mysterySolved, culpritReady, won, ended, walkRects: WALK.length, judged: informants.filter((i) => i.judged).length, marketsVisited, markets: markets.length, villagers: kids.length, helpers: helpers.length, helpersDone: helpers.filter((h) => h.done).length, introOpen }),
+    state: () => ({ x: +kid.position.x.toFixed(1), z: +kid.position.z.toFixed(1), coins, energy: Math.round(energy), recruited, warBoats, engines, cannons, kit: kit(), submitted, won, ended, walkRects: WALK.length, villagers: kids.length, helpers: helpers.length, introOpen, prayerOpen }),
     helperPts: () => helpers.map((h) => [+h.group.position.x.toFixed(1), +h.group.position.z.toFixed(1)]),
     foodPts: () => markets.filter((m) => m.food).map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
-    setHunger: (v) => { hunger = v; refreshHud(); },
+    warPt: () => warPt && [warPt.x, warPt.z],
+    mechPt: () => MECH_PT && [MECH_PT.x, MECH_PT.z],
+    setEnergy: (v) => { energy = v; refreshHud(); },
     eatTest: () => buyFood(markets.find((m) => m.food)),
-    solveHelpers: () => { helpers.forEach((h) => { if (!h.done) { h.done = true; coins += h.reward; } }); refreshHud(); },
+    addCoins: (n) => { coins += n; refreshHud(); },
+    buyKit: () => { coins += 99; for (let i = 0; i < 3; i++) { buyWar('boat'); buyWar('engine'); buyWar('cannon'); } },
+    recruitAll: () => { informants.forEach((i) => { if (i.recruitable && !i.recruited) { i.recruited = true; recruited++; } }); refreshHud(); setObjective(); },
+    submit: () => submitKit(),
+    pray: () => startPrayer(),
     closeIntro: () => { introEl.hidden = true; introOpen = false; },
     clues: () => clueLog.length,
     openJournal: () => { openJournal(); return clueLog.length; },
     simPts: () => kids.filter((k) => k.name).map((k) => [Math.round(k.group.position.x), Math.round(k.group.position.z)]),
-    mapShot: (h = 360, cz = -10) => { running = false; cancelAnimationFrame(raf); hud.style.display = 'none'; rotateEl.classList.remove('show'); scene.fog = null; camera.far = 4000; camera.fov = 55; camera.up.set(0, 0, -1); camera.position.set(0, h, cz); camera.lookAt(0, 0.5, cz); camera.updateProjectionMatrix(); renderer.render(scene, camera); },
+    mapShot: (h = 280, cz = 0) => { running = false; cancelAnimationFrame(raf); hud.style.display = 'none'; rotateEl.classList.remove('show'); scene.fog = null; camera.far = 4000; camera.fov = 55; camera.up.set(0, 0, -1); camera.position.set(0, h, cz); camera.lookAt(0, 0.5, cz); camera.updateProjectionMatrix(); renderer.render(scene, camera); },
     marketPts: () => markets.map((m) => [+m.x.toFixed(1), +m.z.toFixed(1)]),
     infPts: () => informants.map((i) => [i.name, +i.x.toFixed(1), +i.z.toFixed(1)]),
     teleport: (x, z) => { kid.position.x = x; kid.position.z = z; updateCamera(true); },
     cam: (yaw, pitch, dist) => { camYaw = yaw; camPitch = pitch; camDist = dist; updateCamera(true); },
-    judgeAll: () => informants.forEach((i) => { if (!i._far || boatBuilt) judge(i, i.truth); }),
-    clearStashes: () => stashes.forEach((s) => { if (s.revealed && !s.cleared) clearStash(s); }),
-    addTokens: (n) => { tokens += n; refreshHud(); },
-    buildBoat: () => { while (!boatBuilt) { tokens = Math.max(tokens, 4); buildBoat(); } },
-    confront: () => confront(),
     walkable: (x, z) => walkableAt(x, z),
     houses: () => houseXf.length,
     nearestHouseTo: (x, z) => { let bn = 1e9, bh = null; for (const h of houseXf) { const d = Math.hypot(h.x - x, h.z - z); if (d < bn) { bn = d; bh = h; } } return bh ? { x: +bh.x.toFixed(1), z: +bh.z.toFixed(1), d: +bn.toFixed(1) } : null; },

@@ -332,6 +332,9 @@ export function showKampong(audio, { mission, onResult } = {}) {
     return { o: { baju, head: HEADS[(Math.random() * HEADS.length) | 0], sampin: Math.random() < 0.6, sampinColor: SARONGS[(Math.random() * SARONGS.length) | 0] }, female: false, baju };
   }
   function makeSim(hx, hz, scale, roam, mood) {
+    // snap the home onto the nearest boardwalk cell (expanding ring search) so a
+    // sim never starts — or roams — out over the water
+    if (!walkableAt(hx, hz)) { let found = false; for (let r = 1.4; r <= 18 && !found; r += 1.4) for (let a = 0; a < 6.2832; a += 0.45) { const cx = hx + Math.cos(a) * r, cz = hz + Math.sin(a) * r; if (walkableAt(cx, cz)) { hx = cx; hz = cz; found = true; break; } } }
     const mk = makeOutfit(); const pr = person({ ...mk.o, scale }); pr.group.position.set(hx, DECK_Y, hz); wgrp.add(pr.group);
     const name = mk.female ? FEMALE[_nf++ % FEMALE.length] : MALE[_nm++ % MALE.length];
     const prof = PROFS[(Math.random() * PROFS.length) | 0];
@@ -646,7 +649,14 @@ export function showKampong(audio, { mission, onResult } = {}) {
     if (!salamBusy && !frozen) { for (const gg of greetables) { if (gg.greeted) continue; if (Math.hypot(kid.position.x - gg.x, kid.position.z - gg.z) < 3) { gg.greeted = true; saySalam(); break; } } }
     // a small tip + a note the first time you visit a gerai
     if (!frozen) for (const m of markets) { if (m.visited) continue; if (Math.hypot(kid.position.x - m.x, kid.position.z - m.z) < 3.2) { m.visited = true; coins += 1; sfx.pickup(); addClue(`${m.name} · ${m.prof}`, m.clue); showBanner(`${m.name}: ${m.clue}. (+1💰)`, 2600); refreshHud(); break; } }
-    for (const k of kids) { if (k.cool > 0) k.cool -= dt; k.t -= dt; if (k.t <= 0 && !prayerOpen) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx + rand(-rm, rm); k.tz = k.hz + rand(-rm, rm); } const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false; if (d > 0.25) { mv = true; k.group.position.x += dx / d * k.spd * dt; k.group.position.z += dz / d * k.spd * dt; k.group.rotation.y = Math.atan2(dx, dz); } const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0); }
+    for (const k of kids) {
+      if (k.cool > 0) k.cool -= dt;
+      k.t -= dt;
+      if (k.t <= 0 && !prayerOpen) { const rm = k.roam ?? 3.5; k.t = rand(1, 3); k.tx = k.hx; k.tz = k.hz; for (let tries = 0; tries < 6; tries++) { const cx = k.hx + rand(-rm, rm), cz = k.hz + rand(-rm, rm); if (walkableAt(cx, cz)) { k.tx = cx; k.tz = cz; break; } } }
+      const dx = k.tx - k.group.position.x, dz = k.tz - k.group.position.z, d = Math.hypot(dx, dz); let mv = false;
+      if (d > 0.25) { const sx = k.group.position.x + dx / d * k.spd * dt, sz = k.group.position.z + dz / d * k.spd * dt; if (walkableAt(sx, sz)) { mv = true; k.group.position.x = sx; k.group.position.z = sz; k.group.rotation.y = Math.atan2(dx, dz); } else { k.t = 0; } }   // never step onto water — retarget instead
+      const ks = mv ? Math.sin(tnow * 12 + k.ph) : 0; if (k.legs[0]) { k.legs[0].rotation.x = ks * 0.7; k.legs[1].rotation.x = -ks * 0.7; } k.group.position.y = DECK_Y + (mv ? Math.abs(Math.sin(tnow * 12 + k.ph)) * 0.05 : 0);
+    }
     for (const c of cats) { c.t -= dt; if (c.t <= 0) { c.t = rand(2, 5); c.tx = c.hx + rand(-3, 3); c.tz = c.hz + rand(-3, 3); } const dx = c.tx - c.group.position.x, dz = c.tz - c.group.position.z, d = Math.hypot(dx, dz); if (d > 0.2) { c.group.position.x += dx / d * c.spd * dt; c.group.position.z += dz / d * c.spd * dt; c.group.rotation.y = Math.atan2(dx, dz); } c.meowCd -= dt; if (c.meowCd <= 0) { c.meowCd = rand(7, 16); if (Math.hypot(kid.position.x - c.group.position.x, kid.position.z - c.group.position.z) < 10) sfx.meow(); } }
 
     // floating speech bubble over the nearest sim — shows who they are + a line

@@ -11,7 +11,7 @@ import * as THREE from 'three';
 const ringMat = (c, o = 0.6) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false });
 
 // ---- shared kit engine -----------------------------------------------------
-export function makeKit(skills, { hero, addVfx, enemiesNear = () => [], hit = () => {}, onLevel = () => {} }) {
+export function makeKit(skills, { hero, addVfx, enemiesNear = () => [], hit = () => {}, alliesNear = () => [], heal = () => {}, shieldUnit = () => {}, onLevel = () => {} }) {
   const powderMax = 100; let powder = 100, powderRegen = 12;
   let heroLevel = 1, points = 1, xp = 0;
   const xpNeed = () => 100 + (heroLevel - 1) * 70;
@@ -23,7 +23,7 @@ export function makeKit(skills, { hero, addVfx, enemiesNear = () => [], hit = ()
   function tryCast(i) {
     const s = skills[i]; if (!s || s.t > 0 || powder < s.cost) return false;
     powder -= s.cost; s.t = cdOf(s);
-    s.cast({ hero, s, f: fwd(), p: hero.pos, addVfx, enemiesNear, hit, after, ring: ringMat, THREE });
+    s.cast({ hero, s, f: fwd(), p: hero.pos, addVfx, enemiesNear, hit, alliesNear, heal, shieldUnit, after, ring: ringMat, THREE });
     return true;
   }
   function levelUp(i) { const s = skills[i]; if (!s || points <= 0 || s.level >= s.max) return false; s.level++; points--; return true; }
@@ -119,5 +119,73 @@ export const hammerheadSkills = () => [
       if (e2) hit(e2, 180 + s.level * 50, { slow: 1.5, byHero: true });
       const fl = new THREE.Mesh(new THREE.RingGeometry(0.5, 4, 24), ring(0xff7050, 0.7)); fl.rotation.x = -Math.PI / 2; fl.position.set(hero.pos.x, 0.22, hero.pos.z); addVfx(fl, 0.5, (dt, o) => { fl.scale.setScalar(1 + o.t * 2); fl.material.opacity = 0.7 * (1 - o.t / o.life); });
     });
+  } },
+];
+
+// ---- Nakhoda (Traditional SUPPORT): Mend heal, Aegis shield, Tide of Valour ult --
+export const nakhodaSkills = () => [
+  { key: 'mend', name: 'Mend', letter: 'Q', cd: 7, cost: 28, t: 0, level: 1, max: 4, desc: 'Heal nearby allies', cast: (c) => {
+    const { hero, s, addVfx, alliesNear, heal, ring, THREE } = c;
+    const R = 7; const amt = 90 + s.level * 35;
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.5, R, 28), ring(0x8fffa6, 0.55)); r.rotation.x = -Math.PI / 2; r.position.set(hero.pos.x, 0.22, hero.pos.z); addVfx(r, 0.6, (dt, o) => { r.scale.setScalar(0.4 + (o.t / o.life) * 0.6); r.material.opacity = 0.55 * (1 - o.t / o.life); });
+    for (const a of alliesNear(hero.pos.x, hero.pos.z, R, 0)) heal(a, amt);
+  } },
+  { key: 'aegis', name: 'Aegis', letter: 'W', cd: 10, cost: 32, t: 0, level: 1, max: 4, desc: 'Shield nearby allies', cast: (c) => {
+    const { hero, s, addVfx, alliesNear, shieldUnit, ring, THREE } = c;
+    const R = 6.5; const amt = 110 + s.level * 45;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(R * 0.5, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), ring(0xbfe0ff, 0.3)); dome.position.set(hero.pos.x, 0.3, hero.pos.z); addVfx(dome, 0.7, (dt, o) => { dome.material.opacity = 0.3 * (1 - o.t / o.life); });
+    for (const a of alliesNear(hero.pos.x, hero.pos.z, R, 0)) shieldUnit(a, amt, 6);
+  } },
+  { key: 'tide', name: 'Tide of Valour', letter: 'B', cd: 30, cost: 60, t: 0, level: 1, max: 3, desc: 'Pulsing heal + shield, the whole fleet', cast: (c) => {
+    const { hero, s, addVfx, alliesNear, heal, shieldUnit, after, ring, THREE } = c;
+    const R = 11 + s.level; const pulse = () => {
+      const r = new THREE.Mesh(new THREE.RingGeometry(0.5, R, 36), ring(0xffe7a0, 0.5)); r.rotation.x = -Math.PI / 2; r.position.set(hero.pos.x, 0.22, hero.pos.z); addVfx(r, 0.7, (dt, o) => { r.scale.setScalar(0.3 + (o.t / o.life) * 0.7); r.material.opacity = 0.5 * (1 - o.t / o.life); });
+      for (const a of alliesNear(hero.pos.x, hero.pos.z, R, 0)) { heal(a, 70 + s.level * 25); shieldUnit(a, 90 + s.level * 30, 4); }
+    };
+    pulse(); after(0.8, pulse); after(1.6, pulse);
+  } },
+];
+
+// ---- Tempest (Modern MAGE): Arc chain-lightning, Maelstrom storm, Tempest ult ----
+export const tempestSkills = () => [
+  { key: 'arc', name: 'Arc', letter: 'Q', cd: 5, cost: 24, t: 0, level: 1, max: 4, desc: 'Chain lightning, bounces', cast: (c) => {
+    const { p, s, addVfx, enemiesNear, hit, THREE } = c;
+    const bolt = (ax, az, bx, bz) => { const A = new THREE.Vector3(ax, 0.8, az), Bv = new THREE.Vector3(bx, 0.8, bz); const len = A.distanceTo(Bv) || 0.1; const m = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, len, 5), new THREE.MeshBasicMaterial({ color: 0x9fdcff, transparent: true, opacity: 0.9, depthWrite: false })); m.position.copy(A).lerp(Bv, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), Bv.clone().sub(A).normalize()); addVfx(m, 0.2, (dt, o) => { m.material.opacity = 0.9 * (1 - o.t / o.life); }); };
+    let from = { x: p.x, z: p.z }; const seen = new Set(); const bounces = 3 + s.level; let dmg = 55 + s.level * 16;
+    for (let j = 0; j < bounces; j++) { const cand = enemiesNear(from.x, from.z, j === 0 ? 10 : 7, 0).filter((e) => !seen.has(e)).sort((a, b) => Math.hypot(a.x - from.x, a.z - from.z) - Math.hypot(b.x - from.x, b.z - from.z)); const t = cand[0]; if (!t) break; seen.add(t); bolt(from.x, from.z, t.x, t.z); hit(t, dmg, { byHero: true }); dmg *= 0.82; from = { x: t.x, z: t.z }; }
+  } },
+  { key: 'maelstrom', name: 'Maelstrom', letter: 'W', cd: 8, cost: 30, t: 0, level: 1, max: 4, desc: 'Storm AoE, slows', cast: (c) => {
+    const { f, p, s, addVfx, enemiesNear, hit, ring, THREE } = c;
+    const tx = p.x + f.x * 9, tz = p.z + f.z * 9, R = 5 + s.level * 0.5;
+    const sw = new THREE.Mesh(new THREE.RingGeometry(R * 0.3, R, 30), ring(0x6fc8ff, 0.5)); sw.rotation.x = -Math.PI / 2; sw.position.set(tx, 0.22, tz); addVfx(sw, 0.8, (dt, o) => { sw.rotation.z += dt * 9; sw.material.opacity = 0.5 * (1 - o.t / o.life); });
+    for (const e of enemiesNear(tx, tz, R, 0)) hit(e, 60 + s.level * 18, { slow: 1.6, byHero: true });
+  } },
+  { key: 'tempest', name: 'Tempest', letter: 'B', cd: 30, cost: 60, t: 0, level: 1, max: 3, desc: 'A storm of strikes + stun', cast: (c) => {
+    const { f, p, s, addVfx, enemiesNear, hit, after, ring, THREE } = c;
+    const tx = p.x + f.x * 10, tz = p.z + f.z * 10, R = 8 + s.level;
+    const eye = new THREE.Mesh(new THREE.RingGeometry(R - 0.5, R, 40), ring(0x8fd8ff, 0.5)); eye.rotation.x = -Math.PI / 2; eye.position.set(tx, 0.22, tz); addVfx(eye, 1.3, (dt, o) => { eye.rotation.z += dt * 4; eye.material.opacity = 0.3 + 0.2 * Math.sin(o.t * 9); });
+    for (let k = 0; k < 8; k++) after(0.1 * k, () => { const ox = tx + Math.cos(k * 1.9) * R * 0.7, oz = tz + Math.sin(k * 2.4) * R * 0.7; const fl = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 6, 5), new THREE.MeshBasicMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.9, depthWrite: false })); fl.position.set(ox, 3, oz); addVfx(fl, 0.25, (dt, o) => { fl.material.opacity = 0.9 * (1 - o.t / o.life); }); for (const e of enemiesNear(ox, oz, 3, 0)) hit(e, 30 + s.level * 10, { byHero: true }); });
+    after(0.9, () => { for (const e of enemiesNear(tx, tz, R, 0)) hit(e, 60 + s.level * 20, { stun: 0.8, byHero: true }); });
+  } },
+];
+
+// ---- Sentinel (Modern TANK): Bulwark shield, Grapnel pull, Bastion zone ult ------
+export const sentinelSkills = () => [
+  { key: 'bulwark', name: 'Bulwark', letter: 'Q', cd: 9, cost: 28, t: 0, level: 1, max: 4, desc: 'Shield self + near allies', cast: (c) => {
+    const { hero, s, addVfx, alliesNear, shieldUnit, ring, THREE } = c;
+    const R = 5; const amt = 140 + s.level * 50;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(R * 0.6, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), ring(0xaecbe6, 0.34)); dome.position.set(hero.pos.x, 0.3, hero.pos.z); addVfx(dome, 0.7, (dt, o) => { dome.material.opacity = 0.34 * (1 - o.t / o.life); });
+    for (const a of alliesNear(hero.pos.x, hero.pos.z, R, 0)) shieldUnit(a, amt, 7);
+  } },
+  { key: 'grapnel', name: 'Grapnel', letter: 'W', cd: 9, cost: 30, t: 0, level: 1, max: 4, desc: 'Drag in foes ahead, slow', cast: (c) => {
+    const { hero, s, f, p, addVfx, enemiesNear, hit, ring, THREE } = c;
+    const range = 10; const cone = new THREE.Mesh(new THREE.RingGeometry(1, range, 20, 1, -0.5, 1.0), ring(0xffc070, 0.4)); cone.rotation.x = -Math.PI / 2; cone.position.set(p.x, 0.21, p.z); cone.rotation.z = -hero.yaw; addVfx(cone, 0.5, (dt, o) => { cone.material.opacity = 0.4 * (1 - o.t / o.life); });
+    for (const e of enemiesNear(p.x, p.z, range, 0)) { const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1; if ((dx / d) * f.x + (dz / d) * f.z > 0.45) hit(e, 45 + s.level * 14, { pull: { x: p.x, z: p.z }, slow: 1.4, byHero: true }); }
+  } },
+  { key: 'bastion', name: 'Bastion', letter: 'B', cd: 32, cost: 60, t: 0, level: 1, max: 3, desc: 'Hold a zone — slow foes, shield allies', cast: (c) => {
+    const { hero, s, addVfx, enemiesNear, alliesNear, hit, shieldUnit, after, ring, THREE } = c;
+    const cx = hero.pos.x, cz = hero.pos.z, R = 8 + s.level;
+    const zone = new THREE.Mesh(new THREE.RingGeometry(R - 0.6, R, 40), ring(0x9fd0ff, 0.45)); zone.rotation.x = -Math.PI / 2; zone.position.set(cx, 0.21, cz); addVfx(zone, 4.2, (dt, o) => { zone.material.opacity = 0.25 + 0.15 * Math.sin(o.t * 6); });
+    for (let k = 0; k < 4; k++) after(1.0 * k, () => { for (const e of enemiesNear(cx, cz, R, 0)) hit(e, 25 + s.level * 8, { slow: 1.2, byHero: true }); for (const a of alliesNear(cx, cz, R, 0)) shieldUnit(a, 60 + s.level * 20, 1.4); });
   } },
 ];

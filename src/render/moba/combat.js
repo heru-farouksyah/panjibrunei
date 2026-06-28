@@ -17,7 +17,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const fill = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.15), new THREE.MeshBasicMaterial({ color: team === 0 ? 0x46d06a : 0xff5246, depthTest: false })); fill.position.z = 0.01;
     g.add(bg); g.add(fill); g.renderOrder = 999; bg.renderOrder = 999; fill.renderOrder = 1000; return { g, fill };
   }
-  function add(u) { u.alive = true; u.atkT = 0; u.stun = u.stun || 0; u.slow = u.slow || 0; const hb = makeHpBar(u.team); u._hp = hb; scene.add(hb.g); if (u.mesh) scene.add(u.mesh); units.push(u); return u; }
+  function add(u) { u.alive = true; u.atkT = 0; u.stun = u.stun || 0; u.slow = u.slow || 0; u.shield = u.shield || 0; u.shieldT = u.shieldT || 0; const hb = makeHpBar(u.team); u._hp = hb; scene.add(hb.g); if (u.mesh) scene.add(u.mesh); units.push(u); return u; }
 
   function spawnMinion(team, lane) {
     const path = map.lanes[lane].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.4, w.z); });
@@ -70,6 +70,9 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   }
 
   function enemiesNear(x, z, r, team = 0) { const out = []; for (const u of units) { if (!u.alive || u.down || u.team === team) continue; if (Math.hypot(u.x - x, u.z - z) <= r) out.push(u); } return out; }
+  function alliesNear(x, z, r, team = 0) { const out = []; for (const u of units) { if (!u.alive || u.down || u.team !== team) continue; if (u.kind === 'turret' || u.kind === 'core') continue; if (Math.hypot(u.x - x, u.z - z) <= r) out.push(u); } return out; }
+  function heal(u, amt) { if (u && u.alive && !u.down) u.hp = Math.min(u.maxHp, u.hp + amt); }
+  function shieldUnit(u, amt, dur) { if (u && u.alive && !u.down) { u.shield = Math.max(u.shield || 0, amt); u.shieldT = Math.max(u.shieldT || 0, dur); } }
   function tracer(a, b, color) {
     tmp.set(a.x, a.y + 0.5, a.z); tmp2.set(b.x, b.y + 0.5, b.z); const len = tmp.distanceTo(tmp2);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, len, 5), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
@@ -79,6 +82,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   function hit(u, dmg, opts = {}) {
     if (!u || !u.alive || u.down || matchOver) return;
     if (u.kind === 'core' && u.invuln) return;                     // turrets must fall first
+    if (u.shield > 0) { const a = Math.min(u.shield, dmg); u.shield -= a; dmg -= a; }   // absorb
     u.hp -= dmg;
     if (opts.stun) u.stun = Math.max(u.stun, opts.stun);
     if (opts.slow) u.slow = Math.max(u.slow, opts.slow);
@@ -144,7 +148,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
       if (!u.alive) continue;
       if ((u._isEpic || u._isCamp) && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; if (u.mesh) u.mesh.visible = true; } continue; }
       if (u._isBot && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; const b = map.bases[u.team], w = gridToWorld(b.c + (u.team === 0 ? 5 : -5), b.r); u.x = w.x; u.z = w.z; u.wp = 1; if (u.mesh) { u.mesh.visible = true; u.mesh.position.set(u.x, u.y, u.z); } } continue; }
-      if (u.stun > 0) u.stun -= dt; if (u.slow > 0) u.slow -= dt; u.atkT -= dt;
+      if (u.stun > 0) u.stun -= dt; if (u.slow > 0) u.slow -= dt; u.atkT -= dt; if (u.shieldT > 0) { u.shieldT -= dt; if (u.shieldT <= 0) u.shield = 0; }
       let tgt = null, td = u.aggro; for (const e of units) { if (!e.alive || e.down || e.team === u.team) continue; if (e.kind === 'core' && e.invuln) continue; if (e.kind === 'hero' && e._isHero && heroDead) continue; if (e.kind === 'camp' && !u._isHero) continue; if (e.kind === 'epic' && u.kind !== 'hero') continue; const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < td) { td = d; tgt = e; } }
       const stunned = u.stun > 0;
       if (u.kind === 'hero') { if (u._isBot) { if (!stunned) botStep(u, dt, tgt, td); } else { if (!heroDead && tgt && td <= u.rng && u.atkT <= 0 && !hero.rooted) { attack(u, tgt); u.atkT = u.atkCd; } } }
@@ -166,6 +170,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     turretsLeft: (team) => units.filter((u) => u.alive && u.kind === 'turret' && u.team === team).length,
     coreInvuln: (team) => cores.find((c) => c.team === team)?.invuln,
     grantGold: (n) => { gold += n; onGold?.(gold); },
+    hurtHero: (n) => hit(heroUnit, n, {}), heroShield: () => Math.round(heroUnit.shield),
     killBot: () => { botHero.hp = 0; kill(botHero, heroUnit, true); },
     hurtBot: (n) => hit(botHero, n, { byHero: true }),
     naga: () => ({ hp: Math.round(naga.hp), maxHp: naga.maxHp, down: naga.down, respawnIn: Math.ceil(naga.respawnT), buffTeam: nagaBuff.team, buffT: Math.ceil(nagaBuff.t) }),
@@ -176,5 +181,5 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     bot: () => ({ hp: Math.round(botHero.hp), maxHp: botHero.maxHp, down: botHero.down, x: +botHero.x.toFixed(1), z: +botHero.z.toFixed(1), retreat: botHero.retreat, respawnIn: Math.ceil(botHero.respawnT) }),
     bots: () => ({ allyAlive: allyBots.filter((x) => !x.down).length, enemyAlive: enemyBots.filter((x) => !x.down).length, allyHp: allyBots.map((x) => Math.round(x.hp)), enemyHp: enemyBots.map((x) => Math.round(x.hp)), allyX: allyBots.map((x) => +x.x.toFixed(1)), enemyX: enemyBots.map((x) => +x.x.toFixed(1)) }),
   };
-  return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get nagaState() { return { down: naga.down, hpFrac: naga.hp / naga.maxHp, buffTeam: nagaBuff.team, buffT: nagaBuff.t }; }, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
+  return { update, enemiesNear, alliesNear, heal, shieldUnit, hit, debug, setHeroLevel, buffHero, spend, get nagaState() { return { down: naga.down, hpFrac: naga.hp / naga.maxHp, buffTeam: nagaBuff.team, buffT: nagaBuff.t }; }, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

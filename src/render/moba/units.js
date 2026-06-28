@@ -65,6 +65,53 @@ export function buildHammerhead(team = 0) {
   return g;
 }
 
+// "Nakhoda" — Traditional SUPPORT: a serene royal barge with a tiered canopy
+// (pavilion) and hanging lanterns. Heals and shields the fleet.
+export function buildNakhoda(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.8, 1.6), pbr(0x6a4a2c, 0.8, 0.05)); hull.position.y = 0.45; g.add(hull);
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 4), pbr(0x7a5634, 0.8, 0.05)); bow.rotation.z = -Math.PI / 2; bow.rotation.y = Math.PI / 4; bow.position.set(2.0, 0.45, 0); g.add(bow);
+  for (const [px, pz] of [[0.9, 0.55], [0.9, -0.55], [-0.9, 0.55], [-0.9, -0.55]]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 6), pbr(0x8a3030, 0.7, 0.05)); post.position.set(px, 1.25, pz); g.add(post); }
+  const roof1 = new THREE.Mesh(new THREE.ConeGeometry(1.7, 0.6, 4), pbr(T, 0.5, 0.2, T, 0.3)); roof1.rotation.y = Math.PI / 4; roof1.position.set(0, 2.0, 0); g.add(roof1);
+  const roof2 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 4), pbr(0xf0d8a0, 0.6, 0.1)); roof2.rotation.y = Math.PI / 4; roof2.position.set(0, 2.4, 0); g.add(roof2);
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe27a, emissive: 0xffc030, emissiveIntensity: 0.6 })); finial.position.set(0, 2.75, 0); g.add(finial);
+  for (const s of [-1, 1]) { const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffcaa0, emissive: 0xff9030, emissiveIntensity: 0.7 })); lantern.position.set(s * 1.5, 1.4, 0); g.add(lantern); }
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.08);
+  return g;
+}
+
+// "Tempest" — Modern MAGE: a sleek twin-hull hydrofoil with a glowing energy spire
+// that chains lightning and conjures storms.
+export function buildTempest(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const steel = pbr(0x7e93a6, 0.4, 0.6);
+  for (const s of [-1, 1]) { const hull = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 0.5), steel); hull.position.set(0, 0.45, s * 0.7); g.add(hull); const tip = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.9, 5), steel); tip.rotation.z = -Math.PI / 2; tip.position.set(2.0, 0.45, s * 0.7); g.add(tip); }
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.45, 1.6), pbr(0x3a4654, 0.4, 0.55)); bridge.position.set(-0.2, 0.85, 0); g.add(bridge);
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 2.4, 8), pbr(0x46586a, 0.4, 0.7)); spire.position.set(-0.4, 2.1, 0); g.add(spire);
+  for (const y of [1.4, 2.0, 2.6]) { const orb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: 0x9fe6ff, emissive: 0x40c8ff, emissiveIntensity: 1.0 })); orb.position.set(-0.4, y, 0); g.add(orb); }
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 1.0), new THREE.MeshStandardMaterial({ color: T, roughness: 0.4, emissive: T, emissiveIntensity: 0.4 })); fin.position.set(-1.6, 0.9, 0); g.add(fin);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.04);
+  return g;
+}
+
+// "Sentinel" — Modern TANK: a heavy armored monitor with a riot-shield prow and
+// stubby turrets. Bulky, low, immovable.
+export function buildSentinel(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const armor = pbr(0x5b656d, 0.5, 0.6);
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 1.9), armor); hull.position.y = 0.55; g.add(hull);
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.3, 2.0), pbr(0x3c454c, 0.5, 0.6)); belt.position.y = 0.55; g.add(belt);
+  const shield = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.7, 2.3), pbr(0x6c7780, 0.45, 0.55)); shield.position.set(1.9, 0.9, 0); g.add(shield);
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12), pbr(T, 0.4, 0.4, T, 0.3)); boss.rotation.z = Math.PI / 2; boss.position.set(2.18, 0.95, 0); g.add(boss);
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 1.1), armor); tower.position.set(-0.4, 1.3, 0); g.add(tower);
+  for (const s of [-1, 1]) { const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.7, 8), pbr(0x33383d, 0.4, 0.7)); turret.rotation.z = Math.PI / 2; turret.position.set(0.4, 0.95, s * 0.65); g.add(turret); }
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.14);
+  return g;
+}
+
 // "Sea-Naga" — the Epic neutral monster coiled in the central pit. A stack of
 // scaly rings rising into a horned serpent head with glowing eyes.
 export function buildNaga() {

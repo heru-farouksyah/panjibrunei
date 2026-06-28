@@ -177,7 +177,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
   const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n) });
-  const kit = makeKit(chosen.skills(), { hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
+  const kit = makeKit(chosen.skills(), { hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, alliesNear: combat.alliesNear, heal: combat.heal, shieldUnit: combat.shieldUnit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
   // ---- Phase 7: item shop (small curated set) ----------------------------
   const SHOP = [
     { name: 'Cannon Powder', icon: '🧨', cost: 350, desc: '+14 attack', buy: () => combat.buffHero({ dmg: 14 }) },
@@ -365,6 +365,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     naga: () => combat.debug.naga(), killNaga: (team) => combat.debug.killNaga(team), hurtNaga: (n) => combat.debug.hurtNaga(n),
     camps: () => combat.debug.camps(), clearCamp: (i) => combat.debug.clearCamp(i),
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
+    hurtHero: (n) => combat.debug.hurtHero(n), heroShield: () => combat.debug.heroShield(),
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },

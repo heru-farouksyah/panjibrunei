@@ -46,6 +46,21 @@ export function buildNaga() {
   return g;
 }
 
+// jungle-camp creature — a giant river crab squatting on a corner shoal. Clear it for
+// gold + XP; it respawns. Domed shell, glowing eyes, two big claws.
+export function buildCampMob() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 8), pbr(0x7a5238, 0.75, 0.05)); body.scale.y = 0.62; body.position.y = 0.66; g.add(body);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(1.06, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), pbr(0x49642f, 0.6, 0.12)); shell.position.y = 0.66; g.add(shell);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe27a, emissive: 0xffaa10, emissiveIntensity: 0.6 })); eye.position.set(0.78, 0.95, s * 0.3); g.add(eye);
+    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.85, 6), pbr(0x8a5a3a, 0.7, 0.05)); claw.position.set(0.85, 0.42, s * 0.82); claw.rotation.z = -1.05; g.add(claw);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.7, 5), pbr(0x5a3f28, 0.8, 0)); leg.position.set(-0.2, 0.3, s * 0.9); leg.rotation.x = s * 0.5; g.add(leg);
+  }
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return g;
+}
+
 // minion "creep" ship — small wedge hull + a single team sail. Cheap (spawns in waves).
 export function buildMinion(team = 0) {
   const T = TEAM_COL[team]; const g = new THREE.Group();

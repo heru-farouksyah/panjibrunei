@@ -142,14 +142,12 @@ export function showRotatePrompt() {
     `<div class="rot-icon">⟳</div>` +
     `<div class="rot-text">Please rotate your device to <b>landscape</b><br>for the best view.</div>`;
   document.body.appendChild(el2);
-  const check = () => {
-    const portrait = window.innerHeight > window.innerWidth;
-    const touch = document.body.classList.contains('touch');
-    el2.style.display = touch && portrait ? 'flex' : 'none';
-  };
+  // this prompt is only created on touch devices (see caller), so simply show it
+  // whenever the device is in portrait — ask the player to rotate to landscape.
+  const check = () => { el2.style.display = window.innerHeight > window.innerWidth ? 'flex' : 'none'; };
   check();
   window.addEventListener('resize', check);
-  window.addEventListener('orientationchange', check);
+  window.addEventListener('orientationchange', () => setTimeout(check, 150));
 }
 
 // Title screen -> faction select -> match.

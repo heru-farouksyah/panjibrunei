@@ -233,6 +233,12 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
     `<div class="moba-result" hidden style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,25,35,0.72);z-index:5;"><div style="background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:20px;padding:26px 34px;text-align:center;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;"><h2 class="rtitle" style="margin:0;font-size:30px;letter-spacing:1px;"></h2><p class="rsub" style="color:#16384c;margin:10px 0 16px;font-size:15px;"></p><button class="rbtn" style="background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:16px;cursor:pointer;pointer-events:auto;">Continue</button></div></div>`;
   overlay.appendChild(hud);
+  // force landscape on mobile — ask to rotate, and pause while portrait
+  let blocked = false;
+  const rotEl = document.createElement('div'); rotEl.className = 'moba-rotate';
+  rotEl.style.cssText = 'position:absolute;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0c1f2a;color:#fff;text-align:center;padding:24px;pointer-events:auto;font-family:system-ui,sans-serif;';
+  rotEl.innerHTML = `<div style="font-size:58px;">⟳</div><div style="font-size:17px;line-height:1.6;">Rotate your device to <b style="color:#ffd27f;">landscape</b><br>to play <b>Sungai Naga</b>.</div>`;
+  overlay.appendChild(rotEl);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
@@ -284,6 +290,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
   function frame() {
     if (!running) return;
     const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+    if (blocked) { clock.getDelta(); renderer.render(scene, camera); raf = requestAnimationFrame(frame); return; }  // paused in portrait
     waterUni.uTime.value += dt;
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
@@ -293,10 +300,11 @@ export function showMoba(audio, { mission, onResult } = {}) {
     renderer.render(scene, camera);
     raf = requestAnimationFrame(frame);
   }
-  function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); }
+  function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); blocked = innerWidth < innerHeight; rotEl.style.display = blocked ? 'flex' : 'none'; }
   addEventListener('resize', onResize);
+  addEventListener('orientationchange', () => setTimeout(onResize, 150));
   function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('resize', onResize); removeEventListener('mouseup', onMouseUp); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKey); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
-  frame();
+  onResize(); frame();
 
   // ---- debug hook (verification) -----------------------------------------
   window.__moba = {

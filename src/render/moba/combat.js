@@ -13,8 +13,8 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
 
   function makeHpBar(team) {
     const g = new THREE.Group();
-    const bg = new THREE.Mesh(new THREE.PlaneGeometry(1.55, 0.24), new THREE.MeshBasicMaterial({ color: 0x0c1a22, transparent: true, opacity: 0.82, depthTest: false }));
-    const fill = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.15), new THREE.MeshBasicMaterial({ color: team === 0 ? 0x46d06a : 0xff5246, depthTest: false })); fill.position.z = 0.01;
+    const bg = new THREE.Mesh(new THREE.PlaneGeometry(1.62, 0.32), new THREE.MeshBasicMaterial({ color: 0x0c1a22, transparent: true, opacity: 0.86, depthTest: false }));
+    const fill = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.22), new THREE.MeshBasicMaterial({ color: team === 0 ? 0x46d06a : 0xff5246, depthTest: false })); fill.position.z = 0.01;
     g.add(bg); g.add(fill); g.renderOrder = 999; bg.renderOrder = 999; fill.renderOrder = 1000; return { g, fill };
   }
   function add(u) { u.alive = true; u.atkT = 0; u.stun = u.stun || 0; u.slow = u.slow || 0; u.shield = u.shield || 0; u.shieldT = u.shieldT || 0; const hb = makeHpBar(u.team); u._hp = hb; scene.add(hb.g); if (u.mesh) scene.add(u.mesh); units.push(u); return u; }
@@ -176,7 +176,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
         else { const sp = u.speed * (u.slow > 0 ? 0.55 : 1); let dx, dz; if (tgt && td <= u.aggro) { dx = tgt.x - u.x; dz = tgt.z - u.z; } else { const wpt = u.path[u.wp]; if (wpt) { if (Math.hypot(wpt.x - u.x, wpt.z - u.z) < 1.6) u.wp = Math.min(u.path.length - 1, u.wp + 1); dx = u.path[u.wp].x - u.x; dz = u.path[u.wp].z - u.z; } else { dx = dz = 0; } } const d = Math.hypot(dx, dz) || 1; u.x += dx / d * sp * dt; u.z += dz / d * sp * dt; if (u.mesh && (dx || dz)) u.mesh.rotation.y = Math.atan2(-dz, dx); }
       }
       if (u.mesh) u.mesh.position.set(u.x, u.y, u.z);
-      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'epic' ? 7.5 : (u.kind === 'turret' ? 7 : (u.kind === 'camp' ? 3 : (u.kind === 'hero' ? 6.4 : 2.4)))); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.kind === 'epic' ? 0x8fe6b0 : (u.kind === 'camp' ? 0xd9b24a : (u.team === 0 ? 0x46d06a : 0xff5246)))); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core' || u.kind === 'epic') && !(u._isHero && heroDead) && !((u._isBot || u._isEpic || u._isCamp) && u.down); hb.g.scale.x = u.kind === 'core' || u.kind === 'epic' ? 1.6 : 1;
+      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'epic' ? 7.5 : (u.kind === 'turret' ? 7 : (u.kind === 'camp' ? 3 : (u.kind === 'hero' ? 6.4 : 2.4)))); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.kind === 'epic' ? 0x8fe6b0 : (u.kind === 'camp' ? 0xd9b24a : (u.team === 0 ? 0x46d06a : 0xff5246)))); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core' || u.kind === 'epic') && !(u._isHero && heroDead) && !((u._isBot || u._isEpic || u._isCamp) && u.down); const bs = (u.kind === 'core' || u.kind === 'epic') ? 1.85 : (u._isHero ? 1.7 : (u.kind === 'hero' ? 1.5 : (u.kind === 'turret' ? 1.4 : 1.05))); hb.g.scale.set(bs, bs, 1);
     }
     for (let i = units.length - 1; i >= 0; i--) if (!units[i].alive) units.splice(i, 1);
   }

@@ -282,6 +282,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     `<div style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;text-align:center;">Lv <b class="hlv">1</b> · ${chosen.icon} ${chosen.name} <span style="opacity:.6;">(${chosen.era})</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
     `<div style="position:absolute;right:24px;bottom:calc(94px + env(safe-area-inset-bottom));width:206px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
     `<div class="moba-skills" style="position:absolute;right:24px;bottom:calc(20px + env(safe-area-inset-bottom));display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
+    `<button class="atk-btn" style="position:absolute;right:248px;bottom:calc(30px + env(safe-area-inset-bottom));width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,150,100,0.75);background:radial-gradient(circle at 50% 34%,#8a3a2a,#42150f);color:#fff;font-size:25px;font-weight:800;cursor:pointer;pointer-events:auto;box-shadow:0 2px 10px rgba(0,0,0,0.4);">⚔</button>` +
     `<div class="joy-base" style="position:absolute;left:calc(26px + env(safe-area-inset-left));bottom:calc(26px + env(safe-area-inset-bottom));width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.22);pointer-events:auto;touch-action:none;"><div class="joy-knob" style="position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(159,232,255,0.34);border:2px solid rgba(159,232,255,0.6);"></div></div>` +
     `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
     `<div class="moba-result" hidden style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,25,35,0.72);z-index:5;"><div style="background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:20px;padding:26px 34px;text-align:center;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;"><h2 class="rtitle" style="margin:0;font-size:30px;letter-spacing:1px;"></h2><p class="rsub" style="color:#16384c;margin:10px 0 16px;font-size:15px;"></p><button class="rbtn" style="background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:16px;cursor:pointer;pointer-events:auto;">Continue</button></div></div>`;
@@ -306,6 +307,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
       <div style="font-size:13.5px;line-height:1.7;">
         🎯 <b>Goal</b> — raze the enemy turrets, then sink their <b>Core</b> to win.<br>
         🕹️ <b>Move</b> — drag the <b>left joystick</b> to steer your ship (or tap the water to sail there).<br>
+        ⚔️ <b>Attack</b> — your ship <b>auto-fires cannons</b> at any enemy in range. Tap the <b>⚔ button</b> to charge the nearest foe.<br>
         ✨ <b>Skills</b> — tap <b>${kit.skills.map((s) => s.letter).join(' / ')}</b> (or keys 1 2 3). They cost Powder &amp; have cooldowns; tap the <b>+</b> to rank one up on level-up.<br>
         💰 <b>Gold &amp; XP</b> — sink ships near you to earn both; open <b>🛒 Shop</b> to buy upgrades.<br>
         🐉 <b>Sea-Naga</b> — slay the serpent in the middle for your team's <b>Blessing</b> (+40% damage).<br>
@@ -319,6 +321,9 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   hud.querySelector('.cam-help').onclick = () => { helpEl.style.display = 'flex'; };
+  // ⚔ basic-attack button — sail to the nearest enemy and let the ship auto-fire
+  const doAttack = () => { if (!canAct()) return; const e = combat.nearestEnemy(hero.pos.x, hero.pos.z); if (!e) return; const dx = hero.pos.x - e.x, dz = hero.pos.z - e.z, d = Math.hypot(dx, dz) || 1; const stop = Math.max(0, chosen.rng - 1.2); hero.target.set(e.x + dx / d * stop, SHIP_Y, e.z + dz / d * stop); showPing(e.x, e.z); touch(); };
+  hud.querySelector('.atk-btn').onclick = doAttack;
   const camPad = hud.querySelector('.cam-pad'); camPad.style.display = 'none';   // inline display:grid overrides [hidden], so drive via style
   hud.querySelector('.cam-toggle').onclick = () => { camPad.style.display = camPad.style.display === 'none' ? 'grid' : 'none'; };
   const camActs = { rotL: () => rotateBy(0.4), rotR: () => rotateBy(-0.4), zoomin: () => zoomBy(-26), zoomout: () => zoomBy(26), tilttop: () => tiltBy(8), tiltlow: () => tiltBy(-8), reset: () => resetView() };
@@ -459,6 +464,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     hero: () => ({ x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1), tx: +hero.target.x.toFixed(1), tz: +hero.target.z.toFixed(1), yaw: +hero.yaw.toFixed(2) }),
     order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
     joy: (jx, jy) => { joy.active = !!(jx || jy); joy.jx = jx || 0; joy.jy = jy || 0; return { active: joy.active, jx: joy.jx, jy: joy.jy }; },
+    attack: () => { doAttack(); return combat.nearestEnemy(hero.pos.x, hero.pos.z); }, nearest: () => combat.nearestEnemy(hero.pos.x, hero.pos.z),
     layout: () => ({ joystick: !!hud.querySelector('.joy-base'), skillsRight: hud.querySelector('.moba-skills').style.right, mmTop: hud.querySelector('.mmap').style.top.includes('10px') }),
     step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); combat.update(0.05, camera); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,

@@ -80,6 +80,20 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     m.position.copy(tmp).lerp(tmp2, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tmp2.clone().sub(tmp).normalize());
     addVfx(m, 0.13, (dt, o) => { m.material.opacity = 0.85 * (1 - o.t / o.life); });
   }
+  // a visible CANNONBALL arcing from attacker to target + a muzzle flash + splash
+  function cannon(a, b, r, col) {
+    const sx = a.x, sy = (a.y || 0.5) + 0.7, sz = a.z, ex = b.x, ey = (b.y || 0.4) + 0.4, ez = b.z;
+    const dist = Math.hypot(ex - sx, ez - sz), life = Math.min(0.34, 0.12 + dist * 0.012), arc = 0.7 + dist * 0.05;
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), new THREE.MeshStandardMaterial({ color: col, metalness: 0.45, roughness: 0.5, emissive: col, emissiveIntensity: 0.15 }));
+    ball.position.set(sx, sy, sz);
+    addVfx(ball, life, (dt, o) => { const u = o.t / o.life; ball.position.set(sx + (ex - sx) * u, sy + (ey - sy) * u + Math.sin(u * Math.PI) * arc, sz + (ez - sz) * u); });
+    const dx = (ex - sx) / (dist || 1), dz = (ez - sz) / (dist || 1);
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(r * 1.7, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.95, depthWrite: false }));
+    flash.position.set(sx + dx * 0.9, sy, sz + dz * 0.9); addVfx(flash, 0.12, (dt, o) => { flash.material.opacity = 0.95 * (1 - o.t / o.life); flash.scale.setScalar(1 + o.t * 5); });
+    const splash = new THREE.Mesh(new THREE.RingGeometry(0.15, r * 2.4, 14), new THREE.MeshBasicMaterial({ color: 0xdfeefc, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); splash.rotation.x = -Math.PI / 2; splash.position.set(ex, 0.25, ez);
+    addVfx(splash, life + 0.32, (dt, o) => { const u = o.t / o.life; if (u < life / (life + 0.32)) { splash.material.opacity = 0; return; } const v = (u - 0.5) * 2; splash.material.opacity = Math.max(0, 0.7 * (1 - v)); splash.scale.setScalar(1 + v * 2.2); });
+  }
+  function nearestEnemy(x, z, team = 0) { let best = null, bd = 1e9; for (const u of units) { if (!u.alive || u.down || u.team === team) continue; if (u.kind === 'core' && u.invuln) continue; const d = Math.hypot(u.x - x, u.z - z); if (d < bd) { bd = d; best = u; } } return best ? { x: best.x, z: best.z, kind: best.kind, dist: Math.round(bd) } : null; }
   function hit(u, dmg, opts = {}) {
     if (!u || !u.alive || u.down || matchOver) return;
     if (u.kind === 'core' && u.invuln) return;                     // turrets must fall first
@@ -132,7 +146,8 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   }
   function attack(att, tgt) {
     let dmg = att.dmg; if (att.kind === 'hero' && nagaBuff.t > 0 && att.team === nagaBuff.team) dmg *= 1.4;   // Naga's Blessing
-    tracer(att, tgt, att.team === 0 ? 0xbfe8ff : (att.team === 2 ? 0x8fffc0 : 0xffb0a0)); hit(tgt, dmg, { from: att });
+    const pr = att.kind === 'turret' ? [0.42, 0x33373b] : (att.kind === 'epic' ? [0.55, 0x8fffc0] : (att.kind === 'hero' ? [0.34, att.team === 0 ? 0x2a3340 : 0x40262a] : [0.22, 0x2a2d31]));
+    cannon(att, tgt, pr[0], pr[1]); hit(tgt, dmg, { from: att });
     if (att._isHero && att.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + dmg * att.lifesteal);
   }
 
@@ -185,5 +200,5 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     bots: () => ({ allyAlive: allyBots.filter((x) => !x.down).length, enemyAlive: enemyBots.filter((x) => !x.down).length, allyHp: allyBots.map((x) => Math.round(x.hp)), enemyHp: enemyBots.map((x) => Math.round(x.hp)), allyX: allyBots.map((x) => +x.x.toFixed(1)), enemyX: enemyBots.map((x) => +x.x.toFixed(1)) }),
   };
   const blips = () => { const out = []; for (const u of units) { if (!u.alive || u.down) continue; out.push({ x: u.x, z: u.z, team: u.team, kind: u.kind, me: !!u._isHero }); } return out; };
-  return { update, enemiesNear, alliesNear, heal, shieldUnit, hit, debug, blips, setHeroLevel, buffHero, spend, get nagaState() { return { down: naga.down, hpFrac: naga.hp / naga.maxHp, buffTeam: nagaBuff.team, buffT: nagaBuff.t }; }, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
+  return { update, enemiesNear, alliesNear, nearestEnemy, heal, shieldUnit, hit, debug, blips, setHeroLevel, buffHero, spend, get nagaState() { return { down: naga.down, hpFrac: naga.hp / naga.maxHp, buffTeam: nagaBuff.team, buffT: nagaBuff.t }; }, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

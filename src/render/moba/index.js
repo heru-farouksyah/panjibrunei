@@ -166,7 +166,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
-  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; } });
+  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win) });
   const kit = makeBahteraKit({ hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit });
   // selection ring on the water under the hero
   const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
@@ -195,6 +195,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
   // click/tap to MOVE the hero: raycast the pointer onto the water plane → order
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPt = new THREE.Vector3();
   function orderMove(px, py) {
+    if (combat.heroDead || combat.over) return;
     ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
     if (!ray.ray.intersectPlane(groundPlane, hitPt)) return;
     hitPt.x = THREE.MathUtils.clamp(hitPt.x, -MAP_W / 2 + 3, MAP_W / 2 - 3); hitPt.z = THREE.MathUtils.clamp(hitPt.z, -MAP_H / 2 + 3, MAP_H / 2 - 3);
@@ -209,7 +210,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
   canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
   const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 70, 240); };
   addEventListener('wheel', onWheel, { passive: true });
-  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (k === '1') kit.tryCast(0); else if (k === '2') kit.tryCast(1); else if (k === '3' || k === 'r') kit.tryCast(2); };
+  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (!combat.heroDead && !combat.over) { if (k === '1') kit.tryCast(0); else if (k === '2') kit.tryCast(1); else if (k === '3' || k === 'r') kit.tryCast(2); } };
   addEventListener('keydown', onKey);
 
   // ---- minimal HUD (Phase 1) ---------------------------------------------
@@ -224,22 +225,32 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 5 · Combat  <span style="opacity:.7;font-weight:500;">tap move · 1/2/3 cast · sink creeps for 💰</span></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 6 · Match  <span style="opacity:.7;font-weight:500;">raze turrets → enemy Core to win</span></div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div>` +
     `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div></div>` +
     `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
-    `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>`;
+    `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
+    `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
+    `<div class="moba-result" hidden style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,25,35,0.72);z-index:5;"><div style="background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:20px;padding:26px 34px;text-align:center;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;"><h2 class="rtitle" style="margin:0;font-size:30px;letter-spacing:1px;"></h2><p class="rsub" style="color:#16384c;margin:10px 0 16px;font-size:15px;"></p><button class="rbtn" style="background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:16px;cursor:pointer;pointer-events:auto;">Continue</button></div></div>`;
   overlay.appendChild(hud);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
+  const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
+  function showResult(win) {
+    const tt = resultEl.querySelector('.rtitle'); tt.textContent = win ? 'VICTORY' : 'DEFEAT'; tt.style.color = win ? '#2f7f78' : '#c0463a';
+    resultEl.querySelector('.rsub').textContent = win ? 'The enemy Core is sunk — Kampong Ayer holds the channel.' : 'Your Core has fallen to the warlord.';
+    resultEl.hidden = false; resultEl.querySelector('.rbtn').onclick = () => finish({ win, stars: win ? 1 : 0 });
+  }
+  const canAct = () => !combat.heroDead && !combat.over;
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
-  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; kit.tryCast(i); touch(); }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
+  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { kit.tryCast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
   const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp');
   goldEl = hud.querySelector('.gold');
   function updateSkillHud() {
     elPwd.style.width = (kit.powder / kit.powderMax * 100) + '%'; elHlv.textContent = kit.heroLevel;
     elHhp.style.width = (combat.heroHp / combat.heroMaxHp * 100) + '%';
+    if (combat.heroDead) { respEl.hidden = false; respN.textContent = combat.respawnIn; } else respEl.hidden = true;
     kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
   }
   updateSkillHud();
@@ -248,6 +259,8 @@ export function showMoba(audio, { mission, onResult } = {}) {
   const clock = new THREE.Clock(); let raf = 0, running = true;
   const _d = new THREE.Vector3();
   function updateHero(dt, t) {
+    if (combat.heroDead) { selRing.visible = false; return; }   // sunk — hidden in the fountain
+    selRing.visible = true;
     if (hero.dash) {                                      // Ram dash overrides normal sailing
       hero.pos.x = THREE.MathUtils.clamp(hero.pos.x + hero.dash.dx * hero.dash.spd * dt, -MAP_W / 2 + 3, MAP_W / 2 - 3);
       hero.pos.z = THREE.MathUtils.clamp(hero.pos.z + hero.dash.dz * hero.dash.spd * dt, -MAP_H / 2 + 3, MAP_H / 2 - 3);
@@ -295,7 +308,8 @@ export function showMoba(audio, { mission, onResult } = {}) {
     order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
     step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); combat.update(0.05, camera); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
-    combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp) }),
+    combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp), heroDead: combat.heroDead, respawnIn: combat.respawnIn, over: combat.over, eTurrets: combat.debug.turretsLeft(1), eCoreInvuln: combat.debug.coreInvuln(1) }),
+    killTurrets: (team) => combat.debug.killTurrets(team), damageCore: (team, d) => combat.debug.damageCore(team, d), killHero: () => combat.debug.killHero(),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },
   };

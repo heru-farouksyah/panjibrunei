@@ -7,6 +7,12 @@ import * as THREE from 'three';
 const pbr = (color, rough = 0.6, metal = 0.1, em = 0x000000, ei = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, emissive: em, emissiveIntensity: ei });
 export const TEAM_COL = [0x35b6ff, 0xff5246];
 
+// a flat team-coloured glow ring under a hero hull, so teams read at a glance
+function teamDisc(team) {
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.55, 2.35, 28), new THREE.MeshBasicMaterial({ color: TEAM_COL[team] || 0x35b6ff, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.1; return ring;
+}
+
 // "Bahtera" — War-Junk (Traditional tank): broad wooden hull, a metal ram, two
 // battened junk sails, a stern banner. Instantly readable from above.
 export function buildBahtera(team = 0) {
@@ -24,7 +30,7 @@ export function buildBahtera(team = 0) {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 5), pbr(0x3a2a1a, 0.8, 0)); pole.position.set(-1.95, 1.55, 0); g.add(pole);
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.58), new THREE.MeshStandardMaterial({ color: T, roughness: 0.7, side: THREE.DoubleSide, emissive: T, emissiveIntensity: 0.35 })); flag.position.set(-2.35, 2.05, 0); flag.rotation.y = Math.PI / 2; g.add(flag);
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.1);
+  g.add(teamDisc(team)); g.scale.setScalar(1.75);
   return g;
 }
 
@@ -43,7 +49,7 @@ export function buildMeriam(team = 0) {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5), pbr(0x3a2a1a, 0.8, 0)); pole.position.set(-2.0, 1.7, 0); g.add(pole);
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), new THREE.MeshStandardMaterial({ color: T, roughness: 0.7, side: THREE.DoubleSide, emissive: T, emissiveIntensity: 0.35 })); flag.position.set(-2.4, 2.2, 0); flag.rotation.y = Math.PI / 2; g.add(flag);
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.12);
+  g.add(teamDisc(team)); g.scale.setScalar(1.8);
   return g;
 }
 
@@ -61,7 +67,7 @@ export function buildHammerhead(team = 0) {
   const stripe2 = stripe.clone(); stripe2.position.z = -0.61; g.add(stripe2);
   for (const s of [-1, 1]) { const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.5, 8), pbr(0x303338, 0.4, 0.7)); eng.rotation.x = Math.PI / 2; eng.position.set(-2.0, 0.45, s * 0.4); g.add(eng); }
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.0);
+  g.add(teamDisc(team)); g.scale.setScalar(1.6);
   return g;
 }
 
@@ -77,7 +83,7 @@ export function buildNakhoda(team = 0) {
   const finial = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe27a, emissive: 0xffc030, emissiveIntensity: 0.6 })); finial.position.set(0, 2.75, 0); g.add(finial);
   for (const s of [-1, 1]) { const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffcaa0, emissive: 0xff9030, emissiveIntensity: 0.7 })); lantern.position.set(s * 1.5, 1.4, 0); g.add(lantern); }
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.08);
+  g.add(teamDisc(team)); g.scale.setScalar(1.72);
   return g;
 }
 
@@ -92,7 +98,7 @@ export function buildTempest(team = 0) {
   for (const y of [1.4, 2.0, 2.6]) { const orb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: 0x9fe6ff, emissive: 0x40c8ff, emissiveIntensity: 1.0 })); orb.position.set(-0.4, y, 0); g.add(orb); }
   const fin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 1.0), new THREE.MeshStandardMaterial({ color: T, roughness: 0.4, emissive: T, emissiveIntensity: 0.4 })); fin.position.set(-1.6, 0.9, 0); g.add(fin);
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.04);
+  g.add(teamDisc(team)); g.scale.setScalar(1.66);
   return g;
 }
 
@@ -108,7 +114,7 @@ export function buildSentinel(team = 0) {
   const tower = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 1.1), armor); tower.position.set(-0.4, 1.3, 0); g.add(tower);
   for (const s of [-1, 1]) { const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.7, 8), pbr(0x33383d, 0.4, 0.7)); turret.rotation.z = Math.PI / 2; turret.position.set(0.4, 0.95, s * 0.65); g.add(turret); }
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  g.scale.setScalar(1.14);
+  g.add(teamDisc(team)); g.scale.setScalar(1.82);
   return g;
 }
 

@@ -83,8 +83,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   sc.left = -span; sc.right = span; sc.top = span; sc.bottom = -span; sc.near = 20; sc.far = 420;
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0xcfeaff, 0x21506a, 0.7));
-  scene.add(new THREE.AmbientLight(0x3a5566, 0.35));
+  scene.add(new THREE.HemisphereLight(0xcfeaff, 0x21506a, 0.95));
+  scene.add(new THREE.AmbientLight(0x3a5566, 0.55));
 
   // ---- terrain (seabed + islands), built from the grid heightfield --------
   const colDeep = new THREE.Color(0x123043), colSand = new THREE.Color(0xb9a06a), colLane = new THREE.Color(0xcdb985);
@@ -203,7 +203,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   ];
   const owned = new Set();
   // selection ring on the water under the hero
-  const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
+  const selRing = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.2, 8, 36), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.9, depthWrite: false }));
   selRing.rotation.x = -Math.PI / 2; selRing.position.set(hstart.x, 0.18, hstart.z); scene.add(selRing);
   // click-ping marker
   const ping = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.1, 24), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
@@ -212,7 +212,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
 
   // ---- eased RTS camera (pan + zoom + rotate, opening ease, idle drift) ----
   const camTarget = new THREE.Vector3(0, 0, 0), camTargetGoal = new THREE.Vector3(0, 0, 0);
-  let camDist = 235, camDistGoal = 168;                  // opening: ease in from far → default framing
+  let camDist = 200, camDistGoal = 126;                  // opening: ease in from far → closer default framing
   let camYaw = THREE.MathUtils.degToRad(-30), camYawGoal = THREE.MathUtils.degToRad(-22);
   const camPitch = THREE.MathUtils.degToRad(53);
   const offset = new THREE.Vector3(), desired = new THREE.Vector3();
@@ -242,7 +242,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const onMouseUp = (e) => release(e.clientX, e.clientY); addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; press(t.clientX, t.clientY); }, { passive: true });
   canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
-  const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 70, 240); };
+  const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 58, 220); };
   addEventListener('wheel', onWheel, { passive: true });
   const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (!combat.heroDead && !combat.over) { if (k === '1') { if (kit.tryCast(0)) snd.cast(0); } else if (k === '2') { if (kit.tryCast(1)) snd.cast(1); } else if (k === '3' || k === 'r') { if (kit.tryCast(2)) snd.cast(2); } } };
   addEventListener('keydown', onKey);

@@ -43,6 +43,9 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     win: () => { if (!sndOn()) return; const t = A.ctx.currentTime; [523, 659, 784, 1047].forEach((f, k) => A.blip(f, 0.24, 'sine', 0.3, t + k * 0.12)); },
     lose: () => { if (!sndOn()) return; const t = A.ctx.currentTime; [392, 330, 262].forEach((f, k) => A.blip(f, 0.3, 'sine', 0.3, t + k * 0.14)); },
     buy: () => { if (!sndOn()) return; const t = A.ctx.currentTime; A.blip(880, 0.08, 'square', 0.18, t); A.blip(1320, 0.1, 'square', 0.16, t + 0.05); },
+    shoot: () => { if (!sndOn()) return; const t = A.ctx.currentTime; A.noiseBurst(t, 0.14, 0.4, { type: 'lowpass', freq: 380, q: 1 }); A.blip(140, 0.1, 'square', 0.18, t); },   // cannon
+    hurt: () => { if (!sndOn()) return; const t = A.ctx.currentTime; A.noiseBurst(t, 0.18, 0.34, { type: 'lowpass', freq: 240 }); A.blip(90, 0.16, 'sawtooth', 0.2, t); },          // took damage
+    tap: () => { if (!sndOn()) return; A.blip(660, 0.05, 'square', 0.13, A.ctx.currentTime); },                                                                                       // UI click
   };
   A?.world?.('water_village');             // ambient bed + score (starts on first gesture)
 
@@ -191,7 +194,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
-  const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n), onEvent: (ev) => { if (ev === 'core' || ev === 'turret') snd.boom(); } });
+  const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n), onEvent: (ev) => { if (ev === 'core' || ev === 'turret') snd.boom(); else if (ev === 'shoot') snd.shoot(); } });
   const kit = makeKit(chosen.skills(), { hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, alliesNear: combat.alliesNear, heal: combat.heal, shieldUnit: combat.shieldUnit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
   // ---- Phase 7: item shop (small curated set) ----------------------------
   const SHOP = [
@@ -319,21 +322,21 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     </div>`;
   overlay.appendChild(helpEl);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
-  hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
-  hud.querySelector('.cam-help').onclick = () => { helpEl.style.display = 'flex'; };
+  hud.querySelector('.moba-quit').onclick = () => { snd.tap(); finish({ win: false, quit: true }); };
+  hud.querySelector('.cam-help').onclick = () => { snd.tap(); helpEl.style.display = 'flex'; };
   // ⚔ basic-attack button — sail to the nearest enemy and let the ship auto-fire
-  const doAttack = () => { if (!canAct()) return; const e = combat.nearestEnemy(hero.pos.x, hero.pos.z); if (!e) return; const dx = hero.pos.x - e.x, dz = hero.pos.z - e.z, d = Math.hypot(dx, dz) || 1; const stop = Math.max(0, chosen.rng - 1.2); hero.target.set(e.x + dx / d * stop, SHIP_Y, e.z + dz / d * stop); showPing(e.x, e.z); touch(); };
+  const doAttack = () => { if (!canAct()) return; snd.tap(); const e = combat.nearestEnemy(hero.pos.x, hero.pos.z); if (!e) return; const dx = hero.pos.x - e.x, dz = hero.pos.z - e.z, d = Math.hypot(dx, dz) || 1; const stop = Math.max(0, chosen.rng - 1.2); hero.target.set(e.x + dx / d * stop, SHIP_Y, e.z + dz / d * stop); showPing(e.x, e.z); touch(); };
   hud.querySelector('.atk-btn').onclick = doAttack;
   const camPad = hud.querySelector('.cam-pad'); camPad.style.display = 'none';   // inline display:grid overrides [hidden], so drive via style
-  hud.querySelector('.cam-toggle').onclick = () => { camPad.style.display = camPad.style.display === 'none' ? 'grid' : 'none'; };
+  hud.querySelector('.cam-toggle').onclick = () => { snd.tap(); camPad.style.display = camPad.style.display === 'none' ? 'grid' : 'none'; };
   const camActs = { rotL: () => rotateBy(0.4), rotR: () => rotateBy(-0.4), zoomin: () => zoomBy(-26), zoomout: () => zoomBy(26), tilttop: () => tiltBy(8), tiltlow: () => tiltBy(-8), reset: () => resetView() };
-  camPad.querySelectorAll('[data-cam]').forEach((btn) => { btn.onclick = () => camActs[btn.dataset.cam]?.(); });
-  helpEl.querySelector('.help-go').onclick = () => { helpEl.style.display = 'none'; };
+  camPad.querySelectorAll('[data-cam]').forEach((btn) => { btn.onclick = () => { snd.tap(); camActs[btn.dataset.cam]?.(); }; });
+  helpEl.querySelector('.help-go').onclick = () => { snd.tap(); helpEl.style.display = 'none'; };
   // ---- left thumbstick (move) ----
   const joyBase = hud.querySelector('.joy-base'), joyKnob = hud.querySelector('.joy-knob'); const joyR = 52; let joyCx = 0, joyCy = 0;
   const joyMove = (x, y) => { let dx = x - joyCx, dy = y - joyCy; const d = Math.hypot(dx, dy); if (d > joyR) { dx = dx / d * joyR; dy = dy / d * joyR; } joyKnob.style.transform = `translate(${dx}px,${dy}px)`; joy.jx = dx / joyR; joy.jy = dy / joyR; touch(); };
   const joyEnd = () => { joy.active = false; joy.jx = 0; joy.jy = 0; joyKnob.style.transform = ''; };
-  joyBase.addEventListener('pointerdown', (e) => { e.preventDefault(); joyBase.setPointerCapture?.(e.pointerId); const r = joyBase.getBoundingClientRect(); joyCx = r.left + r.width / 2; joyCy = r.top + r.height / 2; joy.active = true; joyMove(e.clientX, e.clientY); });
+  joyBase.addEventListener('pointerdown', (e) => { e.preventDefault(); snd.tap(); joyBase.setPointerCapture?.(e.pointerId); const r = joyBase.getBoundingClientRect(); joyCx = r.left + r.width / 2; joyCy = r.top + r.height / 2; joy.active = true; joyMove(e.clientX, e.clientY); });
   joyBase.addEventListener('pointermove', (e) => { if (joy.active) joyMove(e.clientX, e.clientY); });
   joyBase.addEventListener('pointerup', joyEnd); joyBase.addEventListener('pointercancel', joyEnd);
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
@@ -346,7 +349,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const canAct = () => !combat.heroDead && !combat.over;
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
-  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { if (kit.tryCast(i)) snd.cast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
+  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { if (kit.tryCast(i)) snd.cast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); if (kit.levelUp(i)) snd.tap(); }; });
   const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp'), nagaChip = hud.querySelector('.naga-chip');
   // ---- Phase 10: minimap ----
   const MMW = 300, MMH = 188, mmCtx = hud.querySelector('.mmap').getContext('2d');
@@ -370,7 +373,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   goldEl = hud.querySelector('.gold');
   // ---- shop: render rows, toggle panel, buy ----
   const shopEl = hud.querySelector('.shop'), shopList = hud.querySelector('.shoplist');
-  hud.querySelector('.shopbtn').onclick = () => { shopEl.hidden = !shopEl.hidden; };
+  hud.querySelector('.shopbtn').onclick = () => { snd.tap(); shopEl.hidden = !shopEl.hidden; };
   const shopRows = SHOP.map((it, i) => {
     const row = document.createElement('button');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin:4px 0;padding:7px 8px;border-radius:9px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font:inherit;';
@@ -442,7 +445,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
     kit.tick(dt); updateHero(dt, t); combat.update(dt, camera); updateVfx(dt); updateSkillHud(); drawMinimap();
-    if (!combat.heroDead && combat.heroHp < lastHeroHp - 0.5) hurtT = 0.5;   // took damage → flash
+    if (!combat.heroDead && combat.heroHp < lastHeroHp - 0.5) { hurtT = 0.5; snd.hurt(); }   // took damage → flash + thud
     lastHeroHp = combat.heroHp; if (hurtT > 0) { hurtT = Math.max(0, hurtT - dt); hurtVig.style.opacity = hurtT.toFixed(2); }
     camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
@@ -476,7 +479,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
     hurtHero: (n) => combat.debug.hurtHero(n), heroShield: () => combat.debug.heroShield(),
     drawMM: () => { drawMinimap(); const d = mmCtx.getImageData(0, 0, MMW, MMH).data; let nz = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nz++; return { nonBlankPx: nz, blips: combat.blips().length }; },
-    sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); return 'ok'; },
+    sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); snd.shoot(); snd.hurt(); snd.tap(); return 'ok'; },
     tilt: (d) => { if (d !== undefined) tiltBy(d); return +THREE.MathUtils.radToDeg(camPitchGoal).toFixed(1); },
     zoom: (d) => { if (d !== undefined) zoomBy(d); return +camDistGoal.toFixed(0); },
     camPad: (open) => { if (open !== undefined) camPad.style.display = open ? 'grid' : 'none'; return { hidden: camPad.style.display === 'none', buttons: camPad.querySelectorAll('[data-cam]').length }; },
@@ -498,7 +501,7 @@ function buildHeroSelect(container, onPick) {
     <div style="opacity:.7;font-size:13px;margin-bottom:16px;">Sungai Naga — pick a hero, push the lanes, sink the enemy Core</div>
     <div class="hs-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:12px;max-width:780px;margin:0 auto;"></div></div>`;
   const grid = container.querySelector('.hs-grid');
-  for (const h of ROSTER) {
+  for (const h of ROSTER.filter((x) => !x.locked)) {
     const card = document.createElement('button');
     card.className = 'hs-card';
     card.style.cssText = `text-align:left;background:rgba(255,255,255,0.05);border:1px solid ${h.accent}66;border-radius:14px;padding:14px;color:#eaf6ff;cursor:pointer;font:inherit;transition:transform .1s ease;pointer-events:auto;`;

@@ -14,7 +14,7 @@ export const ROSTER = [
     build: buildBahtera, skills: bahteraSkills,
   },
   {
-    id: 'meriam', name: 'Meriam', era: 'Traditional', role: 'Artillery · Mage', icon: '💣', accent: '#ffb24a',
+    id: 'meriam', name: 'Meriam', era: 'Traditional', role: 'Artillery · Mage', icon: '💣', accent: '#ffb24a', locked: true,
     blurb: 'A gun-barge that rains shells from afar — area barrages, piercing chain shot, a devastating bombardment.',
     hp: 640, dmg: 30, rng: 11, atkCd: 1.2, speed: 17,
     build: buildMeriam, skills: meriamSkills,
@@ -26,19 +26,19 @@ export const ROSTER = [
     build: buildHammerhead, skills: hammerheadSkills,
   },
   {
-    id: 'nakhoda', name: 'Nakhoda', era: 'Traditional', role: 'Support · Healer', icon: '🪔', accent: '#ffd27a',
+    id: 'nakhoda', name: 'Nakhoda', era: 'Traditional', role: 'Support · Healer', icon: '🪔', accent: '#ffd27a', locked: true,
     blurb: 'A royal barge that mends and shields the fleet — keep your warships afloat and unleash a rallying tide.',
     hp: 660, dmg: 20, rng: 8, atkCd: 1.0, speed: 20,
     build: buildNakhoda, skills: nakhodaSkills,
   },
   {
-    id: 'tempest', name: 'Tempest', era: 'Modern', role: 'Mage · Burst', icon: '⚡', accent: '#a06bff',
+    id: 'tempest', name: 'Tempest', era: 'Modern', role: 'Mage · Burst', icon: '⚡', accent: '#a06bff', locked: true,
     blurb: 'A storm hydrofoil that chains lightning between foes, conjures whirlpools, and calls down a tempest.',
     hp: 620, dmg: 23, rng: 10, atkCd: 1.05, speed: 20,
     build: buildTempest, skills: tempestSkills,
   },
   {
-    id: 'sentinel', name: 'Sentinel', era: 'Modern', role: 'Tank · Guardian', icon: '🛡️', accent: '#27c46a',
+    id: 'sentinel', name: 'Sentinel', era: 'Modern', role: 'Tank · Guardian', icon: '🛡️', accent: '#27c46a', locked: true,
     blurb: 'An armored ironclad that shields the line, drags enemies onto its guns, and holds a zone no one crosses.',
     hp: 880, dmg: 21, rng: 6.5, atkCd: 0.95, speed: 17,
     build: buildSentinel, skills: sentinelSkills,

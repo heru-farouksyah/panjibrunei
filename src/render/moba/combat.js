@@ -147,7 +147,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   function attack(att, tgt) {
     let dmg = att.dmg; if (att.kind === 'hero' && nagaBuff.t > 0 && att.team === nagaBuff.team) dmg *= 1.4;   // Naga's Blessing
     const pr = att.kind === 'turret' ? [0.42, 0x33373b] : (att.kind === 'epic' ? [0.55, 0x8fffc0] : (att.kind === 'hero' ? [0.34, att.team === 0 ? 0x2a3340 : 0x40262a] : [0.22, 0x2a2d31]));
-    cannon(att, tgt, pr[0], pr[1]); hit(tgt, dmg, { from: att });
+    cannon(att, tgt, pr[0], pr[1]); if (att._isHero) onEvent?.('shoot'); hit(tgt, dmg, { from: att });
     if (att._isHero && att.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + dmg * att.lifesteal);
   }
 

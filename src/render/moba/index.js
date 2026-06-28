@@ -14,6 +14,7 @@ import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { GRID_W, GRID_H, MAP_W, MAP_H, gridToWorld, worldToGrid } from './config.js';
 import { createMap, TYPE } from './sim.js';
 import { buildBahtera } from './units.js';
+import { makeBahteraKit } from './skills.js';
 
 const TEAM_COL = [0x35b6ff, 0xff5246];   // 0 = ally (azure), 1 = enemy (scarlet)
 
@@ -158,8 +159,12 @@ export function showMoba(audio, { mission, onResult } = {}) {
   // ---- hero ship (Phase 2): placed from sim coords, click-to-move ---------
   const SHIP_Y = 0.55;
   const hstart = gridToWorld(13, Math.round((GRID_H - 1) / 2));   // ally lane mouth (on water)
-  const hero = { mesh: buildBahtera(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: 16 };
+  const hero = { mesh: buildBahtera(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: 16, dash: null, rooted: false };
   hero.mesh.position.copy(hero.pos); scene.add(hero.mesh);
+  // ability VFX pool + the Bahtera kit (Phase 4)
+  const vfx = [];
+  const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
+  const kit = makeBahteraKit({ hero, addVfx });
   // selection ring on the water under the hero
   const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
   selRing.rotation.x = -Math.PI / 2; selRing.position.set(hstart.x, 0.18, hstart.z); scene.add(selRing);
@@ -201,33 +206,61 @@ export function showMoba(audio, { mission, onResult } = {}) {
   canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
   const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 70, 240); };
   addEventListener('wheel', onWheel, { passive: true });
-  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } };
+  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (k === '1') kit.tryCast(0); else if (k === '2') kit.tryCast(1); else if (k === '3' || k === 'r') kit.tryCast(2); };
   addEventListener('keydown', onKey);
 
   // ---- minimal HUD (Phase 1) ---------------------------------------------
   const hud = document.createElement('div');
   hud.style.cssText = 'position:absolute;inset:0;pointer-events:none;font-family:system-ui,sans-serif;';
+  const skBtn = (s, i) => `<div class="sk" data-i="${i}" style="position:relative;width:60px;height:60px;border-radius:50%;border:2px solid rgba(255,255,255,0.55);background:radial-gradient(circle at 50% 35%,#2a566e,#15303f);color:#fff;font-size:22px;font-weight:800;cursor:pointer;overflow:hidden;pointer-events:auto;display:flex;align-items:center;justify-content:center;">` +
+    `<span style="position:relative;z-index:2;">${s.letter}</span>` +
+    `<div class="cd" style="position:absolute;left:0;right:0;bottom:0;height:0%;background:rgba(8,16,24,0.62);z-index:1;"></div>` +
+    `<div class="cdn" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;z-index:3;"></div>` +
+    `<div class="lv" style="position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:#ffe27a;text-shadow:0 1px 2px #000;z-index:3;">Lv1</div>` +
+    `<div class="plus" data-i="${i}" hidden style="position:absolute;top:-7px;right:-5px;width:20px;height:20px;border-radius:50%;background:#3fae6a;color:#fff;font-size:14px;line-height:20px;text-align:center;cursor:pointer;z-index:4;">+</div>` +
+    `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 2 · Hero  <span style="opacity:.7;font-weight:500;">tap to move · wheel zoom · Q/E rotate</span></div>`;
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 4 · Skills  <span style="opacity:.7;font-weight:500;">tap move · 1/2/3 or buttons cast · Q/E rotate</span></div>` +
+    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:5px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span class="ihull" style="opacity:.6;">(passive)</span></div>` +
+    `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
+    `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>`;
   overlay.appendChild(hud);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
+  // skill buttons: cast on click; the corner + levels the skill
+  const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
+  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; kit.tryCast(i); touch(); }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
+  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv');
+  function updateSkillHud() {
+    elPwd.style.width = (kit.powder / kit.powderMax * 100) + '%'; elHlv.textContent = kit.heroLevel;
+    kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
+  }
+  updateSkillHud();
 
   // ---- loop + resize + cleanup -------------------------------------------
   const clock = new THREE.Clock(); let raf = 0, running = true;
   const _d = new THREE.Vector3();
   function updateHero(dt, t) {
-    _d.copy(hero.target).sub(hero.pos); _d.y = 0; const dist = _d.length();
-    if (dist > 0.25) {
-      _d.normalize(); hero.pos.addScaledVector(_d, Math.min(dist, hero.speed * dt));
-      const goalYaw = Math.atan2(-_d.z, _d.x);            // +x model forward → face heading
-      let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 7);
+    if (hero.dash) {                                      // Ram dash overrides normal sailing
+      hero.pos.x = THREE.MathUtils.clamp(hero.pos.x + hero.dash.dx * hero.dash.spd * dt, -MAP_W / 2 + 3, MAP_W / 2 - 3);
+      hero.pos.z = THREE.MathUtils.clamp(hero.pos.z + hero.dash.dz * hero.dash.spd * dt, -MAP_H / 2 + 3, MAP_H / 2 - 3);
+      hero.dash.t -= dt; if (hero.dash.t <= 0) hero.dash = null;
+    } else if (!hero.rooted) {                            // Broadside roots the ship while channeling
+      _d.copy(hero.target).sub(hero.pos); _d.y = 0; const dist = _d.length();
+      if (dist > 0.25) {
+        _d.normalize(); hero.pos.addScaledVector(_d, Math.min(dist, hero.speed * dt));
+        const goalYaw = Math.atan2(-_d.z, _d.x);          // +x model forward → face heading
+        let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 7);
+      }
     }
     hero.mesh.position.set(hero.pos.x, SHIP_Y + Math.sin(t * 1.7) * 0.07, hero.pos.z);
     hero.mesh.rotation.y = hero.yaw; hero.mesh.rotation.z = Math.sin(t * 1.3) * 0.03;   // gentle roll
     selRing.position.set(hero.pos.x, 0.18, hero.pos.z); const ps = 1 + Math.sin(t * 3) * 0.04; selRing.scale.setScalar(ps);
     if (pingT > 0) { pingT = Math.max(0, pingT - dt * 1.6); ping.material.opacity = pingT * 0.8; ping.scale.setScalar(1 + (1 - pingT) * 1.6); }
+  }
+  function updateVfx(dt) {
+    for (let j = vfx.length - 1; j >= 0; j--) { const o = vfx[j]; o.t += dt; o.update?.(dt, o); if (o.t >= o.life) { scene.remove(o.mesh); o.mesh.traverse?.((m) => { m.geometry?.dispose?.(); m.material?.dispose?.(); }); vfx.splice(j, 1); } }
   }
   function frame() {
     if (!running) return;
@@ -235,7 +268,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
     waterUni.uTime.value += dt;
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
-    updateHero(dt, t);
+    kit.tick(dt); updateHero(dt, t); updateVfx(dt); updateSkillHud();
     camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
     renderer.render(scene, camera);
@@ -254,7 +287,9 @@ export function showMoba(audio, { mission, onResult } = {}) {
     cam: (dist, tx, tz) => { camDistGoal = dist; camTargetGoal.set(tx || 0, 0, tz || 0); updateCamera(0, true); },
     hero: () => ({ x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1), tx: +hero.target.x.toFixed(1), tz: +hero.target.z.toFixed(1), yaw: +hero.yaw.toFixed(2) }),
     order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
-    step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) updateHero(0.05, i * 0.05); return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
+    step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
+    cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
+    kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },
   };
   return overlay;

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 const ringMat = (c, o = 0.6) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false });
 
 // hero: { pos, yaw, target, dash, rooted } ; addVfx(mesh, life, update(dt,o))
-export function makeBahteraKit({ hero, addVfx }) {
+export function makeBahteraKit({ hero, addVfx, enemiesNear = () => [], hit = () => {} }) {
   const powderMax = 100; let powder = 100;
   let heroLevel = 1, points = 1, levelT = 0;
   const skills = [
@@ -28,7 +28,7 @@ export function makeBahteraKit({ hero, addVfx }) {
     if (s.key === 'ram') {
       hero.dash = { dx: f.x, dz: f.z, spd: 34, t: 0.32 };
       for (let k = 0; k < 4; k++) after(k * 0.05, () => { const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.4, 20), ringMat(0x9fe8ff, 0.5)); r.rotation.x = -Math.PI / 2; r.position.set(hero.pos.x, 0.2, hero.pos.z); addVfx(r, 0.5, (dt, o) => { r.scale.setScalar(1 + (o.t / o.life) * 2); r.material.opacity = 0.5 * (1 - o.t / o.life); }); });
-      after(0.34, () => { const ex = hero.pos.x + f.x * 2, ez = hero.pos.z + f.z * 2; const sh = new THREE.Mesh(new THREE.RingGeometry(0.5, 3 + s.level * 0.4, 28), ringMat(0xfff0c0, 0.7)); sh.rotation.x = -Math.PI / 2; sh.position.set(ex, 0.22, ez); addVfx(sh, 0.5, (dt, o) => { sh.scale.setScalar(1 + (o.t / o.life) * 1.5); sh.material.opacity = 0.7 * (1 - o.t / o.life); }); hero.target.copy(hero.pos); });
+      after(0.34, () => { const ex = hero.pos.x + f.x * 2, ez = hero.pos.z + f.z * 2; const sh = new THREE.Mesh(new THREE.RingGeometry(0.5, 3 + s.level * 0.4, 28), ringMat(0xfff0c0, 0.7)); sh.rotation.x = -Math.PI / 2; sh.position.set(ex, 0.22, ez); addVfx(sh, 0.5, (dt, o) => { sh.scale.setScalar(1 + (o.t / o.life) * 1.5); sh.material.opacity = 0.7 * (1 - o.t / o.life); }); hero.target.copy(hero.pos); for (const e of enemiesNear(ex, ez, 4.6, 0)) hit(e, 70 + s.level * 22, { knockback: { x: f.x, z: f.z }, stun: 0.4, byHero: true }); });
     } else if (s.key === 'hook') {
       const range = 10 + s.level * 1.2;
       const hook = new THREE.Group();
@@ -36,6 +36,8 @@ export function makeBahteraKit({ hero, addVfx }) {
       const head = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), new THREE.MeshStandardMaterial({ color: 0x9aa0a4, metalness: 0.6, roughness: 0.4 })); head.rotation.z = -Math.PI / 2;
       hook.add(line); hook.add(head); hook.position.set(p.x, 0.7, p.z); hook.rotation.y = hero.yaw;
       addVfx(hook, 0.7, (dt, o) => { const u = o.t / o.life; const reach = (u < 0.5 ? u * 2 : (1 - u) * 2) * range; line.scale.x = Math.max(0.1, reach); line.position.x = reach / 2; head.position.x = reach; });
+      const cand = enemiesNear(p.x, p.z, range, 0).filter((e) => { const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1; return (dx / d) * f.x + (dz / d) * f.z > 0.2; }).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+      if (cand[0]) hit(cand[0], 60 + s.level * 18, { pull: { x: p.x, z: p.z }, slow: 1.6, byHero: true });
     } else {
       hero.rooted = true;
       const arc = new THREE.Mesh(new THREE.RingGeometry(2, 9 + s.level, 24, 1, -Math.PI / 3, Math.PI * 2 / 3), ringMat(0xffb060, 0.35)); arc.rotation.x = -Math.PI / 2;
@@ -45,6 +47,7 @@ export function makeBahteraKit({ hero, addVfx }) {
         hero.rooted = false; const hp = hero.pos.clone(), yaw = hero.yaw;
         for (let k = -2; k <= 2; k++) { const ang = yaw + k * 0.28, dir = { x: Math.cos(ang), z: -Math.sin(ang) }; const ball = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), new THREE.MeshStandardMaterial({ color: 0x24262a, metalness: 0.5, roughness: 0.4 })); ball.position.set(hp.x, 0.9, hp.z); addVfx(ball, 0.8, (dt, o) => { const d = o.t * 22; ball.position.set(hp.x + dir.x * d, 0.9 + Math.sin((o.t / o.life) * Math.PI) * 2.6, hp.z + dir.z * d); }); }
         const st = new THREE.Mesh(new THREE.RingGeometry(1, 7, 28), ringMat(0xffe080, 0.6)); st.rotation.x = -Math.PI / 2; st.position.set(hp.x + Math.cos(yaw) * 5, 0.22, hp.z - Math.sin(yaw) * 5); addVfx(st, 0.6, (dt, o) => { st.scale.setScalar(1 + (o.t / o.life) * 1.4); st.material.opacity = 0.6 * (1 - o.t / o.life); });
+        for (const e of enemiesNear(hp.x, hp.z, 11 + s.level, 0)) { const dx = e.x - hp.x, dz = e.z - hp.z, d = Math.hypot(dx, dz) || 1; if ((dx / d) * Math.cos(yaw) + (dz / d) * (-Math.sin(yaw)) > 0.25) hit(e, 120 + s.level * 40, { stun: 1.0, byHero: true }); }
       });
     }
     return true;

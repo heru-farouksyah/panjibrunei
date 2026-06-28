@@ -27,3 +27,14 @@ export function buildBahtera(team = 0) {
   g.scale.setScalar(1.1);
   return g;
 }
+
+// minion "creep" ship — small wedge hull + a single team sail. Cheap (spawns in waves).
+export function buildMinion(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.85), pbr(0x6a4a30, 0.85, 0.05)); hull.position.y = 0.3; g.add(hull);
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.95, 4), pbr(0x6a4a30, 0.85, 0.05)); bow.rotation.z = -Math.PI / 2; bow.rotation.y = Math.PI / 4; bow.position.set(1.05, 0.3, 0); g.add(bow);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 5), pbr(0x3a2a1a, 0.8, 0)); mast.position.set(0, 1.0, 0); g.add(mast);
+  const sail = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 1.15), new THREE.MeshStandardMaterial({ color: T, roughness: 0.72, side: THREE.DoubleSide, emissive: T, emissiveIntensity: 0.18 })); sail.position.set(0, 1.15, 0); sail.rotation.y = Math.PI / 2; g.add(sail);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return g;
+}

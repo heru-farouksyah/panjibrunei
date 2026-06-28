@@ -15,6 +15,7 @@ import { GRID_W, GRID_H, MAP_W, MAP_H, gridToWorld, worldToGrid } from './config
 import { createMap, TYPE } from './sim.js';
 import { buildBahtera } from './units.js';
 import { makeBahteraKit } from './skills.js';
+import { createCombat } from './combat.js';
 
 const TEAM_COL = [0x35b6ff, 0xff5246];   // 0 = ally (azure), 1 = enemy (scarlet)
 
@@ -161,10 +162,12 @@ export function showMoba(audio, { mission, onResult } = {}) {
   const hstart = gridToWorld(13, Math.round((GRID_H - 1) / 2));   // ally lane mouth (on water)
   const hero = { mesh: buildBahtera(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: 16, dash: null, rooted: false };
   hero.mesh.position.copy(hero.pos); scene.add(hero.mesh);
-  // ability VFX pool + the Bahtera kit (Phase 4)
+  // ability VFX pool + combat (Phase 5) + the Bahtera kit (Phase 4)
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
-  const kit = makeBahteraKit({ hero, addVfx });
+  let goldEl = null;
+  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; } });
+  const kit = makeBahteraKit({ hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit });
   // selection ring on the water under the hero
   const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
   selRing.rotation.x = -Math.PI / 2; selRing.position.set(hstart.x, 0.18, hstart.z); scene.add(selRing);
@@ -221,8 +224,9 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 4 · Skills  <span style="opacity:.7;font-weight:500;">tap move · 1/2/3 or buttons cast · Q/E rotate</span></div>` +
-    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:5px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span class="ihull" style="opacity:.6;">(passive)</span></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 5 · Combat  <span style="opacity:.7;font-weight:500;">tap move · 1/2/3 cast · sink creeps for 💰</span></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div>` +
+    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div></div>` +
     `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
     `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>`;
   overlay.appendChild(hud);
@@ -231,9 +235,11 @@ export function showMoba(audio, { mission, onResult } = {}) {
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
   skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; kit.tryCast(i); touch(); }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
-  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv');
+  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp');
+  goldEl = hud.querySelector('.gold');
   function updateSkillHud() {
     elPwd.style.width = (kit.powder / kit.powderMax * 100) + '%'; elHlv.textContent = kit.heroLevel;
+    elHhp.style.width = (combat.heroHp / combat.heroMaxHp * 100) + '%';
     kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
   }
   updateSkillHud();
@@ -268,7 +274,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
     waterUni.uTime.value += dt;
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
-    kit.tick(dt); updateHero(dt, t); updateVfx(dt); updateSkillHud();
+    kit.tick(dt); updateHero(dt, t); combat.update(dt, camera); updateVfx(dt); updateSkillHud();
     camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
     renderer.render(scene, camera);
@@ -287,8 +293,9 @@ export function showMoba(audio, { mission, onResult } = {}) {
     cam: (dist, tx, tz) => { camDistGoal = dist; camTargetGoal.set(tx || 0, 0, tz || 0); updateCamera(0, true); },
     hero: () => ({ x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1), tx: +hero.target.x.toFixed(1), tz: +hero.target.z.toFixed(1), yaw: +hero.yaw.toFixed(2) }),
     order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
-    step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
+    step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); combat.update(0.05, camera); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
+    combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },
   };

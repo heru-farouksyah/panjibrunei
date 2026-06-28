@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { GRID_W, GRID_H, MAP_W, MAP_H, gridToWorld, worldToGrid } from './config.js';
 import { createMap, TYPE } from './sim.js';
+import { buildBahtera } from './units.js';
 
 const TEAM_COL = [0x35b6ff, 0xff5246];   // 0 = ally (azure), 1 = enemy (scarlet)
 
@@ -154,6 +155,19 @@ export function showMoba(audio, { mission, onResult } = {}) {
   );
   water.position.y = 0; scene.add(water);
 
+  // ---- hero ship (Phase 2): placed from sim coords, click-to-move ---------
+  const SHIP_Y = 0.55;
+  const hstart = gridToWorld(13, Math.round((GRID_H - 1) / 2));   // ally lane mouth (on water)
+  const hero = { mesh: buildBahtera(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: 16 };
+  hero.mesh.position.copy(hero.pos); scene.add(hero.mesh);
+  // selection ring on the water under the hero
+  const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
+  selRing.rotation.x = -Math.PI / 2; selRing.position.set(hstart.x, 0.18, hstart.z); scene.add(selRing);
+  // click-ping marker
+  const ping = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.1, 24), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+  ping.rotation.x = -Math.PI / 2; ping.position.y = 0.2; scene.add(ping); let pingT = 0;
+  const showPing = (x, z) => { ping.position.set(x, 0.2, z); pingT = 1; };
+
   // ---- eased RTS camera (pan + zoom + rotate, opening ease, idle drift) ----
   const camTarget = new THREE.Vector3(0, 0, 0), camTargetGoal = new THREE.Vector3(0, 0, 0);
   let camDist = 235, camDistGoal = 168;                  // opening: ease in from far → default framing
@@ -170,17 +184,21 @@ export function showMoba(audio, { mission, onResult } = {}) {
   }
   updateCamera(0, true);
 
-  const clampTarget = () => { camTargetGoal.x = THREE.MathUtils.clamp(camTargetGoal.x, -MAP_W / 2, MAP_W / 2); camTargetGoal.z = THREE.MathUtils.clamp(camTargetGoal.z, -MAP_H / 2, MAP_H / 2); };
-  let drag = null;
-  const onDown = (x, y) => { drag = { x, y }; touch(); };
-  const onMove = (x, y) => { if (!drag) return; const s = camDist * 0.0016; const fx = Math.sin(camYaw + Math.PI / 2), fz = Math.cos(camYaw + Math.PI / 2); camTargetGoal.x -= (x - drag.x) * s * Math.cos(camYaw) + (y - drag.y) * s * fx; camTargetGoal.z += (x - drag.x) * s * Math.sin(camYaw) - (y - drag.y) * s * fz; drag = { x, y }; clampTarget(); };
-  const onUp = () => { drag = null; };
-  canvas.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
-  addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-  addEventListener('mouseup', onUp);
-  canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; onDown(t.clientX, t.clientY); }, { passive: true });
-  canvas.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
-  canvas.addEventListener('touchend', onUp);
+  // click/tap to MOVE the hero: raycast the pointer onto the water plane → order
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPt = new THREE.Vector3();
+  function orderMove(px, py) {
+    ndc.set((px / innerWidth) * 2 - 1, -(py / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+    if (!ray.ray.intersectPlane(groundPlane, hitPt)) return;
+    hitPt.x = THREE.MathUtils.clamp(hitPt.x, -MAP_W / 2 + 3, MAP_W / 2 - 3); hitPt.z = THREE.MathUtils.clamp(hitPt.z, -MAP_H / 2 + 3, MAP_H / 2 - 3);
+    hero.target.set(hitPt.x, SHIP_Y, hitPt.z); showPing(hitPt.x, hitPt.z); touch();
+  }
+  let down = null;                                  // a press that doesn't drift = a move order (vs a rotate-drag later)
+  const press = (x, y) => { down = { x, y }; };
+  const release = (x, y) => { if (down && Math.hypot(x - down.x, y - down.y) < 9) orderMove(x, y); down = null; };
+  canvas.addEventListener('mousedown', (e) => press(e.clientX, e.clientY));
+  const onMouseUp = (e) => release(e.clientX, e.clientY); addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; press(t.clientX, t.clientY); }, { passive: true });
+  canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
   const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 70, 240); };
   addEventListener('wheel', onWheel, { passive: true });
   const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } };
@@ -191,26 +209,41 @@ export function showMoba(audio, { mission, onResult } = {}) {
   hud.style.cssText = 'position:absolute;inset:0;pointer-events:none;font-family:system-ui,sans-serif;';
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 1 · World  <span style="opacity:.7;font-weight:500;">drag to pan · wheel to zoom</span></div>`;
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 2 · Hero  <span style="opacity:.7;font-weight:500;">tap to move · wheel zoom · Q/E rotate</span></div>`;
   overlay.appendChild(hud);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
 
   // ---- loop + resize + cleanup -------------------------------------------
   const clock = new THREE.Clock(); let raf = 0, running = true;
+  const _d = new THREE.Vector3();
+  function updateHero(dt, t) {
+    _d.copy(hero.target).sub(hero.pos); _d.y = 0; const dist = _d.length();
+    if (dist > 0.25) {
+      _d.normalize(); hero.pos.addScaledVector(_d, Math.min(dist, hero.speed * dt));
+      const goalYaw = Math.atan2(-_d.z, _d.x);            // +x model forward → face heading
+      let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 7);
+    }
+    hero.mesh.position.set(hero.pos.x, SHIP_Y + Math.sin(t * 1.7) * 0.07, hero.pos.z);
+    hero.mesh.rotation.y = hero.yaw; hero.mesh.rotation.z = Math.sin(t * 1.3) * 0.03;   // gentle roll
+    selRing.position.set(hero.pos.x, 0.18, hero.pos.z); const ps = 1 + Math.sin(t * 3) * 0.04; selRing.scale.setScalar(ps);
+    if (pingT > 0) { pingT = Math.max(0, pingT - dt * 1.6); ping.material.opacity = pingT * 0.8; ping.scale.setScalar(1 + (1 - pingT) * 1.6); }
+  }
   function frame() {
     if (!running) return;
     const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
     waterUni.uTime.value += dt;
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
+    updateHero(dt, t);
+    camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
     renderer.render(scene, camera);
     raf = requestAnimationFrame(frame);
   }
   function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); }
   addEventListener('resize', onResize);
-  function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('resize', onResize); removeEventListener('mousemove', onMove); removeEventListener('mouseup', onUp); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKey); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
+  function cleanup() { running = false; cancelAnimationFrame(raf); removeEventListener('resize', onResize); removeEventListener('mouseup', onMouseUp); removeEventListener('wheel', onWheel); removeEventListener('keydown', onKey); renderer.dispose(); renderer.forceContextLoss?.(); overlay.remove(); }
   frame();
 
   // ---- debug hook (verification) -----------------------------------------
@@ -219,6 +252,9 @@ export function showMoba(audio, { mission, onResult } = {}) {
     stats: () => ({ verts: verts.length / 3, tris: idx.length / 3, bases: map.bases.length, turrets: map.turrets.length, lanes: map.lanes.length, drawCalls: renderer.info.render.calls, tris2: renderer.info.render.triangles }),
     grid: (c, r) => gridToWorld(c, r), unproject: (x, z) => worldToGrid(x, z),
     cam: (dist, tx, tz) => { camDistGoal = dist; camTargetGoal.set(tx || 0, 0, tz || 0); updateCamera(0, true); },
+    hero: () => ({ x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1), tx: +hero.target.x.toFixed(1), tz: +hero.target.z.toFixed(1), yaw: +hero.yaw.toFixed(2) }),
+    order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
+    step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) updateHero(0.05, i * 0.05); return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
     shot: () => { renderer.render(scene, camera); },
   };
   return overlay;

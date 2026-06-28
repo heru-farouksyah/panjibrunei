@@ -186,6 +186,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const hstart = gridToWorld(13, Math.round((GRID_H - 1) / 2));   // ally lane mouth (on water)
   const hero = { mesh: chosen.build(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: chosen.speed, dash: null, rooted: false };
   hero.mesh.position.copy(hero.pos); scene.add(hero.mesh);
+  const joy = { active: false, jx: 0, jy: 0 };            // left thumbstick state (set by the on-screen joystick)
   // ability VFX pool + combat (Phase 5) + the Bahtera kit (Phase 4)
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
@@ -212,10 +213,10 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
 
   // ---- eased RTS camera (pan + zoom + rotate, opening ease, idle drift) ----
   const camTarget = new THREE.Vector3(0, 0, 0), camTargetGoal = new THREE.Vector3(0, 0, 0);
-  let camDist = 250, camDistGoal = 158;                  // opening: ease in from far → default framing (bigger map)
-  let camYaw = THREE.MathUtils.degToRad(-30), camYawGoal = THREE.MathUtils.degToRad(-22);
-  let camPitch = THREE.MathUtils.degToRad(53), camPitchGoal = camPitch;   // tilt — adjustable (30°=low/horizon … 80°=top-down)
-  const ZMIN = 40, ZMAX = 320, DEF_DIST = 158, DEF_YAW = THREE.MathUtils.degToRad(-22), DEF_PITCH = THREE.MathUtils.degToRad(53);
+  let camDist = 205, camDistGoal = 142;                  // opening: ease in from far → ML-style close follow
+  let camYaw = THREE.MathUtils.degToRad(-24), camYawGoal = THREE.MathUtils.degToRad(-18);
+  let camPitch = THREE.MathUtils.degToRad(57), camPitchGoal = camPitch;   // tilt — adjustable (30°=low/horizon … 80°=top-down)
+  const ZMIN = 40, ZMAX = 320, DEF_DIST = 142, DEF_YAW = THREE.MathUtils.degToRad(-18), DEF_PITCH = THREE.MathUtils.degToRad(57);
   const tiltBy = (deg) => { touch(); camPitchGoal = THREE.MathUtils.clamp(camPitchGoal + THREE.MathUtils.degToRad(deg), THREE.MathUtils.degToRad(30), THREE.MathUtils.degToRad(80)); };
   const zoomBy = (d) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + d, ZMIN, ZMAX); };
   const rotateBy = (r) => { touch(); camYawGoal += r; };
@@ -266,21 +267,22 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     `<div class="plus" data-i="${i}" hidden style="position:absolute;top:-7px;right:-5px;width:20px;height:20px;border-radius:50%;background:#3fae6a;color:#fff;font-size:14px;line-height:20px;text-align:center;cursor:pointer;z-index:4;">+</div>` +
     `</div>`;
   hud.innerHTML =
-    `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(56px + env(safe-area-inset-top));left:10px;display:flex;flex-direction:column;gap:6px;">${['cam-help|❔', 'cam-toggle|🎥'].map((b) => { const [c, g] = b.split('|'); return `<button class="${c}" style="pointer-events:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,40,55,0.6);color:#fff;font-size:16px;cursor:pointer;">${g}</button>`; }).join('')}</div>` +
-    `<div class="cam-pad" hidden style="position:absolute;top:calc(100px + env(safe-area-inset-top));left:10px;background:rgba(10,26,36,0.94);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:8px;display:grid;grid-template-columns:40px 40px;gap:6px;pointer-events:auto;">` +
+    `<button class="moba-quit" style="position:absolute;top:calc(106px + env(safe-area-inset-top));left:10px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:20px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
+    `<div style="position:absolute;top:calc(106px + env(safe-area-inset-top));left:52px;display:flex;flex-direction:row;gap:6px;">${['cam-help|❔', 'cam-toggle|🎥'].map((b) => { const [c, g] = b.split('|'); return `<button class="${c}" style="pointer-events:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,40,55,0.6);color:#fff;font-size:16px;cursor:pointer;">${g}</button>`; }).join('')}</div>` +
+    `<div class="cam-pad" hidden style="position:absolute;top:calc(150px + env(safe-area-inset-top));left:10px;background:rgba(10,26,36,0.94);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:8px;display:grid;grid-template-columns:40px 40px;gap:6px;pointer-events:auto;">` +
       `<div style="grid-column:1/3;font-size:10px;color:#9fc4d6;text-align:center;letter-spacing:.5px;">CAMERA</div>` +
       [['rotL', '⟲'], ['rotR', '⟳'], ['zoomout', '－'], ['zoomin', '＋'], ['tiltlow', '⤓'], ['tilttop', '⤒']].map(([k, g]) => `<button data-cam="${k}" style="width:40px;height:38px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#fff;font-size:17px;cursor:pointer;">${g}</button>`).join('') +
       `<button data-cam="reset" style="grid-column:1/3;height:30px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#cfeaf6;font-size:11px;font-weight:700;cursor:pointer;">⊙ Reset view</button>` +
     `</div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · 3v3 + Jungle  <span style="opacity:.7;font-weight:500;">farm camps · slay the Sea-Naga · raze turrets → Core</span></div>` +
     `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
-    `<canvas class="mmap" width="300" height="188" style="position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:150px;height:94px;border-radius:8px;border:1px solid rgba(255,255,255,0.28);background:rgba(12,30,40,0.62);pointer-events:none;"></canvas>` +
+    `<canvas class="mmap" width="300" height="188" style="position:absolute;left:10px;top:calc(10px + env(safe-area-inset-top));width:140px;height:88px;border-radius:8px;border:1px solid rgba(255,255,255,0.28);background:rgba(12,30,40,0.62);pointer-events:none;"></canvas>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;display:flex;gap:8px;align-items:center;"><button class="shopbtn" style="pointer-events:auto;background:rgba(15,40,55,0.6);color:#ffe27a;border:1px solid rgba(255,255,255,0.3);padding:7px 12px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;">🛒 Shop</button><div style="background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div></div>` +
     `<div class="shop" hidden style="position:absolute;right:12px;top:60px;width:240px;background:rgba(10,26,36,0.96);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;z-index:6;pointer-events:auto;max-height:72vh;overflow:auto;"><div style="color:#fff;font-weight:800;font-size:13px;margin-bottom:7px;">⚓ Quartermaster — buy with 💰</div><div class="shoplist"></div></div>` +
-    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ${chosen.icon} ${chosen.name} <span style="opacity:.6;">(${chosen.era})</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
-    `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
-    `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
+    `<div style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;text-align:center;">Lv <b class="hlv">1</b> · ${chosen.icon} ${chosen.name} <span style="opacity:.6;">(${chosen.era})</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
+    `<div style="position:absolute;right:24px;bottom:calc(94px + env(safe-area-inset-bottom));width:206px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
+    `<div class="moba-skills" style="position:absolute;right:24px;bottom:calc(20px + env(safe-area-inset-bottom));display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
+    `<div class="joy-base" style="position:absolute;left:calc(26px + env(safe-area-inset-left));bottom:calc(26px + env(safe-area-inset-bottom));width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.22);pointer-events:auto;touch-action:none;"><div class="joy-knob" style="position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(159,232,255,0.34);border:2px solid rgba(159,232,255,0.6);"></div></div>` +
     `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
     `<div class="moba-result" hidden style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,25,35,0.72);z-index:5;"><div style="background:linear-gradient(180deg,#fff,#e7f4f2);border-radius:20px;padding:26px 34px;text-align:center;box-shadow:0 12px 40px rgba(20,50,70,0.5);border:2px solid #2f7f78;"><h2 class="rtitle" style="margin:0;font-size:30px;letter-spacing:1px;"></h2><p class="rsub" style="color:#16384c;margin:10px 0 16px;font-size:15px;"></p><button class="rbtn" style="background:#e2a23a;color:#3a2a10;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:16px;cursor:pointer;pointer-events:auto;">Continue</button></div></div>`;
   overlay.appendChild(hud);
@@ -303,7 +305,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
       <div style="opacity:.7;font-size:12px;margin-bottom:12px;">Sungai Naga · ${chosen.era} ${chosen.role}</div>
       <div style="font-size:13.5px;line-height:1.7;">
         🎯 <b>Goal</b> — raze the enemy turrets, then sink their <b>Core</b> to win.<br>
-        🕹️ <b>Move</b> — tap the water to sail there.<br>
+        🕹️ <b>Move</b> — drag the <b>left joystick</b> to steer your ship (or tap the water to sail there).<br>
         ✨ <b>Skills</b> — tap <b>${kit.skills.map((s) => s.letter).join(' / ')}</b> (or keys 1 2 3). They cost Powder &amp; have cooldowns; tap the <b>+</b> to rank one up on level-up.<br>
         💰 <b>Gold &amp; XP</b> — sink ships near you to earn both; open <b>🛒 Shop</b> to buy upgrades.<br>
         🐉 <b>Sea-Naga</b> — slay the serpent in the middle for your team's <b>Blessing</b> (+40% damage).<br>
@@ -317,11 +319,18 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   hud.querySelector('.cam-help').onclick = () => { helpEl.style.display = 'flex'; };
-  const camPad = hud.querySelector('.cam-pad');
-  hud.querySelector('.cam-toggle').onclick = () => { camPad.hidden = !camPad.hidden; };
+  const camPad = hud.querySelector('.cam-pad'); camPad.style.display = 'none';   // inline display:grid overrides [hidden], so drive via style
+  hud.querySelector('.cam-toggle').onclick = () => { camPad.style.display = camPad.style.display === 'none' ? 'grid' : 'none'; };
   const camActs = { rotL: () => rotateBy(0.4), rotR: () => rotateBy(-0.4), zoomin: () => zoomBy(-26), zoomout: () => zoomBy(26), tilttop: () => tiltBy(8), tiltlow: () => tiltBy(-8), reset: () => resetView() };
   camPad.querySelectorAll('[data-cam]').forEach((btn) => { btn.onclick = () => camActs[btn.dataset.cam]?.(); });
   helpEl.querySelector('.help-go').onclick = () => { helpEl.style.display = 'none'; };
+  // ---- left thumbstick (move) ----
+  const joyBase = hud.querySelector('.joy-base'), joyKnob = hud.querySelector('.joy-knob'); const joyR = 52; let joyCx = 0, joyCy = 0;
+  const joyMove = (x, y) => { let dx = x - joyCx, dy = y - joyCy; const d = Math.hypot(dx, dy); if (d > joyR) { dx = dx / d * joyR; dy = dy / d * joyR; } joyKnob.style.transform = `translate(${dx}px,${dy}px)`; joy.jx = dx / joyR; joy.jy = dy / joyR; touch(); };
+  const joyEnd = () => { joy.active = false; joy.jx = 0; joy.jy = 0; joyKnob.style.transform = ''; };
+  joyBase.addEventListener('pointerdown', (e) => { e.preventDefault(); joyBase.setPointerCapture?.(e.pointerId); const r = joyBase.getBoundingClientRect(); joyCx = r.left + r.width / 2; joyCy = r.top + r.height / 2; joy.active = true; joyMove(e.clientX, e.clientY); });
+  joyBase.addEventListener('pointermove', (e) => { if (joy.active) joyMove(e.clientX, e.clientY); });
+  joyBase.addEventListener('pointerup', joyEnd); joyBase.addEventListener('pointercancel', joyEnd);
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
   resultEl.style.display = 'none';   // inline display:flex overrides [hidden], so drive it via style
   function showResult(win) {
@@ -395,11 +404,21 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
       hero.pos.z = THREE.MathUtils.clamp(hero.pos.z + hero.dash.dz * hero.dash.spd * dt, -MAP_H / 2 + 3, MAP_H / 2 - 3);
       hero.dash.t -= dt; if (hero.dash.t <= 0) hero.dash = null;
     } else if (!hero.rooted) {                            // Broadside roots the ship while channeling
-      _d.copy(hero.target).sub(hero.pos); _d.y = 0; const dist = _d.length();
-      if (dist > 0.25) {
-        _d.normalize(); hero.pos.addScaledVector(_d, Math.min(dist, hero.speed * dt));
-        const goalYaw = Math.atan2(-_d.z, _d.x);          // +x model forward → face heading
-        let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 7);
+      if (joy.active && (joy.jx || joy.jy)) {             // LEFT THUMBSTICK — continuous steer relative to the camera (ML style)
+        const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
+        let mx = fx * -joy.jy + rx * joy.jx, mz = fz * -joy.jy + rz * joy.jx; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
+        const mag = Math.min(1, Math.hypot(joy.jx, joy.jy));
+        hero.pos.x = THREE.MathUtils.clamp(hero.pos.x + mx * hero.speed * mag * dt, -MAP_W / 2 + 3, MAP_W / 2 - 3);
+        hero.pos.z = THREE.MathUtils.clamp(hero.pos.z + mz * hero.speed * mag * dt, -MAP_H / 2 + 3, MAP_H / 2 - 3);
+        const goalYaw = Math.atan2(-mz, mx); let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 9);
+        hero.target.copy(hero.pos);                        // releasing the stick stops the ship
+      } else {
+        _d.copy(hero.target).sub(hero.pos); _d.y = 0; const dist = _d.length();
+        if (dist > 0.25) {
+          _d.normalize(); hero.pos.addScaledVector(_d, Math.min(dist, hero.speed * dt));
+          const goalYaw = Math.atan2(-_d.z, _d.x);        // +x model forward → face heading
+          let da = goalYaw - hero.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); hero.yaw += da * Math.min(1, dt * 7);
+        }
       }
     }
     hero.mesh.position.set(hero.pos.x, SHIP_Y + Math.sin(t * 1.7) * 0.07, hero.pos.z);
@@ -439,6 +458,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     cam: (dist, tx, tz) => { camDistGoal = dist; camTargetGoal.set(tx || 0, 0, tz || 0); updateCamera(0, true); },
     hero: () => ({ x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1), tx: +hero.target.x.toFixed(1), tz: +hero.target.z.toFixed(1), yaw: +hero.yaw.toFixed(2) }),
     order: (x, z) => { hero.target.set(x, SHIP_Y, z); showPing(x, z); },
+    joy: (jx, jy) => { joy.active = !!(jx || jy); joy.jx = jx || 0; joy.jy = jy || 0; return { active: joy.active, jx: joy.jx, jy: joy.jy }; },
+    layout: () => ({ joystick: !!hud.querySelector('.joy-base'), skillsRight: hud.querySelector('.moba-skills').style.right, mmTop: hud.querySelector('.mmap').style.top.includes('10px') }),
     step: (secs) => { const n = Math.ceil(secs / 0.05); for (let i = 0; i < n; i++) { kit.tick(0.05); updateHero(0.05, i * 0.05); combat.update(0.05, camera); updateVfx(0.05); } return { x: +hero.pos.x.toFixed(1), z: +hero.pos.z.toFixed(1) }; },
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
     combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp), heroDead: combat.heroDead, respawnIn: combat.respawnIn, over: combat.over, eTurrets: combat.debug.turretsLeft(1), eCoreInvuln: combat.debug.coreInvuln(1) }),
@@ -452,7 +473,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); return 'ok'; },
     tilt: (d) => { if (d !== undefined) tiltBy(d); return +THREE.MathUtils.radToDeg(camPitchGoal).toFixed(1); },
     zoom: (d) => { if (d !== undefined) zoomBy(d); return +camDistGoal.toFixed(0); },
-    camPad: (open) => { if (open !== undefined) camPad.hidden = !open; return { hidden: camPad.hidden, buttons: camPad.querySelectorAll('[data-cam]').length }; },
+    camPad: (open) => { if (open !== undefined) camPad.style.display = open ? 'grid' : 'none'; return { hidden: camPad.style.display === 'none', buttons: camPad.querySelectorAll('[data-cam]').length }; },
     help: (show) => { if (show !== undefined) helpEl.style.display = show ? 'flex' : 'none'; return getComputedStyle(helpEl).display; },
     mapSize: () => ({ MAP_W: +MAP_W.toFixed(0), MAP_H: +MAP_H.toFixed(0), GRID_W, GRID_H }),
     vig: () => parseFloat(hurtVig.style.opacity || 0),

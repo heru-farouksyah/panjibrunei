@@ -14,7 +14,7 @@ import { hasSave, readSave, writeSave } from './render/settings.js';
 import { loadProfile, completeMission, saveProfile } from './render/profile.js';
 import { showCampaign, showMissionResult } from './render/campaign.js';
 import { showMuara } from './render/muara.js';
-import { showTowerDefense } from './render/td.js';
+import { showMoba } from './render/moba/index.js';
 import { showKampong } from './render/kampong.js';
 import { showFarm } from './render/farm.js';
 import { TICK_RATE } from './sim/constants.js';
@@ -307,9 +307,9 @@ function startMuara(m) {
   showMuara(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
-// Lane tower-defence (Defence of Kampong Ayer).
-function startTowerDefense(m) {
-  showTowerDefense(audio, { mission: m, onResult: (r) => miniResult(m, r) });
+// Naval MOBA (Defence of Kampong Ayer) — Three.js, Phase 1: the 3D world.
+function startMoba(m) {
+  showMoba(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
 // 3rd-person Kampong Ayer collect-a-thon (Landing at Muara).
@@ -327,7 +327,7 @@ function startFarm(m) {
 function launchMission(m) {
   switch (m.mode) {
     case 'naval': return startMuara(m);
-    case 'td': return startTowerDefense(m);
+    case 'moba': return startMoba(m);
     case 'explore': return startKampong(m);
     case 'farm': return startFarm(m);
     default:

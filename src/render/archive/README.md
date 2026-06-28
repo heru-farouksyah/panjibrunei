@@ -15,3 +15,6 @@ To re-activate one: move it back to `src/render/`, re-add its `import` +
 
 Note: their relative imports (`./toonkit.js`, `./kampongAudio.js`, …) assume the
 file sits in `src/render/`; fix the paths (or move the file back) before use.
+
+- **td.js** — `showTowerDefense()`: 5x5 lane tower-defence. Briefly held the
+  "Defence of Kampong Ayer" slot before it became the naval MOBA.

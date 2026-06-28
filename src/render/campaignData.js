@@ -11,9 +11,9 @@ export const MISSIONS = [
   },
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',
-    faction: 'sakam', difficulty: 'easy', mode: 'td',
-    td: { waves: 6 },
-    blurb: 'Stilt-houses under threat — the warlord’s host pours up the titian. Plant your defenders along the lanes and hold every wave before they break through to your Istana.',
+    faction: 'sakam', difficulty: 'normal', mode: 'moba',
+    moba: { lanes: 2, epic: true },
+    blurb: 'Naval MOBA — Traditional vs Modern warships clash over the river. Push two lanes, raze the turrets, fight for the Sea-Naga, and sink the enemy Core. (3D, in development.)',
   },
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',

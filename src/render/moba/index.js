@@ -215,7 +215,11 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   let camDist = 250, camDistGoal = 158;                  // opening: ease in from far → default framing (bigger map)
   let camYaw = THREE.MathUtils.degToRad(-30), camYawGoal = THREE.MathUtils.degToRad(-22);
   let camPitch = THREE.MathUtils.degToRad(53), camPitchGoal = camPitch;   // tilt — adjustable (30°=low/horizon … 80°=top-down)
+  const ZMIN = 40, ZMAX = 320, DEF_DIST = 158, DEF_YAW = THREE.MathUtils.degToRad(-22), DEF_PITCH = THREE.MathUtils.degToRad(53);
   const tiltBy = (deg) => { touch(); camPitchGoal = THREE.MathUtils.clamp(camPitchGoal + THREE.MathUtils.degToRad(deg), THREE.MathUtils.degToRad(30), THREE.MathUtils.degToRad(80)); };
+  const zoomBy = (d) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + d, ZMIN, ZMAX); };
+  const rotateBy = (r) => { touch(); camYawGoal += r; };
+  const resetView = () => { touch(); camDistGoal = DEF_DIST; camYawGoal = DEF_YAW; camPitchGoal = DEF_PITCH; };
   const offset = new THREE.Vector3(), desired = new THREE.Vector3();
   let interacted = false; const touch = () => { interacted = true; };
   function updateCamera(dt, instant) {
@@ -241,9 +245,12 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const release = (x, y) => { if (down && Math.hypot(x - down.x, y - down.y) < 9) orderMove(x, y); down = null; };
   canvas.addEventListener('mousedown', (e) => press(e.clientX, e.clientY));
   const onMouseUp = (e) => release(e.clientX, e.clientY); addEventListener('mouseup', onMouseUp);
-  canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; press(t.clientX, t.clientY); }, { passive: true });
-  canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
-  const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 14, 70, 320); };
+  let pinchD = 0, pinching = false;
+  const tdist = (e) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  canvas.addEventListener('touchstart', (e) => { if (e.touches.length >= 2) { pinching = true; pinchD = tdist(e); down = null; } else { const t = e.touches[0]; press(t.clientX, t.clientY); } }, { passive: true });
+  canvas.addEventListener('touchmove', (e) => { if (e.touches.length >= 2) { pinching = true; const d = tdist(e); zoomBy((pinchD - d) * 0.6); pinchD = d; down = null; } }, { passive: true });
+  canvas.addEventListener('touchend', (e) => { if (pinching) { if (e.touches.length === 0) pinching = false; return; } const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
+  const onWheel = (e) => { zoomBy(Math.sign(e.deltaY) * 14); };
   addEventListener('wheel', onWheel, { passive: true });
   const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (k === '[') { tiltBy(6); } else if (k === ']') { tiltBy(-6); } else if (!combat.heroDead && !combat.over) { if (k === '1') { if (kit.tryCast(0)) snd.cast(0); } else if (k === '2') { if (kit.tryCast(1)) snd.cast(1); } else if (k === '3' || k === 'r') { if (kit.tryCast(2)) snd.cast(2); } } };
   addEventListener('keydown', onKey);
@@ -260,7 +267,12 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(56px + env(safe-area-inset-top));left:10px;display:flex;flex-direction:column;gap:6px;">${['cam-help|❔', 'cam-up|⤒', 'cam-dn|⤓'].map((b) => { const [c, g] = b.split('|'); return `<button class="${c}" style="pointer-events:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,40,55,0.6);color:#fff;font-size:16px;cursor:pointer;">${g}</button>`; }).join('')}</div>` +
+    `<div style="position:absolute;top:calc(56px + env(safe-area-inset-top));left:10px;display:flex;flex-direction:column;gap:6px;">${['cam-help|❔', 'cam-toggle|🎥'].map((b) => { const [c, g] = b.split('|'); return `<button class="${c}" style="pointer-events:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,40,55,0.6);color:#fff;font-size:16px;cursor:pointer;">${g}</button>`; }).join('')}</div>` +
+    `<div class="cam-pad" hidden style="position:absolute;top:calc(100px + env(safe-area-inset-top));left:10px;background:rgba(10,26,36,0.94);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:8px;display:grid;grid-template-columns:40px 40px;gap:6px;pointer-events:auto;">` +
+      `<div style="grid-column:1/3;font-size:10px;color:#9fc4d6;text-align:center;letter-spacing:.5px;">CAMERA</div>` +
+      [['rotL', '⟲'], ['rotR', '⟳'], ['zoomout', '－'], ['zoomin', '＋'], ['tiltlow', '⤓'], ['tilttop', '⤒']].map(([k, g]) => `<button data-cam="${k}" style="width:40px;height:38px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#fff;font-size:17px;cursor:pointer;">${g}</button>`).join('') +
+      `<button data-cam="reset" style="grid-column:1/3;height:30px;border-radius:9px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#cfeaf6;font-size:11px;font-weight:700;cursor:pointer;">⊙ Reset view</button>` +
+    `</div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · 3v3 + Jungle  <span style="opacity:.7;font-weight:500;">farm camps · slay the Sea-Naga · raze turrets → Core</span></div>` +
     `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
     `<canvas class="mmap" width="300" height="188" style="position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:150px;height:94px;border-radius:8px;border:1px solid rgba(255,255,255,0.28);background:rgba(12,30,40,0.62);pointer-events:none;"></canvas>` +
@@ -305,8 +317,10 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   hud.querySelector('.cam-help').onclick = () => { helpEl.style.display = 'flex'; };
-  hud.querySelector('.cam-up').onclick = () => tiltBy(8);    // ⤒ more top-down
-  hud.querySelector('.cam-dn').onclick = () => tiltBy(-8);   // ⤓ lower angle
+  const camPad = hud.querySelector('.cam-pad');
+  hud.querySelector('.cam-toggle').onclick = () => { camPad.hidden = !camPad.hidden; };
+  const camActs = { rotL: () => rotateBy(0.4), rotR: () => rotateBy(-0.4), zoomin: () => zoomBy(-26), zoomout: () => zoomBy(26), tilttop: () => tiltBy(8), tiltlow: () => tiltBy(-8), reset: () => resetView() };
+  camPad.querySelectorAll('[data-cam]').forEach((btn) => { btn.onclick = () => camActs[btn.dataset.cam]?.(); });
   helpEl.querySelector('.help-go').onclick = () => { helpEl.style.display = 'none'; };
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
   resultEl.style.display = 'none';   // inline display:flex overrides [hidden], so drive it via style
@@ -437,6 +451,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     drawMM: () => { drawMinimap(); const d = mmCtx.getImageData(0, 0, MMW, MMH).data; let nz = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nz++; return { nonBlankPx: nz, blips: combat.blips().length }; },
     sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); return 'ok'; },
     tilt: (d) => { if (d !== undefined) tiltBy(d); return +THREE.MathUtils.radToDeg(camPitchGoal).toFixed(1); },
+    zoom: (d) => { if (d !== undefined) zoomBy(d); return +camDistGoal.toFixed(0); },
+    camPad: (open) => { if (open !== undefined) camPad.hidden = !open; return { hidden: camPad.hidden, buttons: camPad.querySelectorAll('[data-cam]').length }; },
     help: (show) => { if (show !== undefined) helpEl.style.display = show ? 'flex' : 'none'; return getComputedStyle(helpEl).display; },
     mapSize: () => ({ MAP_W: +MAP_W.toFixed(0), MAP_H: +MAP_H.toFixed(0), GRID_W, GRID_H }),
     vig: () => parseFloat(hurtVig.style.opacity || 0),

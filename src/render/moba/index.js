@@ -247,6 +247,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · 3v3 + Jungle  <span style="opacity:.7;font-weight:500;">farm camps · slay the Sea-Naga · raze turrets → Core</span></div>` +
     `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
+    `<canvas class="mmap" width="300" height="188" style="position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:150px;height:94px;border-radius:8px;border:1px solid rgba(255,255,255,0.28);background:rgba(12,30,40,0.62);pointer-events:none;"></canvas>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;display:flex;gap:8px;align-items:center;"><button class="shopbtn" style="pointer-events:auto;background:rgba(15,40,55,0.6);color:#ffe27a;border:1px solid rgba(255,255,255,0.3);padding:7px 12px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;">🛒 Shop</button><div style="background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div></div>` +
     `<div class="shop" hidden style="position:absolute;right:12px;top:60px;width:240px;background:rgba(10,26,36,0.96);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;z-index:6;pointer-events:auto;max-height:72vh;overflow:auto;"><div style="color:#fff;font-weight:800;font-size:13px;margin-bottom:7px;">⚓ Quartermaster — buy with 💰</div><div class="shoplist"></div></div>` +
     `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ${chosen.icon} ${chosen.name} <span style="opacity:.6;">(${chosen.era})</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
@@ -275,6 +276,25 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
   skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { kit.tryCast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
   const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp'), nagaChip = hud.querySelector('.naga-chip');
+  // ---- Phase 10: minimap ----
+  const MMW = 300, MMH = 188, mmCtx = hud.querySelector('.mmap').getContext('2d');
+  const w2m = (x, z) => [(x / MAP_W + 0.5) * MMW, (z / MAP_H + 0.5) * MMH];
+  const mmLanes = map.lanes.map((lane) => lane.map((pt) => { const w = gridToWorld(pt.c, pt.r); return w2m(w.x, w.z); }));
+  function drawMinimap() {
+    const g = mmCtx; g.clearRect(0, 0, MMW, MMH);
+    g.strokeStyle = 'rgba(255,255,255,0.13)'; g.lineWidth = 11; g.lineCap = 'round';
+    for (const lane of mmLanes) { g.beginPath(); lane.forEach(([mx, my], i) => i ? g.lineTo(mx, my) : g.moveTo(mx, my)); g.stroke(); }
+    for (const bl of combat.blips()) {
+      const [mx, my] = w2m(bl.x, bl.z);
+      const col = bl.team === 0 ? '#46d06a' : (bl.team === 1 ? '#ff5246' : '#d9b24a');
+      if (bl.kind === 'core') { g.fillStyle = col; g.fillRect(mx - 6, my - 6, 12, 12); }
+      else if (bl.kind === 'turret') { g.fillStyle = col; g.fillRect(mx - 4, my - 4, 8, 8); }
+      else if (bl.kind === 'epic') { g.strokeStyle = '#8fe6b0'; g.lineWidth = 3; g.beginPath(); g.arc(mx, my, 7, 0, 6.3); g.stroke(); }
+      else if (bl.kind === 'camp') { g.fillStyle = '#d9b24a'; g.beginPath(); g.arc(mx, my, 5, 0, 6.3); g.fill(); }
+      else if (bl.kind === 'hero') { if (bl.me) { g.fillStyle = '#fff'; g.beginPath(); g.arc(mx, my, 7, 0, 6.3); g.fill(); g.strokeStyle = '#9fe8ff'; g.lineWidth = 3; g.stroke(); } else { g.fillStyle = col; g.beginPath(); g.arc(mx, my, 6, 0, 6.3); g.fill(); } }
+      else { g.globalAlpha = 0.65; g.fillStyle = col; g.beginPath(); g.arc(mx, my, 3, 0, 6.3); g.fill(); g.globalAlpha = 1; }
+    }
+  }
   goldEl = hud.querySelector('.gold');
   // ---- shop: render rows, toggle panel, buy ----
   const shopEl = hud.querySelector('.shop'), shopList = hud.querySelector('.shoplist');
@@ -337,7 +357,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     waterUni.uTime.value += dt;
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
-    kit.tick(dt); updateHero(dt, t); combat.update(dt, camera); updateVfx(dt); updateSkillHud();
+    kit.tick(dt); updateHero(dt, t); combat.update(dt, camera); updateVfx(dt); updateSkillHud(); drawMinimap();
     camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
     renderer.render(scene, camera);
@@ -366,6 +386,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     camps: () => combat.debug.camps(), clearCamp: (i) => combat.debug.clearCamp(i),
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
     hurtHero: (n) => combat.debug.hurtHero(n), heroShield: () => combat.debug.heroShield(),
+    drawMM: () => { drawMinimap(); const d = mmCtx.getImageData(0, 0, MMW, MMH).data; let nz = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nz++; return { nonBlankPx: nz, blips: combat.blips().length }; },
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },

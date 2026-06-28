@@ -11,15 +11,15 @@ export const MISSIONS = [
   },
   {
     id: 'ayer', name: 'Defence of Kampong Ayer', x: 180, y: 200, prev: 'muara',
-    faction: 'sakam', difficulty: 'easy', theme: 'water_village', mapSize: 72, seed: 102, parMin: 12,
-    reveal: true, enemies: 1, enemyScale: 2, // whole map clear; ONE foe at 2× your whole force
-    blurb: 'Stilt-houses under threat — a warlord twice your size masses across the water. The whole village is in view (enemies show red). Hold your Istana and break their doubled host.',
+    faction: 'sakam', difficulty: 'easy', mode: 'td',
+    td: { waves: 6 },
+    blurb: 'Stilt-houses under threat — the warlord’s host pours up the titian. Plant your defenders along the lanes and hold every wave before they break through to your Istana.',
   },
   {
     id: 'pasar', name: 'Skirmish at the Tamu', x: 300, y: 250, prev: 'ayer',
-    faction: 'shahbandar', difficulty: 'normal', mode: 'climb',
-    climb: { goalY: 64, coins: 12, par: 2.5 },
-    blurb: 'Race to the floating Tamu high above. Bounce up the market-garden platforms, grab coins and balloons, and climb to the banner at the top — don’t fall!',
+    faction: 'shahbandar', difficulty: 'normal', theme: 'water_village', mapSize: 72, seed: 102, parMin: 12,
+    reveal: true, enemies: 1, enemyScale: 2, // the RTS, moved here: whole map clear; ONE foe at 2× your whole force
+    blurb: 'A rival clan contests the floating Tamu — and they muster twice your number. The whole market is in view (enemies show red). Out-fight them and seize the bazaar.',
   },
   {
     id: 'sungai', name: 'Sungai Damuan', x: 410, y: 170, prev: 'pasar',

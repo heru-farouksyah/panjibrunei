@@ -15,9 +15,7 @@ import { loadProfile, completeMission, saveProfile } from './render/profile.js';
 import { showCampaign, showMissionResult } from './render/campaign.js';
 import { showMuara } from './render/muara.js';
 import { showTowerDefense } from './render/td.js';
-import { showTycoon } from './render/tycoon.js';
 import { showKampong } from './render/kampong.js';
-import { showClimb } from './render/climb.js';
 import { showFarm } from './render/farm.js';
 import { TICK_RATE } from './sim/constants.js';
 import factionsData from './data/factions.json' with { type: 'json' };
@@ -309,24 +307,14 @@ function startMuara(m) {
   showMuara(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
-// Lane tower-defence (Kianggeh Stand).
+// Lane tower-defence (Defence of Kampong Ayer).
 function startTowerDefense(m) {
   showTowerDefense(audio, { mission: m, onResult: (r) => miniResult(m, r) });
-}
-
-// Market tycoon (Skirmish at the Tamu).
-function startTycoon(m) {
-  showTycoon(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
 // 3rd-person Kampong Ayer collect-a-thon (Landing at Muara).
 function startKampong(m) {
   showKampong(audio, { mission: m, onResult: (r) => miniResult(m, r) });
-}
-
-// Vertical platform-climber (Skirmish at the Tamu).
-function startClimb(m) {
-  showClimb(audio, { mission: m, onResult: (r) => miniResult(m, r) });
 }
 
 // Harvest-Moon-style farming sim (Kianggeh Stand).
@@ -340,15 +328,13 @@ function launchMission(m) {
   switch (m.mode) {
     case 'naval': return startMuara(m);
     case 'td': return startTowerDefense(m);
-    case 'tycoon': return startTycoon(m);
     case 'explore': return startKampong(m);
-    case 'climb': return startClimb(m);
     case 'farm': return startFarm(m);
     default:
       return startMatch(m.faction, m.difficulty, {
         theme: m.theme, seed: m.seed, mapSize: m.mapSize, mission: m, reveal: !!m.reveal,
         enemyScale: m.enemyScale, numEnemies: m.enemies,
-        tutorial: m.id === 'ayer' && !profile.stars['ayer'], // teach on the first RTS mission
+        tutorial: m.id === 'pasar' && !profile.stars['pasar'], // teach on the first RTS mission
       });
   }
 }

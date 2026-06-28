@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { gridToWorld } from './config.js';
 import { buildMinion, buildBahtera, buildNaga, buildCampMob } from './units.js';
 
-export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp }) {
+export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp, heroStats = {} }) {
   const units = []; let gold = 200; let waveT = 5;
   let matchOver = false, heroDead = false, heroRespawnT = 0;
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
@@ -28,8 +28,9 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   // turrets are combat units (no movement)
   for (const t of map.turrets) { const w = gridToWorld(t.c, t.r); add({ team: t.team, kind: 'turret', x: w.x, z: w.z, y: 4, hp: 700, maxHp: 700, dmg: 28, rng: 14, aggro: 14, atkCd: 1.1, speed: 0, value: 120, mesh: null }); }
   // the hero (position synced from hero.pos; auto basic-attack)
-  const heroUnit = add({ team: 0, kind: 'hero', x: hero.pos.x, z: hero.pos.z, y: 0.6, hp: 760, maxHp: 760, dmg: 24, rng: 7.5, aggro: 7.5, atkCd: 0.85, speed: 0, value: 0, mesh: null, _isHero: true, lifesteal: 0 });
-  const baseHp = 760, baseDmg = 24, baseAtkCd = 0.85; let lvlHp = 0, lvlDmg = 0, itemHp = 0, itemDmg = 0, itemAtkMul = 1;
+  const HS = { hp: 760, dmg: 24, rng: 7.5, atkCd: 0.85, ...heroStats };
+  const heroUnit = add({ team: 0, kind: 'hero', x: hero.pos.x, z: hero.pos.z, y: 0.6, hp: HS.hp, maxHp: HS.hp, dmg: HS.dmg, rng: HS.rng, aggro: HS.rng, atkCd: HS.atkCd, speed: 0, value: 0, mesh: null, _isHero: true, lifesteal: 0 });
+  const baseHp = HS.hp, baseDmg = HS.dmg, baseAtkCd = HS.atkCd; let lvlHp = 0, lvlDmg = 0, itemHp = 0, itemDmg = 0, itemAtkMul = 1;
   function recompute() { const oldMax = heroUnit.maxHp; heroUnit.maxHp = baseHp + lvlHp + itemHp; heroUnit.dmg = baseDmg + lvlDmg + itemDmg; heroUnit.atkCd = baseAtkCd / itemAtkMul; if (heroUnit.maxHp > oldMax) heroUnit.hp += heroUnit.maxHp - oldMax; }
   function setHeroLevel(lvl) { lvlHp = (lvl - 1) * 55; lvlDmg = (lvl - 1) * 4; recompute(); }
   function buffHero({ hp = 0, dmg = 0, atkMul = 1, lifesteal = 0 } = {}) { itemHp += hp; itemDmg += dmg; itemAtkMul *= atkMul; heroUnit.lifesteal += lifesteal; recompute(); }

@@ -28,6 +28,43 @@ export function buildBahtera(team = 0) {
   return g;
 }
 
+// "Meriam" — Traditional ARTILLERY galleon: a broad gun-barge bristling with side
+// cannons and a tall central mortar. Slow, long reach.
+export function buildMeriam(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(4.0, 1.0, 2.0), pbr(0x5a3d28, 0.82, 0.05)); hull.position.y = 0.5; g.add(hull);
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(1.0, 1.8, 4), pbr(0x6a4a30, 0.82, 0.05)); bow.rotation.z = -Math.PI / 2; bow.rotation.y = Math.PI / 4; bow.position.set(2.4, 0.5, 0); g.add(bow);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.24, 1.7), pbr(0x7a5230, 0.8, 0.05)); deck.position.y = 1.06; g.add(deck);
+  for (const side of [-1, 1]) for (const dx of [-1.1, 0, 1.1]) {
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.1, 8), pbr(0x33373b, 0.4, 0.7)); barrel.rotation.x = Math.PI / 2; barrel.position.set(dx, 0.95, side * 1.05); g.add(barrel);
+  }
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 0.5, 10), pbr(T, 0.5, 0.3, T, 0.25)); base.position.set(-0.2, 1.35, 0); g.add(base);
+  const mortar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 1.7, 10), pbr(0x2a2d31, 0.35, 0.75)); mortar.position.set(0.2, 2.0, 0); mortar.rotation.z = -0.5; g.add(mortar);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5), pbr(0x3a2a1a, 0.8, 0)); pole.position.set(-2.0, 1.7, 0); g.add(pole);
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), new THREE.MeshStandardMaterial({ color: T, roughness: 0.7, side: THREE.DoubleSide, emissive: T, emissiveIntensity: 0.35 })); flag.position.set(-2.4, 2.2, 0); flag.rotation.y = Math.PI / 2; g.add(flag);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.12);
+  return g;
+}
+
+// "Hammerhead" — Modern ASSASSIN gunboat: sleek grey steel hull, a wide hammerhead
+// prow, low cabin, twin engines. Fast, low profile.
+export function buildHammerhead(team = 0) {
+  const T = TEAM_COL[team]; const g = new THREE.Group();
+  const steel = pbr(0x9aa4ac, 0.45, 0.65);
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.7, 1.2), steel); hull.position.y = 0.5; g.add(hull);
+  const keel = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.4, 0.7), pbr(0x6b747c, 0.5, 0.6)); keel.position.y = 0.2; g.add(keel);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 2.6), steel); head.position.set(2.2, 0.5, 0); g.add(head);   // hammerhead prow
+  for (const s of [-1, 1]) { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.7, 4), steel); tip.rotation.z = -Math.PI / 2; tip.rotation.y = Math.PI / 4; tip.position.set(2.6, 0.5, s * 1.2); g.add(tip); }
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.55, 0.9), pbr(0x42484e, 0.4, 0.55)); cabin.position.set(-0.3, 1.0, 0); g.add(cabin);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.85, 0.16, 0.06), new THREE.MeshStandardMaterial({ color: T, roughness: 0.5, emissive: T, emissiveIntensity: 0.4 })); stripe.position.set(0, 0.72, 0.61); g.add(stripe);
+  const stripe2 = stripe.clone(); stripe2.position.z = -0.61; g.add(stripe2);
+  for (const s of [-1, 1]) { const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.5, 8), pbr(0x303338, 0.4, 0.7)); eng.rotation.x = Math.PI / 2; eng.position.set(-2.0, 0.45, s * 0.4); g.add(eng); }
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.0);
+  return g;
+}
+
 // "Sea-Naga" — the Epic neutral monster coiled in the central pit. A stack of
 // scaly rings rising into a horned serpent head with glowing eyes.
 export function buildNaga() {

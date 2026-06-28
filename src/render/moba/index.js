@@ -13,13 +13,23 @@ import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { GRID_W, GRID_H, MAP_W, MAP_H, gridToWorld, worldToGrid } from './config.js';
 import { createMap, TYPE } from './sim.js';
-import { buildBahtera } from './units.js';
-import { makeBahteraKit } from './skills.js';
+import { makeKit } from './skills.js';
 import { createCombat } from './combat.js';
+import { ROSTER, heroById } from './heroes.js';
 
 const TEAM_COL = [0x35b6ff, 0xff5246];   // 0 = ally (azure), 1 = enemy (scarlet)
 
-export function showMoba(audio, { mission, onResult } = {}) {
+export function showMoba(audio, opts = {}) {
+  // a quick HERO-SELECT before the match (deep-link with ?hero=<id> to skip it)
+  const pre = new URLSearchParams(location.search).get('hero');
+  if (pre) { runMatch(audio, opts, heroById(pre)); return; }
+  const sel = document.createElement('div'); sel.className = 'screen-overlay moba-select';
+  sel.style.cssText = 'position:fixed;inset:0;overflow:auto;z-index:50;background:linear-gradient(180deg,#0c2230,#0a1822);';
+  document.body.appendChild(sel);
+  buildHeroSelect(sel, (chosen) => { sel.remove(); runMatch(audio, opts, chosen); });
+}
+
+function runMatch(audio, { mission, onResult } = {}, chosen) {
   const map = createMap();                 // ← the simulation's truth (grid)
 
   // ---- overlay + renderer -------------------------------------------------
@@ -160,14 +170,14 @@ export function showMoba(audio, { mission, onResult } = {}) {
   // ---- hero ship (Phase 2): placed from sim coords, click-to-move ---------
   const SHIP_Y = 0.55;
   const hstart = gridToWorld(13, Math.round((GRID_H - 1) / 2));   // ally lane mouth (on water)
-  const hero = { mesh: buildBahtera(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: 16, dash: null, rooted: false };
+  const hero = { mesh: chosen.build(0), pos: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), target: new THREE.Vector3(hstart.x, SHIP_Y, hstart.z), yaw: 0, speed: chosen.speed, dash: null, rooted: false };
   hero.mesh.position.copy(hero.pos); scene.add(hero.mesh);
   // ability VFX pool + combat (Phase 5) + the Bahtera kit (Phase 4)
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
-  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n) });
-  const kit = makeBahteraKit({ hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
+  const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n) });
+  const kit = makeKit(chosen.skills(), { hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
   // ---- Phase 7: item shop (small curated set) ----------------------------
   const SHOP = [
     { name: 'Cannon Powder', icon: '🧨', cost: 350, desc: '+14 attack', buy: () => combat.buffHero({ dmg: 14 }) },
@@ -239,7 +249,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;display:flex;gap:8px;align-items:center;"><button class="shopbtn" style="pointer-events:auto;background:rgba(15,40,55,0.6);color:#ffe27a;border:1px solid rgba(255,255,255,0.3);padding:7px 12px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;">🛒 Shop</button><div style="background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div></div>` +
     `<div class="shop" hidden style="position:absolute;right:12px;top:60px;width:240px;background:rgba(10,26,36,0.96);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;z-index:6;pointer-events:auto;max-height:72vh;overflow:auto;"><div style="color:#fff;font-weight:800;font-size:13px;margin-bottom:7px;">⚓ Quartermaster — buy with 💰</div><div class="shoplist"></div></div>` +
-    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
+    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ${chosen.icon} ${chosen.name} <span style="opacity:.6;">(${chosen.era})</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
     `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
     `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
     `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
@@ -358,6 +368,29 @@ export function showMoba(audio, { mission, onResult } = {}) {
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },
+    pick: () => ({ id: chosen.id, name: chosen.name, era: chosen.era, skills: kit.skills.map((s) => s.key), letters: kit.skills.map((s) => s.letter) }),
   };
   return overlay;
+}
+
+// ---- hero-select screen ----------------------------------------------------
+function buildHeroSelect(container, onPick) {
+  container.innerHTML = `<div style="padding:calc(20px + env(safe-area-inset-top)) 16px 24px;text-align:center;color:#eaf6ff;font-family:system-ui,sans-serif;">
+    <h2 style="margin:4px 0 2px;font-size:22px;letter-spacing:1px;">⚓ Choose your Warship</h2>
+    <div style="opacity:.7;font-size:13px;margin-bottom:16px;">Sungai Naga — pick a hero, push the lanes, sink the enemy Core</div>
+    <div class="hs-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:12px;max-width:780px;margin:0 auto;"></div></div>`;
+  const grid = container.querySelector('.hs-grid');
+  for (const h of ROSTER) {
+    const card = document.createElement('button');
+    card.className = 'hs-card';
+    card.style.cssText = `text-align:left;background:rgba(255,255,255,0.05);border:1px solid ${h.accent}66;border-radius:14px;padding:14px;color:#eaf6ff;cursor:pointer;font:inherit;transition:transform .1s ease;pointer-events:auto;`;
+    card.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:30px;">${h.icon}</span><span><b style="font-size:17px;">${h.name}</b><br><span style="font-size:11px;opacity:.85;color:${h.accent};">${h.era} · ${h.role}</span></span></div>
+      <div style="font-size:12px;line-height:1.5;opacity:.85;min-height:54px;">${h.blurb}</div>
+      <div style="display:flex;gap:12px;font-size:11px;opacity:.85;margin-top:8px;">❤ ${h.hp}&nbsp; ⚔ ${h.dmg}&nbsp; ◎ ${h.rng}&nbsp; ➤ ${h.speed}</div>
+      <div style="margin-top:10px;text-align:center;background:${h.accent};color:#08222e;font-weight:800;border-radius:8px;padding:8px;">Choose ${h.name}</div>`;
+    card.onpointerenter = () => { card.style.transform = 'translateY(-3px)'; };
+    card.onpointerleave = () => { card.style.transform = ''; };
+    card.onclick = () => onPick(h);
+    grid.appendChild(card);
+  }
 }

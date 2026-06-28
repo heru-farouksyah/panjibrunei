@@ -345,7 +345,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
     combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp), heroDead: combat.heroDead, respawnIn: combat.respawnIn, over: combat.over, eTurrets: combat.debug.turretsLeft(1), eCoreInvuln: combat.debug.coreInvuln(1) }),
     killTurrets: (team) => combat.debug.killTurrets(team), damageCore: (team, d) => combat.debug.damageCore(team, d), killHero: () => combat.debug.killHero(),
-    bot: () => combat.debug.bot(), killBot: () => combat.debug.killBot(), hurtBot: (n) => combat.debug.hurtBot(n),
+    bot: () => combat.debug.bot(), bots: () => combat.debug.bots(), killBot: () => combat.debug.killBot(), hurtBot: (n) => combat.debug.hurtBot(n),
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),

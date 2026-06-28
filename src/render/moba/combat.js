@@ -36,11 +36,19 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   function spend(n) { if (gold < n) return false; gold -= n; onGold?.(gold); return true; }
   // base Cores — destroy the enemy's to WIN; invulnerable until that team's turrets fall
   const cores = map.bases.map((b) => { const w = gridToWorld(b.c, b.r); return add({ team: b.team, kind: 'core', x: w.x, z: w.z, y: 6, hp: 2200, maxHp: 2200, dmg: 0, rng: 0, aggro: 0, atkCd: 99, speed: 0, value: 0, mesh: null, invuln: true, _core: b._core }); });
-  // enemy HERO bot — pushes a lane, duels the player, retreats + heals when low (Phase 8)
-  const botPath = map.lanes[0].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.6, w.z); }).reverse();   // base1 → base0
-  const botHero = add({ team: 1, kind: 'hero', x: botPath[0].x, z: botPath[0].z, y: 0.6, hp: 720, maxHp: 720, dmg: 22, rng: 7.5, aggro: 9.5, atkCd: 0.9, speed: 9.5, path: botPath, wp: 1, value: 300, mesh: buildBahtera(1), _isBot: true, down: false, retreat: false, respawnT: 0 });
+  // HERO bots (Phase 8) — 3v3: ally bots fight alongside the player, enemy bots oppose.
+  // Each pushes its lane toward the foe base, duels in aggro, retreats + heals when low.
+  function spawnBot(team, lane, opts = {}) {
+    const path = map.lanes[lane].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.6, w.z); });
+    if (team === 1) path.reverse();                                  // both push toward the FOE base
+    const sw = opts.startWp || 0, s = path[Math.min(sw, path.length - 1)], hp = opts.hp || 690;
+    return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 9.5, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: buildBahtera(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
+  }
+  const allyBots = [spawnBot(0, 0, { hp: 680, dmg: 20 }), spawnBot(0, 1, { hp: 680, dmg: 20 })];
+  const botHero = spawnBot(1, 0, { hp: 730, dmg: 23 });               // lead rival (debug ref)
+  const enemyBots = [botHero, spawnBot(1, 1, { hp: 690, dmg: 21 }), spawnBot(1, 0, { hp: 680, dmg: 20, startWp: 3 })];
   function botStep(u, dt, tgt, td) {
-    const bw = gridToWorld(map.bases[1].c, map.bases[1].r);
+    const bw = gridToWorld(map.bases[u.team].c, map.bases[u.team].r);
     const atBase = Math.hypot(u.x - bw.x, u.z - bw.z) < 12;
     if (atBase) u.hp = Math.min(u.maxHp, u.hp + 95 * dt);                       // heal at home base
     if (u.hp < u.maxHp * 0.3 && !atBase) u.retreat = true;                      // wounded → fall back
@@ -72,11 +80,12 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     if (u.hp <= 0) kill(u, opts.from, opts.byHero);
   }
   function kill(u, from, byHero) {
-    if (u._isBot) {                                                // enemy hero: down + respawn, don't remove
+    if (u._isBot) {                                                // hero bot: down + respawn, don't remove
       if (u.down) return;
       u.down = true; u.respawnT = 7; u.retreat = false; if (u.mesh) u.mesh.visible = false;
-      const sink = new THREE.Mesh(new THREE.RingGeometry(0.5, 2.4, 20), new THREE.MeshBasicMaterial({ color: 0xffd0c0, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); sink.rotation.x = -Math.PI / 2; sink.position.set(u.x, 0.2, u.z); addVfx(sink, 0.7, (dt, o) => { sink.scale.setScalar(1 + o.t * 2.5); sink.material.opacity = 0.8 * (1 - o.t / o.life); });
-      gold += u.value; onGold?.(gold); onXp?.(120);               // bounty: gold + a big XP swing
+      const col = u.team === 1 ? 0xffd0c0 : 0xcfe6ff;
+      const sink = new THREE.Mesh(new THREE.RingGeometry(0.5, 2.4, 20), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); sink.rotation.x = -Math.PI / 2; sink.position.set(u.x, 0.2, u.z); addVfx(sink, 0.7, (dt, o) => { sink.scale.setScalar(1 + o.t * 2.5); sink.material.opacity = 0.8 * (1 - o.t / o.life); });
+      if (u.team === 1) { gold += u.value; onGold?.(gold); onXp?.(120); }   // bounty for slaying ENEMY heroes
       return;
     }
     if (u._isHero) { heroDead = true; heroRespawnT = 5; hero.mesh.visible = false; return; }   // respawn timer
@@ -105,7 +114,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     waveT -= dt; if (waveT <= 0) { waveT = 16; for (const team of [0, 1]) for (let lane = 0; lane < map.lanes.length; lane++) for (let i = 0; i < 2; i++) { const m = spawnMinion(team, lane); m.x += (Math.random() - 0.5) * 2.2; m.z += (Math.random() - 0.5) * 2.2; } }
     for (const u of units) {
       if (!u.alive) continue;
-      if (u._isBot && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; const b = map.bases[1], w = gridToWorld(b.c - 5, b.r); u.x = w.x; u.z = w.z; u.wp = 1; if (u.mesh) { u.mesh.visible = true; u.mesh.position.set(u.x, u.y, u.z); } } continue; }
+      if (u._isBot && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; const b = map.bases[u.team], w = gridToWorld(b.c + (u.team === 0 ? 5 : -5), b.r); u.x = w.x; u.z = w.z; u.wp = 1; if (u.mesh) { u.mesh.visible = true; u.mesh.position.set(u.x, u.y, u.z); } } continue; }
       if (u.stun > 0) u.stun -= dt; if (u.slow > 0) u.slow -= dt; u.atkT -= dt;
       let tgt = null, td = u.aggro; for (const e of units) { if (!e.alive || e.down || e.team === u.team) continue; if (e.kind === 'core' && e.invuln) continue; if (e.kind === 'hero' && e._isHero && heroDead) continue; const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < td) { td = d; tgt = e; } }
       const stunned = u.stun > 0;
@@ -131,6 +140,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     killBot: () => { botHero.hp = 0; kill(botHero, heroUnit, true); },
     hurtBot: (n) => hit(botHero, n, { byHero: true }),
     bot: () => ({ hp: Math.round(botHero.hp), maxHp: botHero.maxHp, down: botHero.down, x: +botHero.x.toFixed(1), z: +botHero.z.toFixed(1), retreat: botHero.retreat, respawnIn: Math.ceil(botHero.respawnT) }),
+    bots: () => ({ allyAlive: allyBots.filter((x) => !x.down).length, enemyAlive: enemyBots.filter((x) => !x.down).length, allyHp: allyBots.map((x) => Math.round(x.hp)), enemyHp: enemyBots.map((x) => Math.round(x.hp)), allyX: allyBots.map((x) => +x.x.toFixed(1)), enemyX: enemyBots.map((x) => +x.x.toFixed(1)) }),
   };
   return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

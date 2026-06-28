@@ -8,9 +8,11 @@ import * as THREE from 'three';
 const ringMat = (c, o = 0.6) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, side: THREE.DoubleSide, depthWrite: false });
 
 // hero: { pos, yaw, target, dash, rooted } ; addVfx(mesh, life, update(dt,o))
-export function makeBahteraKit({ hero, addVfx, enemiesNear = () => [], hit = () => {} }) {
-  const powderMax = 100; let powder = 100;
-  let heroLevel = 1, points = 1, levelT = 0;
+export function makeBahteraKit({ hero, addVfx, enemiesNear = () => [], hit = () => {}, onLevel = () => {} }) {
+  const powderMax = 100; let powder = 100, powderRegen = 12;
+  let heroLevel = 1, points = 1, xp = 0;
+  const xpNeed = () => 100 + (heroLevel - 1) * 70;
+  function gainXp(n) { if (heroLevel >= 15) return; xp += n; while (heroLevel < 15 && xp >= xpNeed()) { xp -= xpNeed(); heroLevel++; points++; onLevel(heroLevel); } }
   const skills = [
     { key: 'ram', name: 'Ram', letter: 'R', cd: 6, cost: 25, t: 0, level: 1, max: 4, desc: 'Dash + knock back' },
     { key: 'hook', name: 'Boarding Hook', letter: 'H', cd: 8, cost: 30, t: 0, level: 1, max: 4, desc: 'Pull + slow' },
@@ -54,10 +56,10 @@ export function makeBahteraKit({ hero, addVfx, enemiesNear = () => [], hit = () 
   }
   function levelUp(i) { const s = skills[i]; if (!s || points <= 0 || s.level >= s.max) return false; s.level++; points--; return true; }
   function tick(dt) {
-    powder = Math.min(powderMax, powder + dt * 12);
+    powder = Math.min(powderMax, powder + dt * powderRegen);
     for (const s of skills) if (s.t > 0) s.t = Math.max(0, s.t - dt);
     for (let j = timers.length - 1; j >= 0; j--) { timers[j].d -= dt; if (timers[j].d <= 0) { timers[j].fn(); timers.splice(j, 1); } }
-    levelT += dt; if (levelT >= 9 && heroLevel < 15) { levelT = 0; heroLevel++; points++; }   // placeholder XP until Phase 7
   }
-  return { skills, cdOf, tryCast, levelUp, tick, get powder() { return powder; }, powderMax, get heroLevel() { return heroLevel; }, get points() { return points; } };
+  const boostPowder = (m) => { powderRegen *= m; };
+  return { skills, cdOf, tryCast, levelUp, tick, gainXp, boostPowder, get powder() { return powder; }, powderMax, get heroLevel() { return heroLevel; }, get points() { return points; }, get xp() { return xp; }, get xpNeed() { return xpNeed(); } };
 }

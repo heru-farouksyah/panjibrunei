@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { gridToWorld } from './config.js';
 import { buildMinion } from './units.js';
 
-export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd }) {
+export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp }) {
   const units = []; let gold = 200; let waveT = 5;
   let matchOver = false, heroDead = false, heroRespawnT = 0;
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
@@ -28,7 +28,12 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd }) {
   // turrets are combat units (no movement)
   for (const t of map.turrets) { const w = gridToWorld(t.c, t.r); add({ team: t.team, kind: 'turret', x: w.x, z: w.z, y: 4, hp: 700, maxHp: 700, dmg: 28, rng: 14, aggro: 14, atkCd: 1.1, speed: 0, value: 120, mesh: null }); }
   // the hero (position synced from hero.pos; auto basic-attack)
-  const heroUnit = add({ team: 0, kind: 'hero', x: hero.pos.x, z: hero.pos.z, y: 0.6, hp: 760, maxHp: 760, dmg: 24, rng: 7.5, aggro: 7.5, atkCd: 0.85, speed: 0, value: 0, mesh: null, _isHero: true });
+  const heroUnit = add({ team: 0, kind: 'hero', x: hero.pos.x, z: hero.pos.z, y: 0.6, hp: 760, maxHp: 760, dmg: 24, rng: 7.5, aggro: 7.5, atkCd: 0.85, speed: 0, value: 0, mesh: null, _isHero: true, lifesteal: 0 });
+  const baseHp = 760, baseDmg = 24, baseAtkCd = 0.85; let lvlHp = 0, lvlDmg = 0, itemHp = 0, itemDmg = 0, itemAtkMul = 1;
+  function recompute() { const oldMax = heroUnit.maxHp; heroUnit.maxHp = baseHp + lvlHp + itemHp; heroUnit.dmg = baseDmg + lvlDmg + itemDmg; heroUnit.atkCd = baseAtkCd / itemAtkMul; if (heroUnit.maxHp > oldMax) heroUnit.hp += heroUnit.maxHp - oldMax; }
+  function setHeroLevel(lvl) { lvlHp = (lvl - 1) * 55; lvlDmg = (lvl - 1) * 4; recompute(); }
+  function buffHero({ hp = 0, dmg = 0, atkMul = 1, lifesteal = 0 } = {}) { itemHp += hp; itemDmg += dmg; itemAtkMul *= atkMul; heroUnit.lifesteal += lifesteal; recompute(); }
+  function spend(n) { if (gold < n) return false; gold -= n; onGold?.(gold); return true; }
   // base Cores — destroy the enemy's to WIN; invulnerable until that team's turrets fall
   const cores = map.bases.map((b) => { const w = gridToWorld(b.c, b.r); return add({ team: b.team, kind: 'core', x: w.x, z: w.z, y: 6, hp: 2200, maxHp: 2200, dmg: 0, rng: 0, aggro: 0, atkCd: 99, speed: 0, value: 0, mesh: null, invuln: true, _core: b._core }); });
 
@@ -60,8 +65,9 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd }) {
     u.alive = false; scene.remove(u._hp.g); if (u.mesh) scene.remove(u.mesh);
     const sink = new THREE.Mesh(new THREE.RingGeometry(0.4, 1.6, 16), new THREE.MeshBasicMaterial({ color: 0xdfeefc, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false })); sink.rotation.x = -Math.PI / 2; sink.position.set(u.x, 0.2, u.z); addVfx(sink, 0.5, (dt, o) => { sink.scale.setScalar(1 + o.t * 2); sink.material.opacity = 0.7 * (1 - o.t / o.life); });
     if ((byHero || (from && from._isHero))) { gold += u.value; onGold?.(gold); }
+    if (Math.hypot(heroUnit.x - u.x, heroUnit.z - u.z) < 14) onXp?.(u.kind === 'turret' ? 85 : 22);   // XP for nearby kills
   }
-  function attack(att, tgt) { tracer(att, tgt, att.team === 0 ? 0xbfe8ff : 0xffb0a0); hit(tgt, att.dmg, { from: att }); }
+  function attack(att, tgt) { tracer(att, tgt, att.team === 0 ? 0xbfe8ff : 0xffb0a0); hit(tgt, att.dmg, { from: att }); if (att._isHero && att.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + att.dmg * att.lifesteal); }
 
   function update(dt, cam) {
     if (matchOver) return;
@@ -96,6 +102,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd }) {
     killHero: () => { heroUnit.hp = 0; kill(heroUnit); },
     turretsLeft: (team) => units.filter((u) => u.alive && u.kind === 'turret' && u.team === team).length,
     coreInvuln: (team) => cores.find((c) => c.team === team)?.invuln,
+    grantGold: (n) => { gold += n; onGold?.(gold); },
   };
-  return { update, enemiesNear, hit, debug, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
+  return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

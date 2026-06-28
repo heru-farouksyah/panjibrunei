@@ -166,8 +166,18 @@ export function showMoba(audio, { mission, onResult } = {}) {
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
-  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win) });
-  const kit = makeBahteraKit({ hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit });
+  const combat = createCombat({ scene, map, hero, addVfx, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n) });
+  const kit = makeBahteraKit({ hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
+  // ---- Phase 7: item shop (small curated set) ----------------------------
+  const SHOP = [
+    { name: 'Cannon Powder', icon: '🧨', cost: 350, desc: '+14 attack', buy: () => combat.buffHero({ dmg: 14 }) },
+    { name: 'Iron Plating', icon: '🛡', cost: 450, desc: '+220 max HP', buy: () => combat.buffHero({ hp: 220 }) },
+    { name: 'War Drum', icon: '🥁', cost: 400, desc: '+25% atk speed', buy: () => combat.buffHero({ atkMul: 1.25 }) },
+    { name: 'Storm Sails', icon: '⛵', cost: 300, desc: '+18% move speed', buy: () => { hero.speed *= 1.18; } },
+    { name: 'Powder Keg', icon: '🛢️', cost: 320, desc: '+50% powder regen', buy: () => kit.boostPowder(1.5) },
+    { name: 'Kris Charm', icon: '🗡️', cost: 520, desc: '+12% lifesteal', buy: () => combat.buffHero({ lifesteal: 0.12 }) },
+  ];
+  const owned = new Set();
   // selection ring on the water under the hero
   const selRing = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.85, depthWrite: false }));
   selRing.rotation.x = -Math.PI / 2; selRing.position.set(hstart.x, 0.18, hstart.z); scene.add(selRing);
@@ -225,9 +235,10 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 6 · Match  <span style="opacity:.7;font-weight:500;">raze turrets → enemy Core to win</span></div>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div>` +
-    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 7 · Economy  <span style="opacity:.7;font-weight:500;">sink ships for 💰 · level up · 🛒 buy upgrades</span></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;display:flex;gap:8px;align-items:center;"><button class="shopbtn" style="pointer-events:auto;background:rgba(15,40,55,0.6);color:#ffe27a;border:1px solid rgba(255,255,255,0.3);padding:7px 12px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;">🛒 Shop</button><div style="background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div></div>` +
+    `<div class="shop" hidden style="position:absolute;right:12px;top:60px;width:240px;background:rgba(10,26,36,0.96);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;z-index:6;pointer-events:auto;max-height:72vh;overflow:auto;"><div style="color:#fff;font-weight:800;font-size:13px;margin-bottom:7px;">⚓ Quartermaster — buy with 💰</div><div class="shoplist"></div></div>` +
+    `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
     `<div style="position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:188px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;"><span class="pwd" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#c9a23a,#ffe27a);"></span></div>` +
     `<div class="moba-skills" style="position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:14px;">${kit.skills.map(skBtn).join('')}</div>` +
     `<div class="resp" hidden style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(15,40,55,0.82);color:#fff;padding:12px 22px;border-radius:12px;font-size:17px;font-weight:800;text-align:center;">⚓ Sunk! Respawning in <span class="respn">5</span>s</div>` +
@@ -242,21 +253,37 @@ export function showMoba(audio, { mission, onResult } = {}) {
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
+  resultEl.style.display = 'none';   // inline display:flex overrides [hidden], so drive it via style
   function showResult(win) {
     const tt = resultEl.querySelector('.rtitle'); tt.textContent = win ? 'VICTORY' : 'DEFEAT'; tt.style.color = win ? '#2f7f78' : '#c0463a';
     resultEl.querySelector('.rsub').textContent = win ? 'The enemy Core is sunk — Kampong Ayer holds the channel.' : 'Your Core has fallen to the warlord.';
-    resultEl.hidden = false; resultEl.querySelector('.rbtn').onclick = () => finish({ win, stars: win ? 1 : 0 });
+    resultEl.style.display = 'flex'; resultEl.querySelector('.rbtn').onclick = () => finish({ win, stars: win ? 1 : 0 });
   }
   const canAct = () => !combat.heroDead && !combat.over;
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
   skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { kit.tryCast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
-  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp');
+  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp');
   goldEl = hud.querySelector('.gold');
+  // ---- shop: render rows, toggle panel, buy ----
+  const shopEl = hud.querySelector('.shop'), shopList = hud.querySelector('.shoplist');
+  hud.querySelector('.shopbtn').onclick = () => { shopEl.hidden = !shopEl.hidden; };
+  const shopRows = SHOP.map((it, i) => {
+    const row = document.createElement('button');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin:4px 0;padding:7px 8px;border-radius:9px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font:inherit;';
+    row.innerHTML = `<span style="font-size:20px;">${it.icon}</span><span style="flex:1;line-height:1.25;"><b style="font-size:12.5px;">${it.name}</b><br><span style="opacity:.72;font-size:11px;">${it.desc}</span></span><span class="cost" style="color:#ffe27a;font-weight:800;font-size:12px;white-space:nowrap;">💰${it.cost}</span>`;
+    row.onclick = () => {
+      if (owned.has(i) || combat.over) return;
+      if (combat.spend(it.cost)) { it.buy(); owned.add(i); row.querySelector('.cost').textContent = '✓ owned'; row.style.opacity = 0.5; row.disabled = true; }
+    };
+    shopList.appendChild(row); return row;
+  });
   function updateSkillHud() {
     elPwd.style.width = (kit.powder / kit.powderMax * 100) + '%'; elHlv.textContent = kit.heroLevel;
     elHhp.style.width = (combat.heroHp / combat.heroMaxHp * 100) + '%';
+    elHxp.style.width = (kit.heroLevel >= 15 ? 100 : kit.xp / kit.xpNeed * 100) + '%';
     if (combat.heroDead) { respEl.hidden = false; respN.textContent = combat.respawnIn; } else respEl.hidden = true;
+    shopRows.forEach((row, i) => { if (!owned.has(i)) row.style.opacity = combat.gold >= SHOP[i].cost ? 1 : 0.5; });
     kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
   }
   updateSkillHud();
@@ -318,6 +345,8 @@ export function showMoba(audio, { mission, onResult } = {}) {
     cast: (i) => kit.tryCast(i), levelUp: (i) => kit.levelUp(i), vfxCount: () => vfx.length,
     combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp), heroDead: combat.heroDead, respawnIn: combat.respawnIn, over: combat.over, eTurrets: combat.debug.turretsLeft(1), eCoreInvuln: combat.debug.coreInvuln(1) }),
     killTurrets: (team) => combat.debug.killTurrets(team), damageCore: (team, d) => combat.debug.damageCore(team, d), killHero: () => combat.debug.killHero(),
+    gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
+    econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },
   };

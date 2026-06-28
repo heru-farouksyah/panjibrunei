@@ -32,6 +32,20 @@ export function showMoba(audio, opts = {}) {
 function runMatch(audio, { mission, onResult } = {}, chosen) {
   const map = createMap();                 // ← the simulation's truth (grid)
 
+  // ---- Phase 10: SFX (procedural, via the shared AudioManager) ----
+  const A = audio;
+  const sndOn = () => A && A.ctx && A.ctx.state === 'running' && !A.muted;
+  const snd = {
+    cast: (i) => { if (!sndOn()) return; const t = A.ctx.currentTime, f = [520, 660, 400][i] || 500; A.blip(f, 0.12, 'sawtooth', 0.22, t); A.blip(f * 1.5, 0.1, 'sine', 0.16, t + 0.04); },
+    level: () => { if (!sndOn()) return; const t = A.ctx.currentTime; [523, 659, 784].forEach((f, k) => A.blip(f, 0.16, 'sine', 0.28, t + k * 0.07)); },
+    boom: () => { if (!sndOn()) return; A.noiseBurst(A.ctx.currentTime, 0.3, 0.5, { type: 'lowpass', freq: 320, q: 1 }); },
+    roar: () => { if (!sndOn()) return; const t = A.ctx.currentTime; A.blip(110, 0.5, 'sawtooth', 0.4, t); A.noiseBurst(t, 0.5, 0.4, { type: 'lowpass', freq: 480 }); },
+    win: () => { if (!sndOn()) return; const t = A.ctx.currentTime; [523, 659, 784, 1047].forEach((f, k) => A.blip(f, 0.24, 'sine', 0.3, t + k * 0.12)); },
+    lose: () => { if (!sndOn()) return; const t = A.ctx.currentTime; [392, 330, 262].forEach((f, k) => A.blip(f, 0.3, 'sine', 0.3, t + k * 0.14)); },
+    buy: () => { if (!sndOn()) return; const t = A.ctx.currentTime; A.blip(880, 0.08, 'square', 0.18, t); A.blip(1320, 0.1, 'square', 0.16, t + 0.05); },
+  };
+  A?.world?.('water_village');             // ambient bed + score (starts on first gesture)
+
   // ---- overlay + renderer -------------------------------------------------
   const overlay = document.createElement('div');
   overlay.className = 'screen-overlay moba';
@@ -176,7 +190,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const vfx = [];
   const addVfx = (mesh, life, update) => { scene.add(mesh); vfx.push({ mesh, t: 0, life, update }); };
   let goldEl = null;
-  const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n) });
+  const combat = createCombat({ scene, map, hero, addVfx, heroStats: { hp: chosen.hp, dmg: chosen.dmg, rng: chosen.rng, atkCd: chosen.atkCd }, onGold: (g) => { if (goldEl) goldEl.textContent = g; }, onMatchEnd: (win) => showResult(win), onXp: (n) => kit.gainXp(n), onEvent: (ev) => { if (ev === 'core' || ev === 'turret') snd.boom(); } });
   const kit = makeKit(chosen.skills(), { hero, addVfx, enemiesNear: combat.enemiesNear, hit: combat.hit, alliesNear: combat.alliesNear, heal: combat.heal, shieldUnit: combat.shieldUnit, onLevel: (lvl) => combat.setHeroLevel(lvl) });
   // ---- Phase 7: item shop (small curated set) ----------------------------
   const SHOP = [
@@ -230,7 +244,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
   const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 70, 240); };
   addEventListener('wheel', onWheel, { passive: true });
-  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (!combat.heroDead && !combat.over) { if (k === '1') kit.tryCast(0); else if (k === '2') kit.tryCast(1); else if (k === '3' || k === 'r') kit.tryCast(2); } };
+  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (!combat.heroDead && !combat.over) { if (k === '1') { if (kit.tryCast(0)) snd.cast(0); } else if (k === '2') { if (kit.tryCast(1)) snd.cast(1); } else if (k === '3' || k === 'r') { if (kit.tryCast(2)) snd.cast(2); } } };
   addEventListener('keydown', onKey);
 
   // ---- minimal HUD (Phase 1) ---------------------------------------------
@@ -262,6 +276,11 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   rotEl.style.cssText = 'position:absolute;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0c1f2a;color:#fff;text-align:center;padding:24px;pointer-events:auto;font-family:system-ui,sans-serif;';
   rotEl.innerHTML = `<div style="font-size:58px;">⟳</div><div style="font-size:17px;line-height:1.6;">Rotate your device to <b style="color:#ffd27f;">landscape</b><br>to play <b>Sungai Naga</b>.</div>`;
   overlay.appendChild(rotEl);
+  // hit-feedback: a red vignette that flashes when the player hero takes damage
+  const hurtVig = document.createElement('div');
+  hurtVig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;background:radial-gradient(ellipse at center, transparent 42%, rgba(200,30,20,0.6) 100%);';
+  overlay.appendChild(hurtVig);
+  let lastHeroHp = 1e9, hurtT = 0, lastLevel = 1, lastNagaDown = false;
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
@@ -269,12 +288,12 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   function showResult(win) {
     const tt = resultEl.querySelector('.rtitle'); tt.textContent = win ? 'VICTORY' : 'DEFEAT'; tt.style.color = win ? '#2f7f78' : '#c0463a';
     resultEl.querySelector('.rsub').textContent = win ? 'The enemy Core is sunk — Kampong Ayer holds the channel.' : 'Your Core has fallen to the warlord.';
-    resultEl.style.display = 'flex'; resultEl.querySelector('.rbtn').onclick = () => finish({ win, stars: win ? 1 : 0 });
+    resultEl.style.display = 'flex'; if (win) snd.win(); else snd.lose(); resultEl.querySelector('.rbtn').onclick = () => finish({ win, stars: win ? 1 : 0 });
   }
   const canAct = () => !combat.heroDead && !combat.over;
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
-  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { kit.tryCast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
+  skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { if (kit.tryCast(i)) snd.cast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
   const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp'), nagaChip = hud.querySelector('.naga-chip');
   // ---- Phase 10: minimap ----
   const MMW = 300, MMH = 188, mmCtx = hud.querySelector('.mmap').getContext('2d');
@@ -305,7 +324,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     row.innerHTML = `<span style="font-size:20px;">${it.icon}</span><span style="flex:1;line-height:1.25;"><b style="font-size:12.5px;">${it.name}</b><br><span style="opacity:.72;font-size:11px;">${it.desc}</span></span><span class="cost" style="color:#ffe27a;font-weight:800;font-size:12px;white-space:nowrap;">💰${it.cost}</span>`;
     row.onclick = () => {
       if (owned.has(i) || combat.over) return;
-      if (combat.spend(it.cost)) { it.buy(); owned.add(i); row.querySelector('.cost').textContent = '✓ owned'; row.style.opacity = 0.5; row.disabled = true; }
+      if (combat.spend(it.cost)) { it.buy(); owned.add(i); row.querySelector('.cost').textContent = '✓ owned'; row.style.opacity = 0.5; row.disabled = true; snd.buy(); }
     };
     shopList.appendChild(row); return row;
   });
@@ -319,6 +338,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     else if (ns.buffT > 0 && ns.buffTeam === 1) { nagaChip.style.color = '#ffb0a0'; nagaChip.textContent = `⚠ Enemy holds the Blessing · ${Math.ceil(ns.buffT)}s`; }
     else if (ns.down) { nagaChip.style.color = '#9fb0bc'; nagaChip.textContent = '🐉 Sea-Naga slain — it will return'; }
     else { nagaChip.style.color = '#bff0d0'; nagaChip.textContent = `🐉 Sea-Naga — slay for the Blessing (${Math.round(ns.hpFrac * 100)}%)`; }
+    if (kit.heroLevel > lastLevel) { lastLevel = kit.heroLevel; snd.level(); }
+    if (ns.down && !lastNagaDown) snd.roar(); lastNagaDown = ns.down;
     shopRows.forEach((row, i) => { if (!owned.has(i)) row.style.opacity = combat.gold >= SHOP[i].cost ? 1 : 0.5; });
     kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
   }
@@ -358,6 +379,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     if (!interacted) camYawGoal += dt * 0.06;             // slow attract-rotate until the player takes over
     for (const s of spinners) { s.rotation.y += dt * 0.6; s.position.y += Math.sin(t * 1.6) * dt * 0.25; }
     kit.tick(dt); updateHero(dt, t); combat.update(dt, camera); updateVfx(dt); updateSkillHud(); drawMinimap();
+    if (!combat.heroDead && combat.heroHp < lastHeroHp - 0.5) hurtT = 0.5;   // took damage → flash
+    lastHeroHp = combat.heroHp; if (hurtT > 0) { hurtT = Math.max(0, hurtT - dt); hurtVig.style.opacity = hurtT.toFixed(2); }
     camTargetGoal.set(hero.pos.x, 0, hero.pos.z);          // camera follows the hero
     updateCamera(dt, false);
     renderer.render(scene, camera);
@@ -387,6 +410,8 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
     hurtHero: (n) => combat.debug.hurtHero(n), heroShield: () => combat.debug.heroShield(),
     drawMM: () => { drawMinimap(); const d = mmCtx.getImageData(0, 0, MMW, MMH).data; let nz = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nz++; return { nonBlankPx: nz, blips: combat.blips().length }; },
+    sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); return 'ok'; },
+    vig: () => parseFloat(hurtVig.style.opacity || 0),
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),
     shot: () => { renderer.render(scene, camera); },

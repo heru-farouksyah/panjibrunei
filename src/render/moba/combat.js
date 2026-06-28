@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { gridToWorld } from './config.js';
 import { buildMinion, buildBahtera, buildNaga, buildCampMob } from './units.js';
 
-export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp, heroStats = {} }) {
+export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp, onEvent, heroStats = {} }) {
   const units = []; let gold = 200; let waveT = 5;
   let matchOver = false, heroDead = false, heroRespawnT = 0;
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
@@ -119,6 +119,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     if (u.kind === 'core') {
       u.alive = false; if (u._core) u._core.visible = false; scene.remove(u._hp.g);
       const ex = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.95, depthWrite: false })); ex.position.set(u.x, 6, u.z); addVfx(ex, 0.9, (dt, o) => { ex.scale.setScalar(1 + o.t * 7); ex.material.opacity = 0.95 * (1 - o.t / o.life); });
+      onEvent?.('core', u.team);
       if (!matchOver) { matchOver = true; onMatchEnd?.(u.team === 1); }                          // enemy Core down → player wins
       return;
     }
@@ -126,6 +127,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const sink = new THREE.Mesh(new THREE.RingGeometry(0.4, 1.6, 16), new THREE.MeshBasicMaterial({ color: 0xdfeefc, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false })); sink.rotation.x = -Math.PI / 2; sink.position.set(u.x, 0.2, u.z); addVfx(sink, 0.5, (dt, o) => { sink.scale.setScalar(1 + o.t * 2); sink.material.opacity = 0.7 * (1 - o.t / o.life); });
     if ((byHero || (from && from._isHero))) { gold += u.value; onGold?.(gold); }
     if (Math.hypot(heroUnit.x - u.x, heroUnit.z - u.z) < 14) onXp?.(u.kind === 'turret' ? 85 : 22);   // XP for nearby kills
+    if (u.kind === 'turret') onEvent?.('turret', u.team);
   }
   function attack(att, tgt) {
     let dmg = att.dmg; if (att.kind === 'hero' && nagaBuff.t > 0 && att.team === nagaBuff.team) dmg *= 1.4;   // Naga's Blessing

@@ -235,7 +235,8 @@ export function showMoba(audio, { mission, onResult } = {}) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
-    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · Enemy Hero  <span style="opacity:.7;font-weight:500;">duel the rival warship · raze turrets → Core</span></div>` +
+    `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · Enemy Hero  <span style="opacity:.7;font-weight:500;">slay the Sea-Naga · duel rivals · raze turrets → Core</span></div>` +
+    `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;display:flex;gap:8px;align-items:center;"><button class="shopbtn" style="pointer-events:auto;background:rgba(15,40,55,0.6);color:#ffe27a;border:1px solid rgba(255,255,255,0.3);padding:7px 12px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;">🛒 Shop</button><div style="background:rgba(15,40,55,0.6);color:#ffe27a;padding:7px 14px;border-radius:999px;font-size:15px;font-weight:800;">💰 <span class="gold">200</span></div></div>` +
     `<div class="shop" hidden style="position:absolute;right:12px;top:60px;width:240px;background:rgba(10,26,36,0.96);border:1px solid rgba(255,255,255,0.22);border-radius:12px;padding:10px;z-index:6;pointer-events:auto;max-height:72vh;overflow:auto;"><div style="color:#fff;font-weight:800;font-size:13px;margin-bottom:7px;">⚓ Quartermaster — buy with 💰</div><div class="shoplist"></div></div>` +
     `<div style="position:absolute;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));color:#fff;font-size:12px;background:rgba(15,40,55,0.55);padding:6px 10px;border-radius:8px;">Lv <b class="hlv">1</b> · ⬢ Iron Hull <span style="opacity:.6;">(passive)</span><div style="width:130px;height:9px;border-radius:6px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:4px;"><span class="hhp" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#3fae6a,#7fe0a0);"></span></div><div style="width:130px;height:5px;border-radius:4px;background:rgba(0,0,0,0.45);overflow:hidden;margin-top:3px;"><span class="hxp" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#a06fd0,#d6b0f0);"></span></div></div>` +
@@ -263,7 +264,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
   // skill buttons: cast on click; the corner + levels the skill
   const skEls = [...hud.querySelectorAll('.moba-skills .sk')];
   skEls.forEach((el, i) => { el.onclick = (e) => { if (e.target.classList.contains('plus')) return; if (canAct()) { kit.tryCast(i); touch(); } }; el.querySelector('.plus').onclick = (e) => { e.stopPropagation(); kit.levelUp(i); }; });
-  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp');
+  const elPwd = hud.querySelector('.pwd'), elHlv = hud.querySelector('.hlv'), elHhp = hud.querySelector('.hhp'), elHxp = hud.querySelector('.hxp'), nagaChip = hud.querySelector('.naga-chip');
   goldEl = hud.querySelector('.gold');
   // ---- shop: render rows, toggle panel, buy ----
   const shopEl = hud.querySelector('.shop'), shopList = hud.querySelector('.shoplist');
@@ -283,6 +284,11 @@ export function showMoba(audio, { mission, onResult } = {}) {
     elHhp.style.width = (combat.heroHp / combat.heroMaxHp * 100) + '%';
     elHxp.style.width = (kit.heroLevel >= 15 ? 100 : kit.xp / kit.xpNeed * 100) + '%';
     if (combat.heroDead) { respEl.hidden = false; respN.textContent = combat.respawnIn; } else respEl.hidden = true;
+    const ns = combat.nagaState;
+    if (ns.buffT > 0 && ns.buffTeam === 0) { nagaChip.style.color = '#9affc0'; nagaChip.textContent = `🐉 Naga's Blessing · +40% dmg · ${Math.ceil(ns.buffT)}s`; }
+    else if (ns.buffT > 0 && ns.buffTeam === 1) { nagaChip.style.color = '#ffb0a0'; nagaChip.textContent = `⚠ Enemy holds the Blessing · ${Math.ceil(ns.buffT)}s`; }
+    else if (ns.down) { nagaChip.style.color = '#9fb0bc'; nagaChip.textContent = '🐉 Sea-Naga slain — it will return'; }
+    else { nagaChip.style.color = '#bff0d0'; nagaChip.textContent = `🐉 Sea-Naga — slay for the Blessing (${Math.round(ns.hpFrac * 100)}%)`; }
     shopRows.forEach((row, i) => { if (!owned.has(i)) row.style.opacity = combat.gold >= SHOP[i].cost ? 1 : 0.5; });
     kit.skills.forEach((s, i) => { const el = skEls[i]; const frac = s.t > 0 ? s.t / kit.cdOf(s) : 0; el.querySelector('.cd').style.height = (frac * 100) + '%'; el.querySelector('.cdn').textContent = s.t > 0 ? Math.ceil(s.t) : ''; el.querySelector('.lv').textContent = 'Lv' + s.level; el.style.opacity = (kit.powder < s.cost && s.t <= 0) ? 0.55 : 1; const plus = el.querySelector('.plus'); plus.hidden = !(kit.points > 0 && s.level < s.max); });
   }
@@ -346,6 +352,7 @@ export function showMoba(audio, { mission, onResult } = {}) {
     combat: () => ({ units: combat.count(), gold: combat.gold, heroHp: Math.round(combat.heroHp), heroDead: combat.heroDead, respawnIn: combat.respawnIn, over: combat.over, eTurrets: combat.debug.turretsLeft(1), eCoreInvuln: combat.debug.coreInvuln(1) }),
     killTurrets: (team) => combat.debug.killTurrets(team), damageCore: (team, d) => combat.debug.damageCore(team, d), killHero: () => combat.debug.killHero(),
     bot: () => combat.debug.bot(), bots: () => combat.debug.bots(), killBot: () => combat.debug.killBot(), hurtBot: (n) => combat.debug.hurtBot(n),
+    naga: () => combat.debug.naga(), killNaga: (team) => combat.debug.killNaga(team), hurtNaga: (n) => combat.debug.hurtNaga(n),
     gainXp: (n) => kit.gainXp(n), buyItem: (i) => shopRows[i].onclick(), grantGold: (n) => combat.debug.grantGold(n),
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),

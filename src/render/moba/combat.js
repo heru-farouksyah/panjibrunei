@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { gridToWorld } from './config.js';
-import { buildMinion, buildBahtera } from './units.js';
+import { buildMinion, buildBahtera, buildNaga } from './units.js';
 
 export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp }) {
   const units = []; let gold = 200; let waveT = 5;
@@ -44,6 +44,10 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const sw = opts.startWp || 0, s = path[Math.min(sw, path.length - 1)], hp = opts.hp || 690;
     return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 9.5, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: buildBahtera(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
   }
+  // Sea-Naga — the Epic neutral in the central pit. Slay it for your team's Blessing.
+  const ew = gridToWorld(map.epic.c, map.epic.r);
+  const naga = add({ team: 2, kind: 'epic', x: ew.x, z: ew.z, y: 1.6, hp: 3200, maxHp: 3200, dmg: 58, rng: 9, aggro: 9, atkCd: 1.4, speed: 0, value: 0, mesh: buildNaga(), _isEpic: true, down: false, respawnT: 0 });
+  let nagaBuff = { team: -1, t: 0 };                                 // Blessing: +40% hero dmg for the slayer's team
   const allyBots = [spawnBot(0, 0, { hp: 680, dmg: 20 }), spawnBot(0, 1, { hp: 680, dmg: 20 })];
   const botHero = spawnBot(1, 0, { hp: 730, dmg: 23 });               // lead rival (debug ref)
   const enemyBots = [botHero, spawnBot(1, 1, { hp: 690, dmg: 21 }), spawnBot(1, 0, { hp: 680, dmg: 20, startWp: 3 })];
@@ -80,6 +84,14 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     if (u.hp <= 0) kill(u, opts.from, opts.byHero);
   }
   function kill(u, from, byHero) {
+    if (u._isEpic) {                                               // Sea-Naga slain → Blessing for the killer's team
+      if (u.down) return;
+      u.down = true; u.respawnT = 90; if (u.mesh) u.mesh.visible = false;
+      const killer = (from && from.team !== undefined && from.team !== 2) ? from.team : (byHero ? 0 : -1);
+      if (killer === 0 || killer === 1) nagaBuff = { team: killer, t: 45 };
+      const burst = new THREE.Mesh(new THREE.SphereGeometry(2.4, 16, 12), new THREE.MeshBasicMaterial({ color: 0x9affd0, transparent: true, opacity: 0.9, depthWrite: false })); burst.position.set(u.x, u.y + 1, u.z); addVfx(burst, 1.0, (dt, o) => { burst.scale.setScalar(1 + o.t * 6); burst.material.opacity = 0.9 * (1 - o.t / o.life); });
+      return;
+    }
     if (u._isBot) {                                                // hero bot: down + respawn, don't remove
       if (u.down) return;
       u.down = true; u.respawnT = 7; u.retreat = false; if (u.mesh) u.mesh.visible = false;
@@ -100,12 +112,17 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     if ((byHero || (from && from._isHero))) { gold += u.value; onGold?.(gold); }
     if (Math.hypot(heroUnit.x - u.x, heroUnit.z - u.z) < 14) onXp?.(u.kind === 'turret' ? 85 : 22);   // XP for nearby kills
   }
-  function attack(att, tgt) { tracer(att, tgt, att.team === 0 ? 0xbfe8ff : 0xffb0a0); hit(tgt, att.dmg, { from: att }); if (att._isHero && att.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + att.dmg * att.lifesteal); }
+  function attack(att, tgt) {
+    let dmg = att.dmg; if (att.kind === 'hero' && nagaBuff.t > 0 && att.team === nagaBuff.team) dmg *= 1.4;   // Naga's Blessing
+    tracer(att, tgt, att.team === 0 ? 0xbfe8ff : (att.team === 2 ? 0x8fffc0 : 0xffb0a0)); hit(tgt, dmg, { from: att });
+    if (att._isHero && att.lifesteal > 0) att.hp = Math.min(att.maxHp, att.hp + dmg * att.lifesteal);
+  }
 
   function update(dt, cam) {
     if (matchOver) return;
     if (heroDead) { heroRespawnT -= dt; if (heroRespawnT <= 0) { heroDead = false; heroUnit.hp = heroUnit.maxHp; const b = map.bases[0], w = gridToWorld(b.c + 5, b.r); hero.pos.set(w.x, 0.55, w.z); hero.target.copy(hero.pos); hero.mesh.visible = true; } }
     else { heroUnit.x = hero.pos.x; heroUnit.z = hero.pos.z; }
+    if (nagaBuff.t > 0) nagaBuff.t -= dt;
     // turret-gating: a team's Core is vulnerable only once all its turrets are gone
     const turr = [0, 0]; for (const u of units) if (u.alive && u.kind === 'turret') turr[u.team]++;
     for (const cr of cores) cr.invuln = turr[cr.team] > 0;
@@ -114,18 +131,19 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     waveT -= dt; if (waveT <= 0) { waveT = 16; for (const team of [0, 1]) for (let lane = 0; lane < map.lanes.length; lane++) for (let i = 0; i < 2; i++) { const m = spawnMinion(team, lane); m.x += (Math.random() - 0.5) * 2.2; m.z += (Math.random() - 0.5) * 2.2; } }
     for (const u of units) {
       if (!u.alive) continue;
+      if (u._isEpic && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; if (u.mesh) u.mesh.visible = true; } continue; }
       if (u._isBot && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; const b = map.bases[u.team], w = gridToWorld(b.c + (u.team === 0 ? 5 : -5), b.r); u.x = w.x; u.z = w.z; u.wp = 1; if (u.mesh) { u.mesh.visible = true; u.mesh.position.set(u.x, u.y, u.z); } } continue; }
       if (u.stun > 0) u.stun -= dt; if (u.slow > 0) u.slow -= dt; u.atkT -= dt;
       let tgt = null, td = u.aggro; for (const e of units) { if (!e.alive || e.down || e.team === u.team) continue; if (e.kind === 'core' && e.invuln) continue; if (e.kind === 'hero' && e._isHero && heroDead) continue; const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < td) { td = d; tgt = e; } }
       const stunned = u.stun > 0;
       if (u.kind === 'hero') { if (u._isBot) { if (!stunned) botStep(u, dt, tgt, td); } else { if (!heroDead && tgt && td <= u.rng && u.atkT <= 0 && !hero.rooted) { attack(u, tgt); u.atkT = u.atkCd; } } }
-      else if (u.kind === 'turret' || u.kind === 'core') { if (u.kind === 'turret' && tgt && td <= u.rng && u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; } }
+      else if (u.kind === 'turret' || u.kind === 'core' || u.kind === 'epic') { if ((u.kind === 'turret' || u.kind === 'epic') && tgt && td <= u.rng && u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; } }
       else if (!stunned) {
         if (tgt && td <= u.rng && u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; }
         else { const sp = u.speed * (u.slow > 0 ? 0.55 : 1); let dx, dz; if (tgt && td <= u.aggro) { dx = tgt.x - u.x; dz = tgt.z - u.z; } else { const wpt = u.path[u.wp]; if (wpt) { if (Math.hypot(wpt.x - u.x, wpt.z - u.z) < 1.6) u.wp = Math.min(u.path.length - 1, u.wp + 1); dx = u.path[u.wp].x - u.x; dz = u.path[u.wp].z - u.z; } else { dx = dz = 0; } } const d = Math.hypot(dx, dz) || 1; u.x += dx / d * sp * dt; u.z += dz / d * sp * dt; if (u.mesh && (dx || dz)) u.mesh.rotation.y = Math.atan2(-dz, dx); }
       }
       if (u.mesh) u.mesh.position.set(u.x, u.y, u.z);
-      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'turret' ? 7 : (u.kind === 'hero' ? 3.6 : 2.4)); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.team === 0 ? 0x46d06a : 0xff5246)); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core') && !(u._isHero && heroDead) && !(u._isBot && u.down); hb.g.scale.x = u.kind === 'core' ? 1.6 : 1;
+      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'epic' ? 7.5 : (u.kind === 'turret' ? 7 : (u.kind === 'hero' ? 3.6 : 2.4))); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.kind === 'epic' ? 0x8fe6b0 : (u.team === 0 ? 0x46d06a : 0xff5246))); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core' || u.kind === 'epic') && !(u._isHero && heroDead) && !((u._isBot || u._isEpic) && u.down); hb.g.scale.x = u.kind === 'core' || u.kind === 'epic' ? 1.6 : 1;
     }
     for (let i = units.length - 1; i >= 0; i--) if (!units[i].alive) units.splice(i, 1);
   }
@@ -139,8 +157,11 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     grantGold: (n) => { gold += n; onGold?.(gold); },
     killBot: () => { botHero.hp = 0; kill(botHero, heroUnit, true); },
     hurtBot: (n) => hit(botHero, n, { byHero: true }),
+    naga: () => ({ hp: Math.round(naga.hp), maxHp: naga.maxHp, down: naga.down, respawnIn: Math.ceil(naga.respawnT), buffTeam: nagaBuff.team, buffT: Math.ceil(nagaBuff.t) }),
+    killNaga: (team = 0) => { naga.hp = 0; kill(naga, team === 0 ? heroUnit : enemyBots[1]); },
+    hurtNaga: (n) => hit(naga, n, { byHero: true }),
     bot: () => ({ hp: Math.round(botHero.hp), maxHp: botHero.maxHp, down: botHero.down, x: +botHero.x.toFixed(1), z: +botHero.z.toFixed(1), retreat: botHero.retreat, respawnIn: Math.ceil(botHero.respawnT) }),
     bots: () => ({ allyAlive: allyBots.filter((x) => !x.down).length, enemyAlive: enemyBots.filter((x) => !x.down).length, allyHp: allyBots.map((x) => Math.round(x.hp)), enemyHp: enemyBots.map((x) => Math.round(x.hp)), allyX: allyBots.map((x) => +x.x.toFixed(1)), enemyX: enemyBots.map((x) => +x.x.toFixed(1)) }),
   };
-  return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
+  return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get nagaState() { return { down: naga.down, hpFrac: naga.hp / naga.maxHp, buffTeam: nagaBuff.team, buffT: nagaBuff.t }; }, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

@@ -28,6 +28,24 @@ export function buildBahtera(team = 0) {
   return g;
 }
 
+// "Sea-Naga" — the Epic neutral monster coiled in the central pit. A stack of
+// scaly rings rising into a horned serpent head with glowing eyes.
+export function buildNaga() {
+  const g = new THREE.Group();
+  const scale = pbr(0x2f6b52, 0.5, 0.18, 0x0a2218, 0.12);          // teal-green scales
+  [[3.0, 0.55], [2.3, 0.5], [1.55, 0.45]].forEach(([R, t], i) => { const ring = new THREE.Mesh(new THREE.TorusGeometry(R, t, 10, 26), scale); ring.rotation.x = Math.PI / 2; ring.position.y = 0.5 + i * 0.75; g.add(ring); });
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.62, 2.6, 8), scale); neck.position.set(0.1, 3.1, 0); neck.rotation.z = 0.18; g.add(neck);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.72, 1.7, 8), scale); head.position.set(0.45, 4.4, 0); head.rotation.z = -1.25; g.add(head);
+  const jaw = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.0, 7), pbr(0x244f3c, 0.6, 0.1)); jaw.position.set(0.7, 4.05, 0); jaw.rotation.z = -1.4; g.add(jaw);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffd23a, emissive: 0xffaa10, emissiveIntensity: 0.9 })); eye.position.set(0.62, 4.6, s * 0.28); g.add(eye);
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.7, 5), pbr(0xe8e0c8, 0.5, 0.1)); horn.position.set(0.2, 5.0, s * 0.22); horn.rotation.z = 0.4 * s; g.add(horn);
+  }
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.scale.setScalar(1.05);
+  return g;
+}
+
 // minion "creep" ship — small wedge hull + a single team sail. Cheap (spawns in waves).
 export function buildMinion(team = 0) {
   const T = TEAM_COL[team]; const g = new THREE.Group();

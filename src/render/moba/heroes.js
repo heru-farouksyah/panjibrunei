@@ -8,7 +8,7 @@ import { bahteraSkills, meriamSkills, hammerheadSkills, nakhodaSkills, tempestSk
 
 export const ROSTER = [
   {
-    id: 'bahtera', name: 'Bahtera', era: 'Traditional', role: 'Tank · Bruiser', icon: '⛵', accent: '#35b6ff',
+    id: 'bahtera', name: 'Bahtera', era: 'Traditional', role: 'Tank · Bruiser', icon: '⛵', accent: '#e85c5c',
     blurb: 'A heavy war-junk that rams the line, hooks stragglers, and unloads a broadside.',
     hp: 760, dmg: 24, rng: 7.5, atkCd: 0.85, speed: 16,
     build: buildBahtera, skills: bahteraSkills,
@@ -32,13 +32,13 @@ export const ROSTER = [
     build: buildNakhoda, skills: nakhodaSkills,
   },
   {
-    id: 'tempest', name: 'Tempest', era: 'Modern', role: 'Mage · Burst', icon: '⚡', accent: '#7fb8ff',
+    id: 'tempest', name: 'Tempest', era: 'Modern', role: 'Mage · Burst', icon: '⚡', accent: '#a06bff',
     blurb: 'A storm hydrofoil that chains lightning between foes, conjures whirlpools, and calls down a tempest.',
     hp: 620, dmg: 23, rng: 10, atkCd: 1.05, speed: 15,
     build: buildTempest, skills: tempestSkills,
   },
   {
-    id: 'sentinel', name: 'Sentinel', era: 'Modern', role: 'Tank · Guardian', icon: '🛡️', accent: '#9fb4c4',
+    id: 'sentinel', name: 'Sentinel', era: 'Modern', role: 'Tank · Guardian', icon: '🛡️', accent: '#27c46a',
     blurb: 'An armored ironclad that shields the line, drags enemies onto its guns, and holds a zone no one crosses.',
     hp: 880, dmg: 21, rng: 6.5, atkCd: 0.95, speed: 13,
     build: buildSentinel, skills: sentinelSkills,

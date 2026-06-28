@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { gridToWorld } from './config.js';
-import { buildMinion, buildBahtera, buildNaga, buildCampMob } from './units.js';
+import { buildMinion, buildBahtera, buildMeriam, buildHammerhead, buildNakhoda, buildTempest, buildSentinel, buildNaga, buildCampMob } from './units.js';
 
 export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp, onEvent, heroStats = {} }) {
   const units = []; let gold = 200; let waveT = 5;
@@ -43,7 +43,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const path = map.lanes[lane].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.6, w.z); });
     if (team === 1) path.reverse();                                  // both push toward the FOE base
     const sw = opts.startWp || 0, s = path[Math.min(sw, path.length - 1)], hp = opts.hp || 690;
-    return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 9.5, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: buildBahtera(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
+    return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 9.5, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: (opts.build || buildBahtera)(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
   }
   // Sea-Naga — the Epic neutral in the central pit. Slay it for your team's Blessing.
   const ew = gridToWorld(map.epic.c, map.epic.r);
@@ -51,9 +51,10 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   let nagaBuff = { team: -1, t: 0 };                                 // Blessing: +40% hero dmg for the slayer's team
   // jungle camps — neutral crabs on the four corners; clear for gold + XP, they respawn
   const camps = map.camps.map((cmp) => { const w = gridToWorld(cmp.c, cmp.r); return add({ team: 2, kind: 'camp', x: w.x, z: w.z, y: 0.8, hp: 560, maxHp: 560, dmg: 17, rng: 6.5, aggro: 6, atkCd: 1.3, speed: 0, value: 75, mesh: buildCampMob(), _isCamp: true, down: false, respawnT: 0, path: [] }); });
-  const allyBots = [spawnBot(0, 0, { hp: 680, dmg: 20 }), spawnBot(0, 1, { hp: 680, dmg: 20 })];
-  const botHero = spawnBot(1, 0, { hp: 730, dmg: 23 });               // lead rival (debug ref)
-  const enemyBots = [botHero, spawnBot(1, 1, { hp: 690, dmg: 21 }), spawnBot(1, 0, { hp: 680, dmg: 20, startWp: 3 })];
+  // each bot gets a DIFFERENT warship so the field reads as a varied fleet, not clones
+  const allyBots = [spawnBot(0, 0, { hp: 680, dmg: 20, build: buildMeriam }), spawnBot(0, 1, { hp: 680, dmg: 20, build: buildNakhoda })];
+  const botHero = spawnBot(1, 0, { hp: 730, dmg: 23, build: buildSentinel });   // lead rival (debug ref)
+  const enemyBots = [botHero, spawnBot(1, 1, { hp: 690, dmg: 21, build: buildTempest }), spawnBot(1, 0, { hp: 680, dmg: 20, startWp: 3, build: buildHammerhead })];
   function botStep(u, dt, tgt, td) {
     const bw = gridToWorld(map.bases[u.team].c, map.bases[u.team].r);
     const atBase = Math.hypot(u.x - bw.x, u.z - bw.z) < 12;

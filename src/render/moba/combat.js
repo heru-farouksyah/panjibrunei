@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { gridToWorld } from './config.js';
-import { buildMinion } from './units.js';
+import { buildMinion, buildBahtera } from './units.js';
 
 export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onXp }) {
   const units = []; let gold = 200; let waveT = 5;
@@ -36,8 +36,25 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
   function spend(n) { if (gold < n) return false; gold -= n; onGold?.(gold); return true; }
   // base Cores — destroy the enemy's to WIN; invulnerable until that team's turrets fall
   const cores = map.bases.map((b) => { const w = gridToWorld(b.c, b.r); return add({ team: b.team, kind: 'core', x: w.x, z: w.z, y: 6, hp: 2200, maxHp: 2200, dmg: 0, rng: 0, aggro: 0, atkCd: 99, speed: 0, value: 0, mesh: null, invuln: true, _core: b._core }); });
+  // enemy HERO bot — pushes a lane, duels the player, retreats + heals when low (Phase 8)
+  const botPath = map.lanes[0].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.6, w.z); }).reverse();   // base1 → base0
+  const botHero = add({ team: 1, kind: 'hero', x: botPath[0].x, z: botPath[0].z, y: 0.6, hp: 720, maxHp: 720, dmg: 22, rng: 7.5, aggro: 9.5, atkCd: 0.9, speed: 9.5, path: botPath, wp: 1, value: 300, mesh: buildBahtera(1), _isBot: true, down: false, retreat: false, respawnT: 0 });
+  function botStep(u, dt, tgt, td) {
+    const bw = gridToWorld(map.bases[1].c, map.bases[1].r);
+    const atBase = Math.hypot(u.x - bw.x, u.z - bw.z) < 12;
+    if (atBase) u.hp = Math.min(u.maxHp, u.hp + 95 * dt);                       // heal at home base
+    if (u.hp < u.maxHp * 0.3 && !atBase) u.retreat = true;                      // wounded → fall back
+    if (u.hp > u.maxHp * 0.85) u.retreat = false;                              // healed → re-engage
+    let dx = 0, dz = 0;
+    if (u.retreat) { dx = bw.x - u.x; dz = bw.z - u.z; }                        // head home
+    else if (tgt && td <= u.rng) { if (u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; } return; }   // in range → hold + fire
+    else if (tgt && td <= u.aggro) { dx = tgt.x - u.x; dz = tgt.z - u.z; }      // chase
+    else { const wpt = u.path[u.wp]; if (wpt) { if (Math.hypot(wpt.x - u.x, wpt.z - u.z) < 1.8) u.wp = Math.min(u.path.length - 1, u.wp + 1); dx = u.path[u.wp].x - u.x; dz = u.path[u.wp].z - u.z; } }   // push lane
+    const d = Math.hypot(dx, dz) || 1; u.x += dx / d * u.speed * dt; u.z += dz / d * u.speed * dt;
+    if (u.mesh && (dx || dz)) u.mesh.rotation.y = Math.atan2(-dz, dx);
+  }
 
-  function enemiesNear(x, z, r, team = 0) { const out = []; for (const u of units) { if (!u.alive || u.team === team) continue; if (Math.hypot(u.x - x, u.z - z) <= r) out.push(u); } return out; }
+  function enemiesNear(x, z, r, team = 0) { const out = []; for (const u of units) { if (!u.alive || u.down || u.team === team) continue; if (Math.hypot(u.x - x, u.z - z) <= r) out.push(u); } return out; }
   function tracer(a, b, color) {
     tmp.set(a.x, a.y + 0.5, a.z); tmp2.set(b.x, b.y + 0.5, b.z); const len = tmp.distanceTo(tmp2);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, len, 5), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
@@ -45,7 +62,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     addVfx(m, 0.13, (dt, o) => { m.material.opacity = 0.85 * (1 - o.t / o.life); });
   }
   function hit(u, dmg, opts = {}) {
-    if (!u || !u.alive || matchOver) return;
+    if (!u || !u.alive || u.down || matchOver) return;
     if (u.kind === 'core' && u.invuln) return;                     // turrets must fall first
     u.hp -= dmg;
     if (opts.stun) u.stun = Math.max(u.stun, opts.stun);
@@ -55,6 +72,13 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     if (u.hp <= 0) kill(u, opts.from, opts.byHero);
   }
   function kill(u, from, byHero) {
+    if (u._isBot) {                                                // enemy hero: down + respawn, don't remove
+      if (u.down) return;
+      u.down = true; u.respawnT = 7; u.retreat = false; if (u.mesh) u.mesh.visible = false;
+      const sink = new THREE.Mesh(new THREE.RingGeometry(0.5, 2.4, 20), new THREE.MeshBasicMaterial({ color: 0xffd0c0, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); sink.rotation.x = -Math.PI / 2; sink.position.set(u.x, 0.2, u.z); addVfx(sink, 0.7, (dt, o) => { sink.scale.setScalar(1 + o.t * 2.5); sink.material.opacity = 0.8 * (1 - o.t / o.life); });
+      gold += u.value; onGold?.(gold); onXp?.(120);               // bounty: gold + a big XP swing
+      return;
+    }
     if (u._isHero) { heroDead = true; heroRespawnT = 5; hero.mesh.visible = false; return; }   // respawn timer
     if (u.kind === 'core') {
       u.alive = false; if (u._core) u._core.visible = false; scene.remove(u._hp.g);
@@ -81,17 +105,18 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     waveT -= dt; if (waveT <= 0) { waveT = 16; for (const team of [0, 1]) for (let lane = 0; lane < map.lanes.length; lane++) for (let i = 0; i < 2; i++) { const m = spawnMinion(team, lane); m.x += (Math.random() - 0.5) * 2.2; m.z += (Math.random() - 0.5) * 2.2; } }
     for (const u of units) {
       if (!u.alive) continue;
+      if (u._isBot && u.down) { u.respawnT -= dt; u._hp.g.visible = false; if (u.respawnT <= 0) { u.down = false; u.hp = u.maxHp; const b = map.bases[1], w = gridToWorld(b.c - 5, b.r); u.x = w.x; u.z = w.z; u.wp = 1; if (u.mesh) { u.mesh.visible = true; u.mesh.position.set(u.x, u.y, u.z); } } continue; }
       if (u.stun > 0) u.stun -= dt; if (u.slow > 0) u.slow -= dt; u.atkT -= dt;
-      let tgt = null, td = u.aggro; for (const e of units) { if (!e.alive || e.team === u.team) continue; if (e.kind === 'core' && e.invuln) continue; if (e.kind === 'hero' && heroDead) continue; const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < td) { td = d; tgt = e; } }
+      let tgt = null, td = u.aggro; for (const e of units) { if (!e.alive || e.down || e.team === u.team) continue; if (e.kind === 'core' && e.invuln) continue; if (e.kind === 'hero' && e._isHero && heroDead) continue; const d = Math.hypot(e.x - u.x, e.z - u.z); if (d < td) { td = d; tgt = e; } }
       const stunned = u.stun > 0;
-      if (u.kind === 'hero') { if (!heroDead && tgt && td <= u.rng && u.atkT <= 0 && !hero.rooted) { attack(u, tgt); u.atkT = u.atkCd; } }
+      if (u.kind === 'hero') { if (u._isBot) { if (!stunned) botStep(u, dt, tgt, td); } else { if (!heroDead && tgt && td <= u.rng && u.atkT <= 0 && !hero.rooted) { attack(u, tgt); u.atkT = u.atkCd; } } }
       else if (u.kind === 'turret' || u.kind === 'core') { if (u.kind === 'turret' && tgt && td <= u.rng && u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; } }
       else if (!stunned) {
         if (tgt && td <= u.rng && u.atkT <= 0) { attack(u, tgt); u.atkT = u.atkCd; }
         else { const sp = u.speed * (u.slow > 0 ? 0.55 : 1); let dx, dz; if (tgt && td <= u.aggro) { dx = tgt.x - u.x; dz = tgt.z - u.z; } else { const wpt = u.path[u.wp]; if (wpt) { if (Math.hypot(wpt.x - u.x, wpt.z - u.z) < 1.6) u.wp = Math.min(u.path.length - 1, u.wp + 1); dx = u.path[u.wp].x - u.x; dz = u.path[u.wp].z - u.z; } else { dx = dz = 0; } } const d = Math.hypot(dx, dz) || 1; u.x += dx / d * sp * dt; u.z += dz / d * sp * dt; if (u.mesh && (dx || dz)) u.mesh.rotation.y = Math.atan2(-dz, dx); }
       }
       if (u.mesh) u.mesh.position.set(u.x, u.y, u.z);
-      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'turret' ? 7 : (u.kind === 'hero' ? 3.6 : 2.4)); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.team === 0 ? 0x46d06a : 0xff5246)); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core') && !(u.kind === 'hero' && heroDead); hb.g.scale.x = u.kind === 'core' ? 1.6 : 1;
+      const hb = u._hp, frac = Math.max(0, u.hp / u.maxHp); const hy = u.kind === 'core' ? 9.5 : (u.kind === 'turret' ? 7 : (u.kind === 'hero' ? 3.6 : 2.4)); hb.g.position.set(u.x, hy, u.z); hb.g.quaternion.copy(cam.quaternion); hb.fill.scale.x = frac; hb.fill.position.x = -0.7 * (1 - frac); hb.fill.material.color.setHex(u.kind === 'core' && u.invuln ? 0x6b7b86 : (u.team === 0 ? 0x46d06a : 0xff5246)); hb.g.visible = (u.hp < u.maxHp || u.kind === 'hero' || u.kind === 'core') && !(u._isHero && heroDead) && !(u._isBot && u.down); hb.g.scale.x = u.kind === 'core' ? 1.6 : 1;
     }
     for (let i = units.length - 1; i >= 0; i--) if (!units[i].alive) units.splice(i, 1);
   }
@@ -103,6 +128,9 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     turretsLeft: (team) => units.filter((u) => u.alive && u.kind === 'turret' && u.team === team).length,
     coreInvuln: (team) => cores.find((c) => c.team === team)?.invuln,
     grantGold: (n) => { gold += n; onGold?.(gold); },
+    killBot: () => { botHero.hp = 0; kill(botHero, heroUnit, true); },
+    hurtBot: (n) => hit(botHero, n, { byHero: true }),
+    bot: () => ({ hp: Math.round(botHero.hp), maxHp: botHero.maxHp, down: botHero.down, x: +botHero.x.toFixed(1), z: +botHero.z.toFixed(1), retreat: botHero.retreat, respawnIn: Math.ceil(botHero.respawnT) }),
   };
   return { update, enemiesNear, hit, debug, setHeroLevel, buffHero, spend, get gold() { return gold; }, get heroHp() { return heroUnit.hp; }, get heroMaxHp() { return heroUnit.maxHp; }, get heroDmg() { return heroUnit.dmg; }, get heroDead() { return heroDead; }, get respawnIn() { return Math.ceil(heroRespawnT); }, get over() { return matchOver; }, count: () => units.length };
 }

@@ -23,7 +23,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const path = map.lanes[lane].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.4, w.z); });
     if (team === 1) path.reverse();
     const s = path[0], mesh = buildMinion(team);
-    return add({ team, kind: 'minion', x: s.x, z: s.z, y: 0.4, hp: 90, maxHp: 90, dmg: 9, rng: 5.5, aggro: 9, atkCd: 1.0, speed: 7, path, wp: 1, value: 14, mesh });
+    return add({ team, kind: 'minion', x: s.x, z: s.z, y: 0.4, hp: 90, maxHp: 90, dmg: 9, rng: 5.5, aggro: 9, atkCd: 1.0, speed: 10, path, wp: 1, value: 14, mesh });
   }
   // turrets are combat units (no movement)
   for (const t of map.turrets) { const w = gridToWorld(t.c, t.r); add({ team: t.team, kind: 'turret', x: w.x, z: w.z, y: 4, hp: 700, maxHp: 700, dmg: 28, rng: 14, aggro: 14, atkCd: 1.1, speed: 0, value: 120, mesh: null }); }
@@ -43,7 +43,7 @@ export function createCombat({ scene, map, hero, addVfx, onGold, onMatchEnd, onX
     const path = map.lanes[lane].map((p) => { const w = gridToWorld(p.c, p.r); return new THREE.Vector3(w.x, 0.6, w.z); });
     if (team === 1) path.reverse();                                  // both push toward the FOE base
     const sw = opts.startWp || 0, s = path[Math.min(sw, path.length - 1)], hp = opts.hp || 690;
-    return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 9.5, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: (opts.build || buildBahtera)(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
+    return add({ team, kind: 'hero', x: s.x, z: s.z, y: 0.6, hp, maxHp: hp, dmg: opts.dmg || 21, rng: 7.5, aggro: 9.5, atkCd: 0.92, speed: 13, path, wp: sw + 1, value: team === 1 ? 300 : 60, mesh: (opts.build || buildBahtera)(team), _isBot: true, down: false, retreat: false, respawnT: 0 });
   }
   // Sea-Naga — the Epic neutral in the central pit. Slay it for your team's Blessing.
   const ew = gridToWorld(map.epic.c, map.epic.r);

@@ -2,9 +2,9 @@
 // SIMULATION owns truth in grid coords; PRESENTATION owns this single transform.
 // Terrain on XZ, Y up, water at Y≈0.  (§3 / §5 of the spec.)
 
-export const TILE = 2.2;            // world units per grid tile
-export const GRID_W = 64;           // logical grid columns (lane length axis = x)
-export const GRID_H = 40;           // logical grid rows       (cross axis      = z)
+export const TILE = 2.5;            // world units per grid tile
+export const GRID_W = 84;           // logical grid columns (lane length axis = x) — bigger arena
+export const GRID_H = 54;           // logical grid rows       (cross axis      = z)
 export const WATER_Y = 0;
 
 export const MAP_W = GRID_W * TILE;

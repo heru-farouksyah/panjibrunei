@@ -65,7 +65,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xbfe0ea, 120, 360);
+  scene.fog = new THREE.Fog(0xbfe0ea, 170, 520);
   const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.5, 2000);
 
   // ---- sky + sun ----------------------------------------------------------
@@ -212,14 +212,15 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
 
   // ---- eased RTS camera (pan + zoom + rotate, opening ease, idle drift) ----
   const camTarget = new THREE.Vector3(0, 0, 0), camTargetGoal = new THREE.Vector3(0, 0, 0);
-  let camDist = 200, camDistGoal = 126;                  // opening: ease in from far → closer default framing
+  let camDist = 250, camDistGoal = 158;                  // opening: ease in from far → default framing (bigger map)
   let camYaw = THREE.MathUtils.degToRad(-30), camYawGoal = THREE.MathUtils.degToRad(-22);
-  const camPitch = THREE.MathUtils.degToRad(53);
+  let camPitch = THREE.MathUtils.degToRad(53), camPitchGoal = camPitch;   // tilt — adjustable (30°=low/horizon … 80°=top-down)
+  const tiltBy = (deg) => { touch(); camPitchGoal = THREE.MathUtils.clamp(camPitchGoal + THREE.MathUtils.degToRad(deg), THREE.MathUtils.degToRad(30), THREE.MathUtils.degToRad(80)); };
   const offset = new THREE.Vector3(), desired = new THREE.Vector3();
   let interacted = false; const touch = () => { interacted = true; };
   function updateCamera(dt, instant) {
     const k = instant ? 1 : 1 - Math.pow(0.0014, dt);
-    camDist += (camDistGoal - camDist) * k; camYaw += (camYawGoal - camYaw) * k; camTarget.lerp(camTargetGoal, k);
+    camDist += (camDistGoal - camDist) * k; camYaw += (camYawGoal - camYaw) * k; camPitch += (camPitchGoal - camPitch) * k; camTarget.lerp(camTargetGoal, k);
     offset.set(Math.sin(camYaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw) * Math.cos(camPitch)).multiplyScalar(camDist);
     desired.copy(camTarget).add(offset);
     camera.position.lerp(desired, k); camera.lookAt(camTarget); waterUni.uCam.value.copy(camera.position);
@@ -242,9 +243,9 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   const onMouseUp = (e) => release(e.clientX, e.clientY); addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; press(t.clientX, t.clientY); }, { passive: true });
   canvas.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; release(t.clientX, t.clientY); }, { passive: true });
-  const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 12, 58, 220); };
+  const onWheel = (e) => { touch(); camDistGoal = THREE.MathUtils.clamp(camDistGoal + Math.sign(e.deltaY) * 14, 70, 320); };
   addEventListener('wheel', onWheel, { passive: true });
-  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (!combat.heroDead && !combat.over) { if (k === '1') { if (kit.tryCast(0)) snd.cast(0); } else if (k === '2') { if (kit.tryCast(1)) snd.cast(1); } else if (k === '3' || k === 'r') { if (kit.tryCast(2)) snd.cast(2); } } };
+  const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'q') { touch(); camYawGoal += 0.32; } else if (k === 'e') { touch(); camYawGoal -= 0.32; } else if (k === '[') { tiltBy(6); } else if (k === ']') { tiltBy(-6); } else if (!combat.heroDead && !combat.over) { if (k === '1') { if (kit.tryCast(0)) snd.cast(0); } else if (k === '2') { if (kit.tryCast(1)) snd.cast(1); } else if (k === '3' || k === 'r') { if (kit.tryCast(2)) snd.cast(2); } } };
   addEventListener('keydown', onKey);
 
   // ---- minimal HUD (Phase 1) ---------------------------------------------
@@ -259,6 +260,7 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     `</div>`;
   hud.innerHTML =
     `<button class="moba-quit" style="position:absolute;top:calc(10px + env(safe-area-inset-top));left:10px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);color:#16384c;font-size:22px;font-weight:700;cursor:pointer;pointer-events:auto;">‹</button>` +
+    `<div style="position:absolute;top:calc(56px + env(safe-area-inset-top));left:10px;display:flex;flex-direction:column;gap:6px;">${['cam-help|❔', 'cam-up|⤒', 'cam-dn|⤓'].map((b) => { const [c, g] = b.split('|'); return `<button class="${c}" style="pointer-events:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(15,40,55,0.6);color:#fff;font-size:16px;cursor:pointer;">${g}</button>`; }).join('')}</div>` +
     `<div style="position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.6);color:#fff;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;">⚓ Sungai Naga — Phase 8 · 3v3 + Jungle  <span style="opacity:.7;font-weight:500;">farm camps · slay the Sea-Naga · raze turrets → Core</span></div>` +
     `<div class="naga-chip" style="position:absolute;top:calc(46px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:rgba(15,40,55,0.5);color:#bff0d0;padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">🐉 Sea-Naga</div>` +
     `<canvas class="mmap" width="300" height="188" style="position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:150px;height:94px;border-radius:8px;border:1px solid rgba(255,255,255,0.28);background:rgba(12,30,40,0.62);pointer-events:none;"></canvas>` +
@@ -281,8 +283,31 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
   hurtVig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;background:radial-gradient(ellipse at center, transparent 42%, rgba(200,30,20,0.6) 100%);';
   overlay.appendChild(hurtVig);
   let lastHeroHp = 1e9, hurtT = 0, lastLevel = 1, lastNagaDown = false;
+  // ---- How-to-Play card (shown at match start; reopen with the ❔ button) ----
+  const helpEl = document.createElement('div');
+  helpEl.style.cssText = 'position:absolute;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;background:rgba(8,22,30,0.78);padding:18px;pointer-events:auto;font-family:system-ui,sans-serif;';
+  helpEl.innerHTML = `<div style="max-width:480px;width:100%;max-height:90%;overflow:auto;background:linear-gradient(180deg,#0e2a38,#0b202c);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:20px 22px;color:#eaf6ff;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+      <h2 style="margin:0 0 4px;font-size:21px;letter-spacing:.5px;">⚓ How to Play — <b style="color:#9fe8ff;">${chosen.name}</b></h2>
+      <div style="opacity:.7;font-size:12px;margin-bottom:12px;">Sungai Naga · ${chosen.era} ${chosen.role}</div>
+      <div style="font-size:13.5px;line-height:1.7;">
+        🎯 <b>Goal</b> — raze the enemy turrets, then sink their <b>Core</b> to win.<br>
+        🕹️ <b>Move</b> — tap the water to sail there.<br>
+        ✨ <b>Skills</b> — tap <b>${kit.skills.map((s) => s.letter).join(' / ')}</b> (or keys 1 2 3). They cost Powder &amp; have cooldowns; tap the <b>+</b> to rank one up on level-up.<br>
+        💰 <b>Gold &amp; XP</b> — sink ships near you to earn both; open <b>🛒 Shop</b> to buy upgrades.<br>
+        🐉 <b>Sea-Naga</b> — slay the serpent in the middle for your team's <b>Blessing</b> (+40% damage).<br>
+        🦀 <b>Jungle</b> — clear the corner camps for bonus gold.<br>
+        🗺️ <b>Minimap</b> (bottom-right) — green is your side, red the enemy.<br>
+        🎥 <b>Camera</b> — <b>Q / E</b> rotate · scroll / pinch to zoom · <b>⤒ / ⤓</b> (or <b>[ ]</b>) to tilt the angle.
+      </div>
+      <button class="help-go" style="margin-top:16px;width:100%;background:#e2a23a;color:#3a2a10;border:none;border-radius:11px;padding:12px;font-weight:800;font-size:16px;cursor:pointer;pointer-events:auto;">Set sail ⚓</button>
+    </div>`;
+  overlay.appendChild(helpEl);
   let ended = false; const finish = (r) => { if (ended) return; ended = true; cleanup(); onResult?.(r); };
   hud.querySelector('.moba-quit').onclick = () => finish({ win: false, quit: true });
+  hud.querySelector('.cam-help').onclick = () => { helpEl.style.display = 'flex'; };
+  hud.querySelector('.cam-up').onclick = () => tiltBy(8);    // ⤒ more top-down
+  hud.querySelector('.cam-dn').onclick = () => tiltBy(-8);   // ⤓ lower angle
+  helpEl.querySelector('.help-go').onclick = () => { helpEl.style.display = 'none'; };
   const respEl = hud.querySelector('.resp'), respN = hud.querySelector('.respn'), resultEl = hud.querySelector('.moba-result');
   resultEl.style.display = 'none';   // inline display:flex overrides [hidden], so drive it via style
   function showResult(win) {
@@ -411,6 +436,9 @@ function runMatch(audio, { mission, onResult } = {}, chosen) {
     hurtHero: (n) => combat.debug.hurtHero(n), heroShield: () => combat.debug.heroShield(),
     drawMM: () => { drawMinimap(); const d = mmCtx.getImageData(0, 0, MMW, MMH).data; let nz = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) nz++; return { nonBlankPx: nz, blips: combat.blips().length }; },
     sfxTest: () => { snd.cast(0); snd.level(); snd.boom(); snd.roar(); snd.win(); snd.lose(); snd.buy(); return 'ok'; },
+    tilt: (d) => { if (d !== undefined) tiltBy(d); return +THREE.MathUtils.radToDeg(camPitchGoal).toFixed(1); },
+    help: (show) => { if (show !== undefined) helpEl.style.display = show ? 'flex' : 'none'; return getComputedStyle(helpEl).display; },
+    mapSize: () => ({ MAP_W: +MAP_W.toFixed(0), MAP_H: +MAP_H.toFixed(0), GRID_W, GRID_H }),
     vig: () => parseFloat(hurtVig.style.opacity || 0),
     econ: () => ({ level: kit.heroLevel, xp: Math.round(kit.xp), xpNeed: kit.xpNeed, points: kit.points, gold: combat.gold, owned: [...owned], heroDmg: Math.round(combat.heroDmg), heroMaxHp: Math.round(combat.heroMaxHp), heroSpeed: +hero.speed.toFixed(1) }),
     kit: () => ({ powder: Math.round(kit.powder), heroLevel: kit.heroLevel, points: kit.points, cds: kit.skills.map((s) => +s.t.toFixed(1)), levels: kit.skills.map((s) => s.level), rooted: hero.rooted, dash: !!hero.dash }),

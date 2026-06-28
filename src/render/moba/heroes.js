@@ -10,37 +10,37 @@ export const ROSTER = [
   {
     id: 'bahtera', name: 'Bahtera', era: 'Traditional', role: 'Tank · Bruiser', icon: '⛵', accent: '#e85c5c',
     blurb: 'A heavy war-junk that rams the line, hooks stragglers, and unloads a broadside.',
-    hp: 760, dmg: 24, rng: 7.5, atkCd: 0.85, speed: 16,
+    hp: 760, dmg: 24, rng: 7.5, atkCd: 0.85, speed: 21,
     build: buildBahtera, skills: bahteraSkills,
   },
   {
     id: 'meriam', name: 'Meriam', era: 'Traditional', role: 'Artillery · Mage', icon: '💣', accent: '#ffb24a',
     blurb: 'A gun-barge that rains shells from afar — area barrages, piercing chain shot, a devastating bombardment.',
-    hp: 640, dmg: 30, rng: 11, atkCd: 1.2, speed: 13,
+    hp: 640, dmg: 30, rng: 11, atkCd: 1.2, speed: 17,
     build: buildMeriam, skills: meriamSkills,
   },
   {
     id: 'hammerhead', name: 'Hammerhead', era: 'Modern', role: 'Assassin', icon: '🦈', accent: '#7fe0c0',
     blurb: 'A fast steel gunboat that dashes in, saws through clusters, and leaps onto a target to finish it.',
-    hp: 700, dmg: 22, rng: 6, atkCd: 0.7, speed: 19,
+    hp: 700, dmg: 22, rng: 6, atkCd: 0.7, speed: 25,
     build: buildHammerhead, skills: hammerheadSkills,
   },
   {
     id: 'nakhoda', name: 'Nakhoda', era: 'Traditional', role: 'Support · Healer', icon: '🪔', accent: '#ffd27a',
     blurb: 'A royal barge that mends and shields the fleet — keep your warships afloat and unleash a rallying tide.',
-    hp: 660, dmg: 20, rng: 8, atkCd: 1.0, speed: 15,
+    hp: 660, dmg: 20, rng: 8, atkCd: 1.0, speed: 20,
     build: buildNakhoda, skills: nakhodaSkills,
   },
   {
     id: 'tempest', name: 'Tempest', era: 'Modern', role: 'Mage · Burst', icon: '⚡', accent: '#a06bff',
     blurb: 'A storm hydrofoil that chains lightning between foes, conjures whirlpools, and calls down a tempest.',
-    hp: 620, dmg: 23, rng: 10, atkCd: 1.05, speed: 15,
+    hp: 620, dmg: 23, rng: 10, atkCd: 1.05, speed: 20,
     build: buildTempest, skills: tempestSkills,
   },
   {
     id: 'sentinel', name: 'Sentinel', era: 'Modern', role: 'Tank · Guardian', icon: '🛡️', accent: '#27c46a',
     blurb: 'An armored ironclad that shields the line, drags enemies onto its guns, and holds a zone no one crosses.',
-    hp: 880, dmg: 21, rng: 6.5, atkCd: 0.95, speed: 13,
+    hp: 880, dmg: 21, rng: 6.5, atkCd: 0.95, speed: 17,
     build: buildSentinel, skills: sentinelSkills,
   },
 ];
